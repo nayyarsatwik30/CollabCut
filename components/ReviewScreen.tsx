@@ -15,7 +15,7 @@ export default function ReviewScreen({ onBack }: ReviewScreenProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [comments, setComments] = useState(INITIAL_COMMENTS);
+  const [comments, setComments] = useState<any[]>(INITIAL_COMMENTS);
   const [draftText, setDraftText] = useState("");
 
   const togglePlay = () => {
