@@ -3,7 +3,7 @@ import { Project, Asset, AssetVersion, Comment, ActivityItem, User } from './typ
 export const MOCK_ME: User = {
   id: 'user-1',
   name: 'You (Satwik)',
-  email: 'satwik@dailies.app',
+  email: 'satwik@collabcut.app',
   initials: 'YS',
   avatarColor: '#4CAF7D',
   role: 'owner',
@@ -70,7 +70,7 @@ export const MOCK_COMMENTS: Comment[] = [
 ]
 
 export const MOCK_MEMBERS = [
-  { name: 'You (Satwik)', initials: 'YS', avatarColor: '#4CAF7D', role: 'Owner', email: 'satwik@dailies.app' },
+  { name: 'You (Satwik)', initials: 'YS', avatarColor: '#4CAF7D', role: 'Owner', email: 'satwik@collabcut.app' },
   { name: 'Riya S.',      initials: 'RS', avatarColor: '#E8A33D', role: 'Editor', email: 'riya@studio.in' },
   { name: 'Client (Aditi)', initials: 'CA', avatarColor: '#5BA4CF', role: 'Client', email: 'aditi@client.com' },
 ]

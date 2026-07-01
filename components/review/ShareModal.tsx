@@ -17,7 +17,7 @@ export function ShareModal({ open, onClose, onCopied }: ShareModalProps) {
   const [commentsOnly, setCommentsOnly] = useState(false)
   const [copied,       setCopied]       = useState(false)
 
-  const link = 'dailies.app/r/singh-mehta-v3-xk9p'
+  const link = 'collabcut.app/r/singh-mehta-v3-xk9p'
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(`https://${link}`).catch(() => {})
@@ -30,7 +30,7 @@ export function ShareModal({ open, onClose, onCopied }: ShareModalProps) {
     <Modal open={open} onClose={onClose} title="Share review link" width="340px">
       <div className="space-y-4">
         <p className="text-[12px] text-th-muted leading-relaxed">
-          Anyone with this link can view and leave notes — no Dailies account required.
+          Anyone with this link can view and leave notes — noCOLLABCUT account required.
         </p>
 
         {/* Link copy */}

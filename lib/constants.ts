@@ -27,7 +27,7 @@ export const INITIAL_COMMENTS = [
 ] as const;
 
 export const STEPS = [
-  { n: "01", title: "Upload dailies", desc: "Drag in a cut straight from your editor. No transcoding wait before reviewers can open it." },
+  { n: "01", title: "UploadCOLLABCUT", desc: "Drag in a cut straight from your editor. No transcoding wait before reviewers can open it." },
   { n: "02", title: "Drop timecoded notes", desc: "Click a frame, leave a note. It is pinned to that exact moment, forever." },
   { n: "03", title: "Stack versions", desc: "A new cut goes on top of the old one. Compare side by side in one click." },
   { n: "04", title: "Reach picture lock", desc: "Mark it approved. Everyone sees the same status, no buried email thread." },

@@ -30,7 +30,7 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-th-accent block" />
-            <span className="text-[17px] font-extrabold tracking-tight">DAILIES</span>
+            <span className="text-[17px] font-extrabold tracking-tight">COLLABCUT</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-6 text-[13px] text-th-muted">
@@ -92,7 +92,7 @@ export function LandingPage() {
               <span className="w-3 h-3 rounded-full bg-th-resolved/70" />
             </div>
             <div className="flex-1 h-5 rounded-th-sm bg-th-surface-alt border border-th-border mx-4 flex items-center px-3">
-              <span className="font-mono text-[10px] text-th-muted">dailies.app/r/singh-mehta-v3</span>
+              <span className="font-mono text-[10px] text-th-muted">collabcut.app/r/singh-mehta-v3</span>
             </div>
           </div>
           {/* Mock player */}
@@ -191,7 +191,7 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full bg-th-accent block" />
-            <span className="text-[13px] font-bold">DAILIES</span>
+            <span className="text-[13px] font-bold">COLLABCUT</span>
           </div>
           <p className="font-mono text-[11px] text-th-faint">Built for the loop between a cut and a lock.</p>
         </div>

@@ -45,7 +45,7 @@ export default function LoginPage() {
       <header className="h-14 border-b border-th-border flex items-center justify-between px-6 shrink-0">
         <Link href="/" className="flex items-center gap-2.5">
           <span className="w-2.5 h-2.5 rounded-full bg-th-accent block" />
-          <span className="text-[17px] font-extrabold tracking-tight">DAILIES</span>
+          <span className="text-[17px] font-extrabold tracking-tight">COLLABCUT</span>
         </Link>
         <ThemePicker />
       </header>

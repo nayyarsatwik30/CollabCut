@@ -41,4 +41,4 @@ export const THEMES: Record<ThemeKey, Theme> = {
 export const THEME_KEYS = Object.keys(THEMES) as ThemeKey[]
 
 export const DEFAULT_THEME: ThemeKey = 'film'
-export const THEME_STORAGE_KEY = 'dailies-theme'
+export const THEME_STORAGE_KEY = 'collabcut-theme'

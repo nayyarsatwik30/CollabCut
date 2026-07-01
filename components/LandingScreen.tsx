@@ -142,7 +142,7 @@ export default function LandingScreen({ onTryReview }: LandingScreenProps) {
       </section>
 
       <footer className="px-6 py-10 max-w-6xl mx-auto text-xs" style={{ color: COLORS.textMuted }}>
-        Dailies — built for the loop between a cut and a lock.
+       COLLABCUT — built for the loop between a cut and a lock.
       </footer>
     </div>
   );

@@ -130,7 +130,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="bg-th-surface rounded-th border border-th-border overflow-hidden">
                   {[
-                    { name:'You (Satwik)', email:'satwik@dailies.app', role:'Owner',  color:'#4CAF7D', init:'YS' },
+                    { name:'You (Satwik)', email:'satwik@collabcut.app', role:'Owner',  color:'#4CAF7D', init:'YS' },
                     { name:'Riya S.',      email:'riya@studio.in',     role:'Editor', color:'#E8A33D', init:'RS' },
                   ].map((m) => (
                     <div key={m.email} className="flex items-center gap-3.5 px-5 py-3.5 border-b border-th-border last:border-b-0">
