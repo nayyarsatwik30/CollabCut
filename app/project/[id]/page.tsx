@@ -1,12 +1,12 @@
 'use client'
 
+import { UploadModal } from '@/components/project/UploadModal'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Share2, Upload, UserPlus } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { ThemePicker } from '@/components/layout/ThemePicker'
-import { AssetCard } from '@/components/project/AssetCard'
 import { Avatar } from '@/components/ui/Badge'
 import { supabase } from '@/lib/supabase'
 
@@ -29,7 +29,6 @@ interface Asset {
   status: string
   mux_playback_id?: string
   created_at: string
-  emoji: string
 }
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
@@ -38,7 +37,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null)
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
-  const [token, setToken] = useState<string | null>(null)
+  const [showUpload, setShowUpload] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -47,9 +46,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const loadData = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { router.push('/auth/login'); return }
-    setToken(session.access_token)
 
-    // Load project
     const projectRes = await fetch(`/api/projects/${params.id}`, {
       headers: { Authorization: `Bearer ${session.access_token}` }
     })
@@ -89,6 +86,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     <div className="flex h-screen overflow-hidden bg-th-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* Upload Modal */}
+        {showUpload && (
+          <UploadModal
+            projectId={params.id}
+            onClose={() => setShowUpload(false)}
+            onUploaded={() => { setShowUpload(false); loadData() }}
+          />
+        )}
+
         {/* Top bar */}
         <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-2 px-5">
           <Link href="/dashboard" className="text-[13px] text-th-muted hover:text-th-text transition-colors">
@@ -104,7 +111,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             <button className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text btn-press">
               <Share2 size={13} /> Share
             </button>
-            <button className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity">
+            <button
+              onClick={() => setShowUpload(true)}
+              className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity">
               <Upload size={13} /> Upload
             </button>
           </div>
@@ -121,7 +130,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                 fontWeight: tab === t ? 700 : 400,
               }}>
               {t}
-              {t === 'assets' && <span className="ml-1.5 font-mono text-[10px] text-th-faint">{assets.length}</span>}
+              {t === 'assets' && (
+                <span className="ml-1.5 font-mono text-[10px] text-th-faint">{assets.length}</span>
+              )}
             </button>
           ))}
         </div>
@@ -139,7 +150,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     <p className="font-semibold mb-1">No assets yet</p>
                     <p className="text-[13px] text-th-muted">Upload your first cut to start reviewing.</p>
                   </div>
-                  <button className="flex items-center gap-2 px-4 py-2.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press">
+                  <button
+                    onClick={() => setShowUpload(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press">
                     <Upload size={14} /> Upload first cut
                   </button>
                 </div>
@@ -154,12 +167,20 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                         <div className="absolute top-2.5 left-2.5 font-mono text-[10px] px-1.5 py-px rounded bg-th-bg/70 text-th-muted border border-th-border">
                           v{a.version}
                         </div>
-                        <div className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-th-full font-mono"
+                        <div
+                          className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-th-full font-mono"
                           style={{
                             color: a.status === 'approved' ? 'var(--th-resolved)' : a.status === 'changes' ? 'var(--th-changes)' : 'var(--th-open)',
-                            background: a.status === 'approved' ? 'color-mix(in srgb, var(--th-resolved) 14%, transparent)' : a.status === 'changes' ? 'color-mix(in srgb, var(--th-changes) 14%, transparent)' : 'color-mix(in srgb, var(--th-open) 14%, transparent)',
+                            background: a.status === 'approved'
+                              ? 'color-mix(in srgb, var(--th-resolved) 14%, transparent)'
+                              : a.status === 'changes'
+                              ? 'color-mix(in srgb, var(--th-changes) 14%, transparent)'
+                              : 'color-mix(in srgb, var(--th-open) 14%, transparent)',
                           }}>
-                          {a.status === 'approved' ? 'APPROVED' : a.status === 'changes' ? 'NEEDS CHANGES' : a.status === 'processing' ? 'PROCESSING' : 'IN REVIEW'}
+                          {a.status === 'approved' ? 'APPROVED'
+                            : a.status === 'changes' ? 'NEEDS CHANGES'
+                            : a.status === 'processing' ? 'PROCESSING'
+                            : 'IN REVIEW'}
                         </div>
                       </div>
                       <div className="p-3.5">
@@ -170,7 +191,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                       </div>
                     </Link>
                   ))}
-                  <button className="flex flex-col items-center justify-center gap-3 h-[172px] rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent transition-colors btn-press">
+                  <button
+                    onClick={() => setShowUpload(true)}
+                    className="flex flex-col items-center justify-center gap-3 h-[172px] rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent transition-colors btn-press">
                     <Upload size={20} />
                     <span className="text-[12px] font-medium">Upload cut</span>
                   </button>
