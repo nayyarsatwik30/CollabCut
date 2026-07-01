@@ -47,7 +47,7 @@ export default function ReviewScreen({ onBack }: ReviewScreenProps) {
 
   const addComment = () => {
     if (!draftText.trim()) return;
-    setComments((prev: typeof INITIAL_COMMENTS) =>
+    setComments((prev) =>
       [...prev, { id: Date.now(), time: currentTime, author: "You", color: COLORS.amber, status: "open", text: draftText.trim() }].sort(
         (a, b) => a.time - b.time
       )
