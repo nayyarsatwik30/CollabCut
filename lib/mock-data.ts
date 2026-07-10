@@ -77,7 +77,7 @@ export const MOCK_MEMBERS = [
 
 export const MOCK_ACTIVITY: ActivityItem[] = [
   { id: 'act1', who: 'Riya S.',       initials: 'RS', avatarColor: '#E8A33D', action: 'left a note at',   detail: '00:00:02:12', createdAt: '3h ago' },
-  { id: 'act2', who: 'Client (Aditi)',initials: 'CA', avatarColor: '#5BA4CF', action: 'approved section', detail: '',            createdAt: '2h ago' },
+  { id: 'act2', who: 'Client (om)',initials: 'CA', avatarColor: '#5BA4CF', action: 'approved section', detail: '',            createdAt: '2h ago' },
   { id: 'act3', who: 'You',           initials: 'YS', avatarColor: '#4CAF7D', action: 'uploaded v3',      detail: '840 MB',      createdAt: '5h ago' },
   { id: 'act4', who: 'Riya S.',       initials: 'RS', avatarColor: '#E8A33D', action: 'resolved a note',  detail: '',            createdAt: '6h ago' },
   { id: 'act5', who: 'Client (Aditi)',initials: 'CA', avatarColor: '#5BA4CF', action: 'opened the review',detail: '',            createdAt: 'Yesterday' },

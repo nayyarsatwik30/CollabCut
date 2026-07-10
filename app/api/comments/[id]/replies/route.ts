@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const { data: { user } } = await supabase.auth.getUser()
-  const { text, author_name } = await req.json()
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
+  const { data: { user } } = token
+    ? await supabaseAdmin.auth.getUser(token)
+    : { data: { user: null } }
 
+  const { text, author_name } = await req.json()
   if (!text) return NextResponse.json({ error: 'text required' }, { status: 400 })
 
   const { data, error } = await supabaseAdmin

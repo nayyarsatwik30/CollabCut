@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { video } from '@/lib/mux'
 
 export async function POST(req: NextRequest) {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { project_id, name, version } = await req.json()
-  if (!project_id || !name) return NextResponse.json({ error: 'project_id and name required' }, { status: 400 })
+  if (!project_id || !name) {
+    return NextResponse.json({ error: 'project_id and name required' }, { status: 400 })
+  }
 
   const upload = await video.uploads.create({
     cors_origin: process.env.NEXT_PUBLIC_APP_URL!,
