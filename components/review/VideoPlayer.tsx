@@ -5,7 +5,6 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Downlo
 import { Comment } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { FilmScrubber } from './FilmScrubber'
-import { Button } from '@/components/ui/Button'
 
 interface VideoPlayerProps {
   src?: string
@@ -78,7 +77,6 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
     document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen()
   }
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
@@ -91,7 +89,6 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
     return () => window.removeEventListener('keydown', handler)
   }, [togglePlay, stepFrame])
 
-  // Active comment (within 0.4s of current time)
   const activeComment = comments.find((c) => Math.abs(c.timeSec - currentTime) < 0.4)
 
   const openCount   = comments.filter((c) => !c.resolved).length
@@ -99,43 +96,46 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
 
   return (
     <div ref={containerRef} className="flex flex-col h-full overflow-hidden">
-      {/* Video */}
       <div
         className="flex-1 bg-black flex items-center justify-center relative overflow-hidden min-h-0 cursor-pointer"
         onClick={togglePlay}
       >
-        <video
-          ref={videoRef}
-          src={src ?? 'https://www.w3schools.com/html/mov_bbb.mp4'}
-          className="max-w-full max-h-full object-contain"
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          playsInline
-        />
+        {src ? (
+          <video
+            ref={videoRef}
+            src={src}
+            className="w-full h-full object-contain"
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            playsInline
+          />
+        ) : (
+          <div className="text-center text-white/60">
+            <p className="text-[13px]">No video source available</p>
+          </div>
+        )}
 
-        {/* SMPTE timecode burn-in */}
-        <div className="absolute bottom-3 left-3 font-mono text-[13px] text-th-accent bg-black/65 px-2.5 py-1 rounded pointer-events-none tracking-widest">
-          {formatTimecode(currentTime)}
-        </div>
+        {src && (
+          <div className="absolute bottom-3 left-3 font-mono text-[13px] text-th-accent bg-black/65 px-2.5 py-1 rounded pointer-events-none tracking-widest">
+            {formatTimecode(currentTime)}
+          </div>
+        )}
 
-        {/* Approved badge */}
         {approved && (
           <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-th-resolved text-white text-[11px] font-bold px-3 py-1 rounded-th-full pointer-events-none">
             ✓ APPROVED
           </div>
         )}
 
-        {/* Active comment bubble */}
         {activeComment && (
           <div className="comment-bubble border border-th-open/40">
             {activeComment.text}
           </div>
         )}
 
-        {/* Play overlay (shown when paused) */}
-        {!playing && (
+        {src && !playing && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
               <Play size={22} className="text-white ml-0.5" />
@@ -144,7 +144,6 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
         )}
       </div>
 
-      {/* Controls */}
       <div className="bg-th-surface border-t border-th-border shrink-0">
         <FilmScrubber
           currentTime={currentTime}
@@ -153,15 +152,12 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
           onSeek={seekTo}
         />
 
-        {/* Transport row */}
         <div className="flex items-center gap-2 px-4 pb-3">
-          {/* Frame step */}
           <button onClick={() => stepFrame(-1)} title="Previous frame (←)"
             className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text hover:bg-th-surface-hov transition-colors btn-press">
             <SkipBack size={14} />
           </button>
 
-          {/* Play / Pause */}
           <button onClick={togglePlay} title="Play/Pause (Space)"
             className="w-9 h-9 rounded-full bg-th-accent flex items-center justify-center btn-press hover:opacity-90 transition-opacity"
             style={{ boxShadow: '0 4px 12px color-mix(in srgb, var(--th-accent) 40%, transparent)' }}>
@@ -171,13 +167,11 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
             }
           </button>
 
-          {/* Frame step forward */}
           <button onClick={() => stepFrame(1)} title="Next frame (→)"
             className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text hover:bg-th-surface-hov transition-colors btn-press">
             <SkipForward size={14} />
           </button>
 
-          {/* Volume */}
           <div className="relative flex items-center gap-1.5"
             onMouseEnter={() => setShowVolume(true)}
             onMouseLeave={() => setShowVolume(false)}>
@@ -197,13 +191,11 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
             )}
           </div>
 
-          {/* Comment count summary */}
           <div className="ml-2 flex items-center gap-3 font-mono text-[11px] text-th-muted">
             <span style={{ color: 'var(--th-open)' }}>{openCount} open</span>
             <span style={{ color: 'var(--th-resolved)' }}>{resolvedCnt} resolved</span>
           </div>
 
-          {/* Right controls */}
           <div className="ml-auto flex items-center gap-2">
             <a
               href={src ?? '#'}

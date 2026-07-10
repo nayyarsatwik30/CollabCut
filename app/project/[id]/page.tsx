@@ -41,6 +41,12 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     loadData()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) router.push('/auth/login')
+    })
+
+    return () => listener.subscription.unsubscribe()
   }, [params.id])
 
   const loadData = async () => {

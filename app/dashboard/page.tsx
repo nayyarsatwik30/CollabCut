@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Grid3X3, List, Plus, Upload, LogOut } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
@@ -23,6 +23,16 @@ export default function DashboardPage() {
 
   useEffect(() => {
     checkAuthAndLoad()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.push('/auth/login')
+      } else {
+        setToken(session.access_token)
+      }
+    })
+
+    return () => listener.subscription.unsubscribe()
   }, [])
 
   const checkAuthAndLoad = async () => {
