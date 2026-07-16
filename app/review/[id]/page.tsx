@@ -73,13 +73,9 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     setToken(session.access_token)
     setUserName(session.user.user_metadata?.name ?? session.user.email ?? 'You')
 
-    const { data: assetData, error: assetError } = await supabase
-      .from('assets')
-      .select('*')
-      .eq('id', params.id)
-      .single()
-
-    if (!assetError && assetData) {
+    const assetRes = await fetch(`/api/assets/${params.id}`)
+    if (assetRes.ok) {
+      const { asset: assetData } = await assetRes.json()
       setAsset(assetData)
       setApproved(assetData.status === 'approved')
     }
