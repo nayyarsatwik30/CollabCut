@@ -9,10 +9,21 @@ export async function POST(req: NextRequest) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { project_id, name, version } = await req.json()
+  const { project_id, name } = await req.json()
   if (!project_id || !name) {
     return NextResponse.json({ error: 'project_id and name required' }, { status: 400 })
   }
+
+  // Check for existing assets with the same name in this project to auto-increment version
+  const { data: existing } = await supabaseAdmin
+    .from('assets')
+    .select('version')
+    .eq('project_id', project_id)
+    .eq('name', name)
+    .order('version', { ascending: false })
+    .limit(1)
+
+  const nextVersion = existing && existing.length > 0 ? existing[0].version + 1 : 1
 
   const upload = await video.uploads.create({
     cors_origin: process.env.NEXT_PUBLIC_APP_URL!,
@@ -28,7 +39,7 @@ export async function POST(req: NextRequest) {
       project_id,
       uploaded_by: user.id,
       name,
-      version: version ?? 1,
+      version: nextVersion,
       status: 'processing',
       mux_upload_id: upload.id,
     })

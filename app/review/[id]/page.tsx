@@ -24,6 +24,15 @@ interface Asset {
   project_id: string
 }
 
+interface VersionEntry {
+  id: string
+  version: number
+  name: string
+  status: string
+  created_at: string
+  size_bytes: number
+}
+
 interface Comment {
   id: string
   asset_id: string
@@ -48,6 +57,9 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [comments, setComments] = useState<Comment[]>([])
+
+  const [versions, setVersions] = useState<VersionEntry[]>([])
+  const [showVersions, setShowVersions] = useState(false)
 
   const [sideTab, setSideTab] = useState<SideTab>('notes')
   const [shareOpen, setShareOpen] = useState(false)
@@ -78,6 +90,12 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       const { asset: assetData } = await assetRes.json()
       setAsset(assetData)
       setApproved(assetData.status === 'approved')
+    }
+
+    const versionsRes = await fetch(`/api/assets/${params.id}/versions`)
+    if (versionsRes.ok) {
+      const { versions: v } = await versionsRes.json()
+      setVersions(v)
     }
 
     const commentsRes = await fetch(`/api/comments?asset_id=${params.id}`)
@@ -222,10 +240,45 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="text-[14px] font-semibold truncate">{asset.name}</span>
-          <div className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted shrink-0">
-            <Layers size={10} />
-            v{asset.version}
+
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setShowVersions(!showVersions)}
+              className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
+            >
+              <Layers size={10} />
+              v{asset.version}
+              <ChevronDown size={10} />
+            </button>
+
+            {showVersions && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowVersions(false)} />
+                <div className="absolute left-0 top-full mt-1.5 z-50 bg-th-surface border border-th-border rounded-th-lg shadow-panel w-56 overflow-hidden animate-slide-up">
+                  <div className="px-4 py-2.5 border-b border-th-border font-mono text-[10px] text-th-muted uppercase tracking-wider">
+                    Version history
+                  </div>
+                  {versions.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => { setShowVersions(false); router.push(`/review/${v.id}`) }}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
+                    >
+                      <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-muted)' }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-text)' }}>
+                          v{v.version}
+                        </p>
+                        <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
+                      </div>
+                      {v.id === asset.id && <Check size={12} className="text-th-accent shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
+
           <StatusBadge status={asset.status as any} />
         </div>
 
