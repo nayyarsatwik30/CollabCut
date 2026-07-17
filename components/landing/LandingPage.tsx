@@ -3,7 +3,12 @@
 import Link from 'next/link'
 import { Check, ArrowRight, Play } from 'lucide-react'
 
-
+const STEPS = [
+  { n: '01', title: 'Upload your cut', body: 'Drag a file in — any format. We handle transcoding. Reviewers can open it in seconds, not hours.' },
+  { n: '02', title: 'Drop frame-accurate notes', body: 'Click any frame in the player, type your note. It is pinned to that exact timecode, forever.' },
+  { n: '03', title: 'Stack new versions', body: 'Upload a revised cut on top of the old one. Compare v1 and v3 side by side in one click.' },
+  { n: '04', title: 'Reach picture lock', body: 'Client clicks Approve. Everyone sees the same status. No buried email thread, no missing feedback.' },
+]
 
 const PLAN_FEATURES = [
   'Unlimited reviewers — no per-seat charge',
@@ -133,70 +138,17 @@ export function LandingPage() {
 
       {/* How it works */}
       <section id="how" className="max-w-6xl mx-auto px-6 py-20 border-t border-th-border">
-        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-th-accent mb-4">File Management</p>
-        <h2 className="text-3xl font-extrabold mb-4 max-w-2xl leading-tight">
-          Upload, organize, and share files and projects with ease.
-        </h2>
-        <div className="mb-14">
-          <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-th border border-th-border text-[13px] font-semibold text-th-text bg-th-surface-alt hover:bg-th-surface-hov transition-colors btn-press">
-            Manage Files Effortlessly <ArrowRight size={13} />
-          </button>
-        </div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-th-muted mb-4">How it works</p>
+        <h2 className="text-3xl font-extrabold mb-14">The review loop, simplified.</h2>
 
-        <div className="grid sm:grid-cols-3 gap-8">
-          {/* Card 1 */}
-          <div className="flex flex-col">
-            <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
-              <video
-                src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-                className="w-full h-full object-cover"
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
+          {STEPS.map((s) => (
+            <div key={s.n}>
+              <p className="font-mono text-[11px] text-th-accent mb-3">{s.n}</p>
+              <h3 className="font-bold text-[15px] mb-2">{s.title}</h3>
+              <p className="text-[13px] text-th-muted leading-relaxed">{s.body}</p>
             </div>
-            <h3 className="font-bold text-[16px] text-th-text mb-2">Organize and prioritize</h3>
-            <p className="text-[13px] text-th-muted leading-relaxed">
-              Tag, sort, and group assets into Collections your way, using out-of-the-box and custom metadata fields.
-            </p>
-          </div>
-
-          {/* Card 2 */}
-          <div className="flex flex-col">
-            <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
-              <video
-                src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
-                className="w-full h-full object-cover"
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
-            </div>
-            <h3 className="font-bold text-[16px] text-th-text mb-2">Work without the wait</h3>
-            <p className="text-[13px] text-th-muted leading-relaxed">
-              Stream files directly into creative apps and work as if they are stored locally.
-            </p>
-          </div>
-
-          {/* Card 3 */}
-          <div className="flex flex-col">
-            <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
-              <video
-                src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
-                className="w-full h-full object-cover"
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
-            </div>
-            <h3 className="font-bold text-[16px] text-th-text mb-2">Navigate easily</h3>
-            <p className="text-[13px] text-th-muted leading-relaxed">
-              Panel-based workspaces and nested folder trees make finding everything easier, no more screen hopping.
-            </p>
-          </div>
+          ))}
         </div>
       </section>
 
