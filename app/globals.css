@@ -5,22 +5,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --th-bg:          #0A0F14;
-  --th-surface:     #0F1620;
-  --th-surface-alt: #16202B;
-  --th-surface-hov: #1C2833;
-  --th-border:      #223140;
-  --th-border-lt:   #1A2733;
-  --th-text:        #E4F1F5;
-  --th-muted:       #5C8494;
-  --th-faint:       #2A3F4C;
-  --th-accent:      #22D3EE;
-  --th-accent-fg:   #04141A;
-  --th-accent-hov:  #06B6D4;
-  --th-open:        #22D3EE;
-  --th-resolved:    #34D399;
-  --th-changes:     #FB7185;
-  --th-info:        #38BDF8;
+  --th-bg:          #EDF6F8;
+  --th-surface:     #FFFFFF;
+  --th-surface-alt: #F0F7F9;
+  --th-surface-hov: #E3EFF2;
+  --th-border:      #D2E2E6;
+  --th-border-lt:   #E4EFF1;
+  --th-text:        #082F3E;
+  --th-muted:       #567A86;
+  --th-faint:       #799BA8;
+  --th-accent:      #0891B2;
+  --th-accent-fg:   #FFFFFF;
+  --th-accent-hov:  #0E7490;
+  --th-open:        #0891B2;
+  --th-resolved:    #059669;
+  --th-changes:     #D90429;
+  --th-info:        #0284C7;
   --th-r:           8px;
   --th-r-sm:        6px;
   --th-r-lg:        16px;
@@ -61,13 +61,13 @@ body {
 .film-strip::after { bottom: 2px; }
 .film-strip-played { position: absolute; inset: 0; background: color-mix(in srgb, var(--th-accent) 28%, transparent); pointer-events: none; }
 .film-strip-playhead {
-  position: absolute; top: -4px; bottom: -4px; width: 2px; background: white;
-  border-radius: 2px; pointer-events: none; box-shadow: 0 0 8px rgba(255,255,255,0.6);
+  position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--th-accent);
+  border-radius: 2px; pointer-events: none; box-shadow: 0 0 8px color-mix(in srgb, var(--th-accent) 60%, transparent);
   transform: translateX(-50%); z-index: 10;
 }
 .film-strip-playhead::before {
   content: ''; position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
-  width: 10px; height: 10px; border-radius: 50%; background: white; box-shadow: 0 0 6px rgba(255,255,255,0.5);
+  width: 10px; height: 10px; border-radius: 50%; background: var(--th-accent); box-shadow: 0 0 6px color-mix(in srgb, var(--th-accent) 50%, transparent);
 }
 .film-strip-dot {
   position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%;
