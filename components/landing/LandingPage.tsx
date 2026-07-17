@@ -52,16 +52,17 @@ export function LandingPage() {
 
       {/* Hero */}
       <div className="relative overflow-hidden">
-        {/* Gradient bars: teal accent at ~12% opacity, bottom-anchored */}
+        {/* Gradient bars anchored to bottom of hero */}
         <GradientBars
           numBars={24}
-          gradientFrom="rgba(8, 145, 178, 0.12)"
+          gradientFrom="rgba(8, 145, 178, 0.25)"
           gradientTo="transparent"
           animationDuration={3}
         />
-        {/* Bottom fade so bars don't bleed into the next section */}
-        <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-[var(--th-bg)] to-transparent pointer-events-none z-10" />
-      <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 relative z-20">
+        {/* Fade bar edges into page background */}
+        <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-[#EDF6F8] to-transparent pointer-events-none z-10" />
+
+        <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 relative z-20">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-th-accent mb-5">
           Frame-accurate video review
         </p>
