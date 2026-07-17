@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Check, ArrowRight, Play } from 'lucide-react'
 import { GradientBars } from '@/components/ui/gradient-bars-background'
@@ -23,8 +24,44 @@ const PLAN_FEATURES = [
 ]
 
 export function LandingPage() {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [scrollY, setScrollY] = useState(0)
+
+  // Track scroll for parallax on gradient bars
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+    const onScroll = () => setScrollY(container.scrollTop)
+    container.addEventListener('scroll', onScroll, { passive: true })
+    return () => container.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Scroll reveal: elements with class "reveal" rise into view
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view')
+          }
+        })
+      },
+      { root: container, threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+    )
+
+    // Observe all reveal elements inside the scroll container
+    container.querySelectorAll('.reveal').forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [])
+
+  // Parallax: bars move at 30% of scroll speed (slower = depth illusion)
+  const barsOffset = -scrollY * 0.3
+
   return (
-    <div className="page-scroll bg-th-bg font-display">
+    <div ref={scrollRef} className="page-scroll bg-th-bg font-display">
       {/* Nav */}
       <header className="sticky top-0 z-50 bg-th-bg/90 backdrop-blur-md border-b border-th-border">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
@@ -50,127 +87,138 @@ export function LandingPage() {
         </div>
       </header>
 
-      {/* Hero */}
+      {/* ── Hero ── */}
       <div className="relative overflow-hidden">
-        {/* Gradient bars anchored to bottom of hero */}
-        <GradientBars
-          numBars={24}
-          gradientFrom="rgba(8, 145, 178, 0.25)"
-          gradientTo="transparent"
-          animationDuration={3}
-        />
-        {/* Fade bar edges into page background */}
-        <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-[#EDF6F8] to-transparent pointer-events-none z-10" />
+        {/* Gradient bars — parallax layer (moves slower than content) */}
+        <div
+          className="absolute inset-0 z-0"
+          style={{ transform: `translateY(${barsOffset}px)`, willChange: 'transform' }}
+        >
+          <GradientBars
+            numBars={30}
+            gradientFrom="rgba(8, 145, 178, 0.55)"
+            gradientTo="transparent"
+            animationDuration={2.5}
+          />
+        </div>
+
+        {/* Bottom edge fade — blends bars into page background */}
+        <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-[#EDF6F8] to-transparent pointer-events-none z-10" />
 
         <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 relative z-20">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-th-accent mb-5">
-          Frame-accurate video review
-        </p>
+          {/* Hero headline block — reveal with stagger */}
+          <div className="reveal">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-th-accent mb-5">
+              Frame-accurate video review
+            </p>
 
-        <h1 className="text-[clamp(2.4rem,6vw,4rem)] font-extrabold leading-[1.08] tracking-tight max-w-3xl mb-6">
-          From rough cut to{' '}
-          <span className="text-th-accent">picture lock</span>
-          {' '}— without the seat tax.
-        </h1>
+            <h1 className="text-[clamp(2.4rem,6vw,4rem)] font-extrabold leading-[1.08] tracking-tight max-w-3xl mb-6">
+              From rough cut to{' '}
+              <span className="text-th-accent">picture lock</span>
+              {' '}— without the seat tax.
+            </h1>
 
-        <p className="text-[17px] text-th-muted max-w-xl leading-relaxed mb-10">
-          Upload a cut, drop notes on the exact frame, and send one link. Reviewers open it without creating an account. You never pay per reviewer.
-        </p>
+            <p className="text-[17px] text-th-muted max-w-xl leading-relaxed mb-10">
+              Upload a cut, drop notes on the exact frame, and send one link. Reviewers open it without creating an account. You never pay per reviewer.
+            </p>
 
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/auth/signup"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-th bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
-          >
-            Start free — 14 days <ArrowRight size={14} />
-          </Link>
-          <Link
-            href="/review/demo"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-th border border-th-border text-th-text font-semibold text-[14px] btn-press hover:bg-th-surface-alt transition-colors"
-          >
-            <Play size={13} className="text-th-accent" /> See a live review
-          </Link>
-        </div>
-
-        {/* 3-Block Feature Showcase */}
-        <div className="mt-20">
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-th-accent mb-4">File Management</p>
-          <h2 className="text-3xl font-extrabold mb-4 max-w-2xl leading-tight text-th-text">
-            Upload, organize, and share files and projects with ease.
-          </h2>
-          <div className="mb-14">
-            <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-th border border-th-border text-[13px] font-semibold text-th-text bg-th-surface-alt hover:bg-th-surface-hov transition-colors btn-press">
-              Manage Files Effortlessly <ArrowRight size={13} />
-            </button>
-          </div>
-
-          <div className="grid sm:grid-cols-3 gap-8">
-            {/* Card 1 */}
-            <div className="flex flex-col">
-              <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
-                <video
-                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-                  className="w-full h-full object-cover"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                />
-              </div>
-              <h3 className="font-bold text-[16px] text-th-text mb-2">Organize and prioritize</h3>
-              <p className="text-[13px] text-th-muted leading-relaxed">
-                Tag, sort, and group assets into Collections your way, using out-of-the-box and custom metadata fields.
-              </p>
-            </div>
-
-            {/* Card 2 */}
-            <div className="flex flex-col">
-              <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
-                <video
-                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
-                  className="w-full h-full object-cover"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                />
-              </div>
-              <h3 className="font-bold text-[16px] text-th-text mb-2">Work without the wait</h3>
-              <p className="text-[13px] text-th-muted leading-relaxed">
-                Stream files directly into creative apps and work as if they are stored locally.
-              </p>
-            </div>
-
-            {/* Card 3 */}
-            <div className="flex flex-col">
-              <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
-                <video
-                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
-                  className="w-full h-full object-cover"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                />
-              </div>
-              <h3 className="font-bold text-[16px] text-th-text mb-2">Navigate easily</h3>
-              <p className="text-[13px] text-th-muted leading-relaxed">
-                Panel-based workspaces and nested folder trees make finding everything easier, no more screen hopping.
-              </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/auth/signup"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-th bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
+              >
+                Start free — 14 days <ArrowRight size={14} />
+              </Link>
+              <Link
+                href="/review/demo"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-th border border-th-border text-th-text font-semibold text-[14px] btn-press hover:bg-th-surface-alt transition-colors"
+              >
+                <Play size={13} className="text-th-accent" /> See a live review
+              </Link>
             </div>
           </div>
-        </div>
-      </section>
+
+          {/* 3-Block Feature Showcase — separate reveal with delay */}
+          <div className="mt-20 reveal" style={{ transitionDelay: '0.15s' }}>
+            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-th-accent mb-4">File Management</p>
+            <h2 className="text-3xl font-extrabold mb-4 max-w-2xl leading-tight text-th-text">
+              Upload, organize, and share files and projects with ease.
+            </h2>
+            <div className="mb-14">
+              <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-th border border-th-border text-[13px] font-semibold text-th-text bg-th-surface-alt hover:bg-th-surface-hov transition-colors btn-press">
+                Manage Files Effortlessly <ArrowRight size={13} />
+              </button>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-8">
+              {/* Card 1 */}
+              <div className="flex flex-col reveal" style={{ transitionDelay: '0.05s' }}>
+                <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
+                  <video
+                    src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                  />
+                </div>
+                <h3 className="font-bold text-[16px] text-th-text mb-2">Organize and prioritize</h3>
+                <p className="text-[13px] text-th-muted leading-relaxed">
+                  Tag, sort, and group assets into Collections your way, using out-of-the-box and custom metadata fields.
+                </p>
+              </div>
+
+              {/* Card 2 */}
+              <div className="flex flex-col reveal" style={{ transitionDelay: '0.15s' }}>
+                <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
+                  <video
+                    src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                  />
+                </div>
+                <h3 className="font-bold text-[16px] text-th-text mb-2">Work without the wait</h3>
+                <p className="text-[13px] text-th-muted leading-relaxed">
+                  Stream files directly into creative apps and work as if they are stored locally.
+                </p>
+              </div>
+
+              {/* Card 3 */}
+              <div className="flex flex-col reveal" style={{ transitionDelay: '0.25s' }}>
+                <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
+                  <video
+                    src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                  />
+                </div>
+                <h3 className="font-bold text-[16px] text-th-text mb-2">Navigate easily</h3>
+                <p className="text-[13px] text-th-muted leading-relaxed">
+                  Panel-based workspaces and nested folder trees make finding everything easier, no more screen hopping.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
-      {/* How it works */}
+      {/* ── How it works ── */}
       <section id="how" className="max-w-6xl mx-auto px-6 py-20 border-t border-th-border">
-        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-th-muted mb-4">How it works</p>
-        <h2 className="text-3xl font-extrabold mb-14">The review loop, simplified.</h2>
+        <div className="reveal">
+          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-th-muted mb-4">How it works</p>
+          <h2 className="text-3xl font-extrabold mb-14">The review loop, simplified.</h2>
+        </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          {STEPS.map((s) => (
-            <div key={s.n}>
+          {STEPS.map((s, i) => (
+            <div key={s.n} className="reveal" style={{ transitionDelay: `${i * 0.1}s` }}>
               <p className="font-mono text-[11px] text-th-accent mb-3">{s.n}</p>
               <h3 className="font-bold text-[15px] mb-2">{s.title}</h3>
               <p className="text-[13px] text-th-muted leading-relaxed">{s.body}</p>
@@ -179,13 +227,15 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing */}
+      {/* ── Pricing ── */}
       <section id="pricing" className="max-w-6xl mx-auto px-6 py-20 border-t border-th-border">
-        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-th-muted mb-4">Pricing</p>
-        <h2 className="text-3xl font-extrabold mb-3">One plan. No surprises.</h2>
-        <p className="text-th-muted mb-12 text-[15px]">Everything included. No per-seat fees. No storage upsells.</p>
+        <div className="reveal">
+          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-th-muted mb-4">Pricing</p>
+          <h2 className="text-3xl font-extrabold mb-3">One plan. No surprises.</h2>
+          <p className="text-th-muted mb-12 text-[15px]">Everything included. No per-seat fees. No storage upsells.</p>
+        </div>
 
-        <div className="max-w-sm bg-th-surface border border-th-border rounded-th-lg p-8 shadow-card">
+        <div className="max-w-sm bg-th-surface border border-th-border rounded-th-lg p-8 shadow-card reveal" style={{ transitionDelay: '0.1s' }}>
           <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-4">Monthly</p>
           <div className="flex items-baseline gap-2 mb-2">
             <span className="text-5xl font-extrabold">₹499</span>
@@ -211,7 +261,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <footer className="border-t border-th-border">
         <div className="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
