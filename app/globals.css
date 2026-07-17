@@ -2,129 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Theme tokens — Film Lab (default) ────────────────────────────────── */
-:root,
-[data-theme="film"] {
-  --th-bg:          #15140F;
-  --th-surface:     #1C1A14;
-  --th-surface-alt: #242019;
-  --th-surface-hov: #2C2820;
-  --th-border:      #33301F;
-  --th-border-lt:   #28261A;
-  --th-text:        #F0EDE4;
-  --th-muted:       #8C8676;
-  --th-faint:       #4A4638;
-  --th-accent:      #E8A33D;
-  --th-accent-fg:   #15140F;
-  --th-accent-hov:  #D4922C;
-  --th-open:        #E8A33D;
-  --th-resolved:    #4CAF7D;
-  --th-changes:     #E05C45;
-  --th-info:        #5BA4CF;
-  --th-r:           10px;
-  --th-r-sm:        6px;
-  --th-r-lg:        16px;
-  --th-r-full:      9999px;
-  --th-font:        'Bricolage Grotesque', sans-serif;
-  --th-mono:        'IBM Plex Mono', monospace;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-/* ─── Arctic Studio ─────────────────────────────────────────────────────── */
-[data-theme="arctic"] {
-  --th-bg:          #EDF1F8;
-  --th-surface:     #FFFFFF;
-  --th-surface-alt: #E4EBF5;
-  --th-surface-hov: #D8E2F0;
-  --th-border:      #C8D5E8;
-  --th-border-lt:   #DDE5F0;
-  --th-text:        #0A1628;
-  --th-muted:       #557098;
-  --th-faint:       #A0B8D8;
-  --th-accent:      #1A4DB8;
-  --th-accent-fg:   #FFFFFF;
-  --th-accent-hov:  #1540A0;
-  --th-open:        #1A4DB8;
-  --th-resolved:    #1A7A5C;
-  --th-changes:     #C84020;
-  --th-info:        #0E7490;
-  --th-r:           6px;
-  --th-r-sm:        4px;
-  --th-r-lg:        12px;
-  --th-r-full:      9999px;
-  --th-font:        'DM Sans', sans-serif;
-  --th-mono:        'JetBrains Mono', monospace;
-}
-
-/* ─── Noir ──────────────────────────────────────────────────────────────── */
-[data-theme="noir"] {
-  --th-bg:          #000000;
-  --th-surface:     #0C0C0C;
-  --th-surface-alt: #141414;
-  --th-surface-hov: #1C1C1C;
-  --th-border:      #242424;
-  --th-border-lt:   #1A1A1A;
-  --th-text:        #F0F0F0;
-  --th-muted:       #505050;
-  --th-faint:       #282828;
-  --th-accent:      #00FF85;
-  --th-accent-fg:   #000000;
-  --th-accent-hov:  #00E876;
-  --th-open:        #00FF85;
-  --th-resolved:    #00C4FF;
-  --th-changes:     #FF4444;
-  --th-info:        #A855F7;
-  --th-r:           2px;
-  --th-r-sm:        2px;
-  --th-r-lg:        4px;
-  --th-r-full:      2px;
-  --th-font:        'JetBrains Mono', monospace;
-  --th-mono:        'JetBrains Mono', monospace;
-}
-
-/* ─── Sunset Cut ────────────────────────────────────────────────────────── */
-[data-theme="sunset"] {
-  --th-bg:          #F5EDE0;
-  --th-surface:     #FDF8F2;
-  --th-surface-alt: #EDE0CC;
-  --th-surface-hov: #E4D4C0;
-  --th-border:      #D4C0A4;
-  --th-border-lt:   #E4D8CC;
-  --th-text:        #1A0E04;
-  --th-muted:       #7A6050;
-  --th-faint:       #C0A880;
-  --th-accent:      #C4501A;
-  --th-accent-fg:   #FDF8F2;
-  --th-accent-hov:  #B04418;
-  --th-open:        #C4501A;
-  --th-resolved:    #3A7840;
-  --th-changes:     #9B1830;
-  --th-info:        #2563EB;
-  --th-r:           4px;
-  --th-r-sm:        3px;
-  --th-r-lg:        10px;
-  --th-r-full:      9999px;
-  --th-font:        'Fraunces', serif;
-  --th-mono:        'IBM Plex Mono', monospace;
-}
-
-/* ─── Slate Pro ─────────────────────────────────────────────────────────── */
-[data-theme="slate"] {
-  --th-bg:          #0B0B12;
-  --th-surface:     #12121C;
-  --th-surface-alt: #1A1A28;
-  --th-surface-hov: #222234;
-  --th-border:      #2A2A40;
-  --th-border-lt:   #202030;
-  --th-text:        #E4E4F0;
-  --th-muted:       #6060A0;
-  --th-faint:       #303050;
-  --th-accent:      #8B5CF6;
-  --th-accent-fg:   #FFFFFF;
-  --th-accent-hov:  #7C3AED;
-  --th-open:        #8B5CF6;
-  --th-resolved:    #10B981;
-  --th-changes:     #F43F5E;
-  --th-info:        #3B82F6;
+:root {
+  --th-bg:          #0A0F14;
+  --th-surface:     #0F1620;
+  --th-surface-alt: #16202B;
+  --th-surface-hov: #1C2833;
+  --th-border:      #223140;
+  --th-border-lt:   #1A2733;
+  --th-text:        #E4F1F5;
+  --th-muted:       #5C8494;
+  --th-faint:       #2A3F4C;
+  --th-accent:      #22D3EE;
+  --th-accent-fg:   #04141A;
+  --th-accent-hov:  #06B6D4;
+  --th-open:        #22D3EE;
+  --th-resolved:    #34D399;
+  --th-changes:     #FB7185;
+  --th-info:        #38BDF8;
   --th-r:           8px;
   --th-r-sm:        6px;
   --th-r-lg:        16px;
@@ -133,18 +29,8 @@
   --th-mono:        'JetBrains Mono', monospace;
 }
 
-/* ─── Base resets ───────────────────────────────────────────────────────── */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html, body {
-  height: 100%;
-  overflow: hidden;
-}
-
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
 body {
   background-color: var(--th-bg);
   color: var(--th-text);
@@ -152,174 +38,62 @@ body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.25s ease, color 0.25s ease;
 }
-
-/* Allow pages that need scrolling */
-.page-scroll {
-  height: 100%;
-  overflow-y: auto;
-}
-
-/* ─── Custom scrollbar ──────────────────────────────────────────────────── */
-::-webkit-scrollbar       { width: 6px; height: 6px; }
+.page-scroll { height: 100%; overflow-y: auto; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--th-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--th-muted); }
-
-/* ─── Focus ring ────────────────────────────────────────────────────────── */
-:focus-visible {
-  outline: 2px solid var(--th-accent);
-  outline-offset: 2px;
-}
-
-/* ─── Typography helpers ────────────────────────────────────────────────── */
+:focus-visible { outline: 2px solid var(--th-accent); outline-offset: 2px; }
 .font-display { font-family: var(--th-font); }
-.font-mono    { font-family: var(--th-mono); }
+.font-mono { font-family: var(--th-mono); }
 
-/* ─── Film-strip scrubber ───────────────────────────────────────────────── */
 .film-strip {
-  position: relative;
-  height: 32px;
-  border-radius: 4px;
-  background: var(--th-surface-alt);
-  border: 1px solid var(--th-border);
-  overflow: hidden;
-  cursor: pointer;
+  position: relative; height: 32px; border-radius: 4px;
+  background: var(--th-surface-alt); border: 1px solid var(--th-border);
+  overflow: hidden; cursor: pointer;
 }
-.film-strip::before,
-.film-strip::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0;
-  height: 5px;
-  background-image: repeating-linear-gradient(
-    90deg,
-    transparent 0px,
-    transparent 14px,
-    var(--th-faint) 14px,
-    var(--th-faint) 22px
-  );
+.film-strip::before, .film-strip::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 5px;
+  background-image: repeating-linear-gradient(90deg, transparent 0px, transparent 14px, var(--th-faint) 14px, var(--th-faint) 22px);
 }
 .film-strip::before { top: 2px; }
-.film-strip::after  { bottom: 2px; }
-
-.film-strip-played {
-  position: absolute;
-  inset: 0;
-  background: color-mix(in srgb, var(--th-accent) 28%, transparent);
-  transform-origin: left;
-  pointer-events: none;
-}
-
+.film-strip::after { bottom: 2px; }
+.film-strip-played { position: absolute; inset: 0; background: color-mix(in srgb, var(--th-accent) 28%, transparent); pointer-events: none; }
 .film-strip-playhead {
-  position: absolute;
-  top: -4px;
-  bottom: -4px;
-  width: 2px;
-  background: white;
-  border-radius: 2px;
-  pointer-events: none;
-  box-shadow: 0 0 8px rgba(255,255,255,0.6);
-  transform: translateX(-50%);
-  z-index: 10;
+  position: absolute; top: -4px; bottom: -4px; width: 2px; background: white;
+  border-radius: 2px; pointer-events: none; box-shadow: 0 0 8px rgba(255,255,255,0.6);
+  transform: translateX(-50%); z-index: 10;
 }
 .film-strip-playhead::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: white;
-  box-shadow: 0 0 6px rgba(255,255,255,0.5);
+  content: ''; position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+  width: 10px; height: 10px; border-radius: 50%; background: white; box-shadow: 0 0 6px rgba(255,255,255,0.5);
 }
-
 .film-strip-dot {
-  position: absolute;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid var(--th-bg);
-  transform: translate(-50%, -50%);
-  cursor: pointer;
-  z-index: 5;
-  transition: transform 0.1s ease;
+  position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid var(--th-bg); transform: translate(-50%, -50%); cursor: pointer;
+  z-index: 5; transition: transform 0.1s ease;
 }
-.film-strip-dot:hover {
-  transform: translate(-50%, -50%) scale(1.6);
-}
-
-/* ─── Comment card status border ────────────────────────────────────────── */
-.comment-card {
-  border-left-width: 3px;
-  border-left-style: solid;
-  transition: box-shadow 0.15s ease, opacity 0.15s ease;
-}
-.comment-card:hover {
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-}
-.comment-card.resolved {
-  opacity: 0.6;
-}
-
-/* ─── Button press ──────────────────────────────────────────────────────── */
-.btn-press {
-  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease;
-}
-.btn-press:active {
-  transform: scale(0.95);
-}
-
-/* ─── Approval glow ─────────────────────────────────────────────────────── */
-.approve-glow {
-  box-shadow: 0 0 0 0 transparent;
-  transition: box-shadow 0.3s ease, background-color 0.2s ease;
-}
-.approve-glow.approved {
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--th-resolved) 50%, transparent);
-}
-
-/* ─── Tooltip ───────────────────────────────────────────────────────────── */
+.film-strip-dot:hover { transform: translate(-50%, -50%) scale(1.6); }
+.comment-card { border-left-width: 3px; border-left-style: solid; transition: box-shadow 0.15s ease, opacity 0.15s ease; }
+.comment-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+.comment-card.resolved { opacity: 0.6; }
+.btn-press { transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease; }
+.btn-press:active { transform: scale(0.95); }
+.approve-glow { box-shadow: 0 0 0 0 transparent; transition: box-shadow 0.3s ease, background-color 0.2s ease; }
+.approve-glow.approved { box-shadow: 0 4px 16px color-mix(in srgb, var(--th-resolved) 50%, transparent); }
 .tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 4px 8px;
-  background: var(--th-surface);
-  border: 1px solid var(--th-border);
-  border-radius: var(--th-r-sm);
-  font-family: var(--th-mono);
-  font-size: 11px;
-  color: var(--th-text);
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 50;
-  animation: fadeIn 0.12s ease-out;
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  padding: 4px 8px; background: var(--th-surface); border: 1px solid var(--th-border);
+  border-radius: var(--th-r-sm); font-family: var(--th-mono); font-size: 11px;
+  color: var(--th-text); white-space: nowrap; pointer-events: none; z-index: 50; animation: fadeIn 0.12s ease-out;
 }
-
-/* ─── Floating comment popup on video ───────────────────────────────────── */
 .comment-bubble {
-  position: absolute;
-  top: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 5px 14px;
-  background: var(--th-surface);
-  border-radius: var(--th-r-full);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--th-text);
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  pointer-events: none;
-  animation: slideUp 0.18s ease-out;
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  padding: 5px 14px; background: var(--th-surface); border-radius: var(--th-r-full);
+  font-size: 12px; font-weight: 600; color: var(--th-text); max-width: 320px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4); pointer-events: none; animation: slideUp 0.18s ease-out;
 }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Grid3X3, List, Plus, Upload, LogOut } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { ThemePicker } from '@/components/layout/ThemePicker'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { supabase } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
@@ -137,7 +136,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2.5">
-            <ThemePicker />
             <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 h-8 px-3 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-muted btn-press hover:text-th-changes transition-colors"

@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Share2, Upload, UserPlus } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { ThemePicker } from '@/components/layout/ThemePicker'
 import { Avatar } from '@/components/ui/Badge'
 import { supabase } from '@/lib/supabase'
 
@@ -113,7 +112,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             <span className="text-[12px] text-th-muted">— {project.client}</span>
           )}
           <div className="ml-auto flex items-center gap-2.5">
-            <ThemePicker />
+
             <button className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text btn-press">
               <Share2 size={13} /> Share
             </button>
@@ -180,13 +179,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                             background: a.status === 'approved'
                               ? 'color-mix(in srgb, var(--th-resolved) 14%, transparent)'
                               : a.status === 'changes'
-                              ? 'color-mix(in srgb, var(--th-changes) 14%, transparent)'
-                              : 'color-mix(in srgb, var(--th-open) 14%, transparent)',
+                                ? 'color-mix(in srgb, var(--th-changes) 14%, transparent)'
+                                : 'color-mix(in srgb, var(--th-open) 14%, transparent)',
                           }}>
                           {a.status === 'approved' ? 'APPROVED'
                             : a.status === 'changes' ? 'NEEDS CHANGES'
-                            : a.status === 'processing' ? 'PROCESSING'
-                            : 'IN REVIEW'}
+                              : a.status === 'processing' ? 'PROCESSING'
+                                : 'IN REVIEW'}
                         </div>
                       </div>
                       <div className="p-3.5">

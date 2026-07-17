@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight, Check } from 'lucide-react'
-import { ThemePicker } from '@/components/layout/ThemePicker'
 import { supabase } from '@/lib/supabase'
 
 const PERKS = [
@@ -58,7 +57,6 @@ export default function SignupPage() {
           <span className="w-2.5 h-2.5 rounded-full bg-th-accent block" />
           <span className="text-[17px] font-extrabold tracking-tight">COLLABCUT</span>
         </Link>
-        <ThemePicker />
       </header>
 
       <div className="flex items-start justify-center px-6 py-16 gap-20">

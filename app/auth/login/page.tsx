@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight } from 'lucide-react'
-import { ThemePicker } from '@/components/layout/ThemePicker'
 import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
@@ -47,7 +46,6 @@ export default function LoginPage() {
           <span className="w-2.5 h-2.5 rounded-full bg-th-accent block" />
           <span className="text-[17px] font-extrabold tracking-tight">COLLABCUT</span>
         </Link>
-        <ThemePicker />
       </header>
 
       <div className="flex-1 flex items-center justify-center px-6 py-12">

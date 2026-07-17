@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { Check, ArrowRight, Play } from 'lucide-react'
-import { ThemePicker } from '@/components/layout/ThemePicker'
 
 const STEPS = [
   { n: '01', title: 'Upload your cut', body: 'Drag a file in — any format. We handle transcoding. Reviewers can open it in seconds, not hours.' },
@@ -40,7 +39,6 @@ export function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <ThemePicker />
             <Link
               href="/auth/signup"
               className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"

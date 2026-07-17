@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock } from 'lucide-react'
-import { ThemePicker } from '@/components/layout/ThemePicker'
 import { VideoPlayer } from '@/components/review/VideoPlayer'
 import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
@@ -283,7 +282,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <ThemePicker />
           <button
             onClick={() => setShareOpen(true)}
             className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text font-medium btn-press hover:bg-th-surface-hov transition-colors"
