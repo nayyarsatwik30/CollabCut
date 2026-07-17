@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Check, ArrowRight, Play } from 'lucide-react'
+import { GradientBars } from '@/components/ui/gradient-bars-background'
 
 const STEPS = [
   { n: '01', title: 'Upload your cut', body: 'Drag a file in — any format. We handle transcoding. Reviewers can open it in seconds, not hours.' },
@@ -50,7 +51,17 @@ export function LandingPage() {
       </header>
 
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 pt-20 pb-16">
+      <div className="relative overflow-hidden">
+        {/* Gradient bars: teal accent at ~12% opacity, bottom-anchored */}
+        <GradientBars
+          numBars={24}
+          gradientFrom="rgba(8, 145, 178, 0.12)"
+          gradientTo="transparent"
+          animationDuration={3}
+        />
+        {/* Bottom fade so bars don't bleed into the next section */}
+        <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-[var(--th-bg)] to-transparent pointer-events-none z-10" />
+      <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 relative z-20">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-th-accent mb-5">
           Frame-accurate video review
         </p>
@@ -149,6 +160,7 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+      </div>
 
       {/* How it works */}
       <section id="how" className="max-w-6xl mx-auto px-6 py-20 border-t border-th-border">
