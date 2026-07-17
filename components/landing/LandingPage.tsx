@@ -80,59 +80,73 @@ export function LandingPage() {
           </Link>
         </div>
 
-        {/* Hero mockup — film strip preview */}
-        <div className="mt-14 rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card-hover">
-          {/* Top bar mock */}
-          <div className="h-11 border-b border-th-border flex items-center px-4 gap-3">
-            <div className="flex gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-th-changes/70" />
-              <span className="w-3 h-3 rounded-full bg-th-open/70" />
-              <span className="w-3 h-3 rounded-full bg-th-resolved/70" />
+        {/* 3-Block Feature Showcase */}
+        <div className="mt-20">
+          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-th-accent mb-4">File Management</p>
+          <h2 className="text-3xl font-extrabold mb-4 max-w-2xl leading-tight text-th-text">
+            Upload, organize, and share files and projects with ease.
+          </h2>
+          <div className="mb-14">
+            <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-th border border-th-border text-[13px] font-semibold text-th-text bg-th-surface-alt hover:bg-th-surface-hov transition-colors btn-press">
+              Manage Files Effortlessly <ArrowRight size={13} />
+            </button>
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-8">
+            {/* Card 1 */}
+            <div className="flex flex-col">
+              <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
+                <video
+                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+              </div>
+              <h3 className="font-bold text-[16px] text-th-text mb-2">Organize and prioritize</h3>
+              <p className="text-[13px] text-th-muted leading-relaxed">
+                Tag, sort, and group assets into Collections your way, using out-of-the-box and custom metadata fields.
+              </p>
             </div>
-            <div className="flex-1 h-5 rounded-th-sm bg-th-surface-alt border border-th-border mx-4 flex items-center px-3">
-              <span className="font-mono text-[10px] text-th-muted">collabcut.app/r/singh-mehta-v3</span>
+
+            {/* Card 2 */}
+            <div className="flex flex-col">
+              <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
+                <video
+                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+              </div>
+              <h3 className="font-bold text-[16px] text-th-text mb-2">Work without the wait</h3>
+              <p className="text-[13px] text-th-muted leading-relaxed">
+                Stream files directly into creative apps and work as if they are stored locally.
+              </p>
+            </div>
+
+            {/* Card 3 */}
+            <div className="flex flex-col">
+              <div className="relative aspect-video rounded-th-lg border border-th-border bg-th-surface overflow-hidden shadow-card mb-5">
+                <video
+                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+              </div>
+              <h3 className="font-bold text-[16px] text-th-text mb-2">Navigate easily</h3>
+              <p className="text-[13px] text-th-muted leading-relaxed">
+                Panel-based workspaces and nested folder trees make finding everything easier, no more screen hopping.
+              </p>
             </div>
           </div>
-          {/* Mock player */}
-          <div className="flex h-52 sm:h-72">
-            <div className="flex-1 bg-black flex items-center justify-center relative">
-              <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
-                <Play size={20} className="text-white ml-0.5" />
-              </div>
-              {/* Timecode burn */}
-              <div className="absolute bottom-3 left-3 font-mono text-[11px] text-th-accent bg-black/60 px-2 py-1 rounded">
-                00:00:07:14
-              </div>
-              {/* Comment bubble */}
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-th-surface rounded-full px-4 py-1.5 text-[11px] font-semibold border border-th-open/40 text-th-text">
-                Logo is clipping the right edge — needs safe zone
-              </div>
-            </div>
-            {/* Mini comment panel */}
-            <div className="w-52 border-l border-th-border flex flex-col">
-              <div className="p-3 border-b border-th-border text-[11px] font-semibold">Notes (5)</div>
-              <div className="flex-1 overflow-hidden p-2 space-y-2">
-                {[
-                  { who: 'RS', color: '#E8A33D', tc: '00:00:02:12', s: 'changes' },
-                  { who: 'CA', color: '#5BA4CF', tc: '00:00:05:19', s: 'resolved' },
-                  { who: 'RS', color: '#E8A33D', tc: '00:00:07:14', s: 'open' },
-                ].map((c, i) => {
-                  const sc: Record<string,string> = { open:'var(--th-open)', resolved:'var(--th-resolved)', changes:'var(--th-changes)' }
-                  return (
-                    <div key={i} className="p-2 rounded-th bg-th-surface-alt border-l-2 text-[10px]" style={{ borderColor: sc[c.s] }}>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ background: c.color, color: '#000' }}>{c.who}</div>
-                        <span className="font-mono text-th-muted">{c.tc}</span>
-                      </div>
-                      <div className="h-2 rounded-sm bg-th-border w-3/4" />
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-          {/* Film strip */}
-          <div className="h-10 border-t border-th-border bg-th-surface-alt film-strip" />
         </div>
       </section>
 
