@@ -96,7 +96,7 @@ export function LandingPage() {
         >
           <GradientBars
             numBars={30}
-            gradientFrom="rgba(8, 145, 178, 0.55)"
+            gradientFrom="rgba(6, 182, 212, 0.95)"
             gradientTo="transparent"
             animationDuration={2.5}
           />
