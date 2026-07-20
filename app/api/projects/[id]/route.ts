@@ -14,6 +14,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     .eq('id', params.id)
     .single()
 
+  if (data?.assets) {
+    const latestByName = new Map<string, any>()
+    for (const asset of data.assets) {
+      if (asset.deleted_at) continue
+      const existing = latestByName.get(asset.name)
+      if (!existing || asset.version > existing.version) {
+        latestByName.set(asset.name, asset)
+      }
+    }
+    data.assets = Array.from(latestByName.values())
+  }
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ project: data })
 }

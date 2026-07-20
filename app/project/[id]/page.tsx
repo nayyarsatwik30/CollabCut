@@ -4,7 +4,7 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Share2, Upload, UserPlus } from 'lucide-react'
+import { ChevronRight, Share2, Upload, UserPlus, Trash2 } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { supabase } from '@/lib/supabase'
@@ -61,6 +61,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       setAssets(data.project.assets ?? [])
     }
     setLoading(false)
+  }
+
+
+
+  const handleDeleteAsset = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm('Delete this asset?')) return
+    await fetch(`/api/assets/${id}/delete`, { method: 'POST' })
+    loadData()
   }
 
   const formatSize = (bytes: number) => {
@@ -165,7 +175,12 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                   {assets.map((a) => (
                     <Link key={a.id} href={`/review/${a.id}`}
-                      className="block bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover">
+                      className="group relative block bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover">
+                      <button
+                        onClick={(e) => handleDeleteAsset(e, a.id)}
+                        className="absolute top-2.5 right-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes z-10">
+                        <Trash2 size={13} />
+                      </button>
                       <div className="h-28 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
                         <span className="text-3xl">🎞️</span>
                         <span className="font-mono text-[11px] text-th-muted">{formatDuration(a.duration_sec)}</span>
