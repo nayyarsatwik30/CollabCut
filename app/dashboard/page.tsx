@@ -10,15 +10,15 @@ import type { Project } from '@/lib/types'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [view,      setView]      = useState<'grid' | 'list'>('grid')
-  const [search,    setSearch]    = useState('')
-  const [projects,  setProjects]  = useState<Project[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [showNew,   setShowNew]   = useState(false)
-  const [newName,   setNewName]   = useState('')
+  const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [search, setSearch] = useState('')
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showNew, setShowNew] = useState(false)
+  const [newName, setNewName] = useState('')
   const [newClient, setNewClient] = useState('')
-  const [creating,  setCreating]  = useState(false)
-  const [token,     setToken]     = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
     checkAuthAndLoad()
@@ -60,6 +60,17 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
+  const handleDeleteProject = async (id: string) => {
+    if (!token) return
+    const res = await fetch(`/api/projects/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) {
+      setProjects((prev) => prev.filter((p) => p.id !== id))
+    }
+  }
+
   const createProject = async () => {
     if (!newName.trim() || !token) return
     setCreating(true)
@@ -71,9 +82,9 @@ export default function DashboardPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name:   newName.trim(),
+          name: newName.trim(),
           client: newClient.trim(),
-          emoji:  '🎬',
+          emoji: '🎬',
         }),
       })
       if (res.ok) {
@@ -238,7 +249,7 @@ export default function DashboardPage() {
           ) : view === 'grid' ? (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
               {filtered.map((p) => (
-                <ProjectCard key={p.id} project={p} view="grid" />
+                <ProjectCard key={p.id} project={p} view="grid" onDelete={handleDeleteProject} />
               ))}
               <button
                 onClick={() => setShowNew(true)}
@@ -256,7 +267,7 @@ export default function DashboardPage() {
                 <span className="w-20 text-right">Updated</span>
               </div>
               {filtered.map((p) => (
-                <ProjectCard key={p.id} project={p} view="list" />
+                <ProjectCard key={p.id} project={p} view="list" onDelete={handleDeleteProject} />
               ))}
             </div>
           )}

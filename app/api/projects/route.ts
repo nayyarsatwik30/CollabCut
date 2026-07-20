@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
     .from('projects')
     .select('*')
     .eq('owner_id', user.id)
+    .is('deleted_at', null)
     .order('updated_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
