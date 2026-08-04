@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock } from 'lucide-react'
+import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X } from 'lucide-react'
 import { VideoPlayer } from '@/components/review/VideoPlayer'
 import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
+import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
@@ -30,6 +31,7 @@ interface VersionEntry {
   status: string
   created_at: string
   size_bytes: number
+  mux_playback_id?: string | null
 }
 
 interface Comment {
@@ -65,6 +67,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const [approved, setApproved] = useState(false)
   const [drawTool, setDrawTool] = useState<AnnotationTool>(null)
   const [hasAnnotations, setHasAnnotations] = useState(false)
+
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showCompareModal, setShowCompareModal] = useState(false)
+  const [compareV1Id, setCompareV1Id] = useState<string>('')
+  const [compareV2Id, setCompareV2Id] = useState<string>('')
 
   const { toast, showToast, dismissToast } = useToast()
 
@@ -104,6 +111,47 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     }
 
     setLoading(false)
+  }
+
+  const handleSwitchVersion = async (targetId: string) => {
+    setShowVersions(false)
+    if (!asset || targetId === asset.id) return
+
+    setLoading(true)
+    router.replace(`/review/${targetId}`)
+
+    const assetRes = await fetch(`/api/assets/${targetId}`)
+    if (assetRes.ok) {
+      const { asset: newAsset } = await assetRes.json()
+      setAsset(newAsset)
+      setApproved(newAsset.status === 'approved')
+    }
+
+    const versionsRes = await fetch(`/api/assets/${targetId}/versions`)
+    if (versionsRes.ok) {
+      const { versions: v } = await versionsRes.json()
+      setVersions(v)
+    }
+
+    const commentsRes = await fetch(`/api/comments?asset_id=${targetId}`)
+    if (commentsRes.ok) {
+      const data = await commentsRes.json()
+      setComments(data.comments ?? [])
+    }
+
+    setCurrentTime(0)
+    setLoading(false)
+  }
+
+  const handleOpenCompare = () => {
+    if (versions.length >= 2) {
+      setCompareV1Id(versions[0].id)
+      setCompareV2Id(versions[1].id)
+    } else if (versions.length === 1) {
+      setCompareV1Id(versions[0].id)
+      setCompareV2Id(versions[0].id)
+    }
+    setShowCompareModal(true)
   }
 
   const handleAddComment = useCallback(async (text: string, status: CommentStatus) => {
@@ -238,7 +286,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         <div className="w-px h-5 bg-th-border shrink-0" />
 
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-[14px] font-semibold truncate">{asset.name}</span>
+          <span className="text-[14px] truncate" style={{ fontFamily: 'system-ui, -apple-system, "SF Pro Display", sans-serif', fontWeight: 700, color: '#000' }}>{asset.name}</span>
 
           <div className="relative shrink-0">
             <button
@@ -253,30 +301,53 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             {showVersions && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowVersions(false)} />
-                <div className="absolute left-0 top-full mt-1.5 z-50 bg-th-surface border border-th-border rounded-th-lg shadow-panel w-56 overflow-hidden animate-slide-up">
+                <div className="absolute left-0 top-full mt-1.5 z-50 bg-th-surface border border-th-border rounded-th-lg shadow-panel w-60 overflow-hidden animate-slide-up">
                   <div className="px-4 py-2.5 border-b border-th-border font-mono text-[10px] text-th-muted uppercase tracking-wider">
                     Version history
                   </div>
-                  {versions.map((v) => (
+                  <div className="max-h-60 overflow-y-auto">
+                    {versions.map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => handleSwitchVersion(v.id)}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
+                      >
+                        <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-muted)' }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-text)' }}>
+                            v{v.version}
+                          </p>
+                          <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
+                        </div>
+                        {v.id === asset.id && <Check size={12} className="text-th-accent shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="p-2 border-t border-th-border bg-th-surface-alt/50">
                     <button
-                      key={v.id}
-                      onClick={() => { setShowVersions(false); router.push(`/review/${v.id}`) }}
-                      className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
+                      onClick={() => {
+                        setShowVersions(false)
+                        setShowUploadModal(true)
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-th text-[12px] font-semibold bg-th-surface border border-th-border text-th-text hover:border-th-accent hover:text-th-accent transition-colors btn-press"
                     >
-                      <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-muted)' }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-text)' }}>
-                          v{v.version}
-                        </p>
-                        <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
-                      </div>
-                      {v.id === asset.id && <Check size={12} className="text-th-accent shrink-0" />}
+                      <Upload size={13} />
+                      Upload new version
                     </button>
-                  ))}
+                  </div>
                 </div>
               </>
             )}
           </div>
+
+          <button
+            onClick={handleOpenCompare}
+            className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
+          >
+            <Layers size={10} className="text-th-accent" />
+            Compare versions
+          </button>
 
           <StatusBadge status={asset.status as any} />
         </div>
@@ -407,6 +478,119 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           </div>
         </aside>
       </div>
+
+      {showUploadModal && asset && (
+        <UploadModal
+          projectId={asset.project_id}
+          onClose={() => setShowUploadModal(false)}
+          onUploaded={async () => {
+            setShowUploadModal(false)
+            const versionsRes = await fetch(`/api/assets/${asset.id}/versions`)
+            if (versionsRes.ok) {
+              const { versions: v } = await versionsRes.json()
+              setVersions(v)
+            }
+            showToast('New version uploaded!', 'success')
+          }}
+        />
+      )}
+
+      {showCompareModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-th-surface border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="px-6 py-4 border-b border-th-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers size={16} className="text-th-accent" />
+                <h2 className="font-bold text-[16px]">Compare versions</h2>
+              </div>
+              <button
+                onClick={() => setShowCompareModal(false)}
+                className="text-th-muted hover:text-th-text transition-colors p-1 rounded-th hover:bg-th-surface-alt"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-6 overflow-hidden min-h-0 bg-black/40">
+              <div className="flex flex-col h-full overflow-hidden bg-th-surface border border-th-border rounded-th-lg">
+                <div className="p-3 border-b border-th-border flex items-center justify-between bg-th-surface-alt">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted font-semibold">Version A</span>
+                  <select
+                    value={compareV1Id}
+                    onChange={(e) => setCompareV1Id(e.target.value)}
+                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent font-mono font-medium"
+                  >
+                    {versions.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        v{v.version} ({new Date(v.created_at).toLocaleDateString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden">
+                  {(() => {
+                    const selV1 = versions.find((v) => v.id === compareV1Id)
+                    const v1Src = selV1?.mux_playback_id
+                      ? `https://stream.mux.com/${selV1.mux_playback_id}.m3u8`
+                      : undefined
+
+                    return v1Src ? (
+                      <video
+                        controls
+                        src={v1Src}
+                        className="w-full h-full object-contain"
+                        playsInline
+                      />
+                    ) : (
+                      <div className="text-center text-th-muted text-[13px] p-4">
+                        <p>No video stream available for v{selV1?.version ?? '?'}</p>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+
+              <div className="flex flex-col h-full overflow-hidden bg-th-surface border border-th-border rounded-th-lg">
+                <div className="p-3 border-b border-th-border flex items-center justify-between bg-th-surface-alt">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted font-semibold">Version B</span>
+                  <select
+                    value={compareV2Id}
+                    onChange={(e) => setCompareV2Id(e.target.value)}
+                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent font-mono font-medium"
+                  >
+                    {versions.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        v{v.version} ({new Date(v.created_at).toLocaleDateString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden">
+                  {(() => {
+                    const selV2 = versions.find((v) => v.id === compareV2Id)
+                    const v2Src = selV2?.mux_playback_id
+                      ? `https://stream.mux.com/${selV2.mux_playback_id}.m3u8`
+                      : undefined
+
+                    return v2Src ? (
+                      <video
+                        controls
+                        src={v2Src}
+                        className="w-full h-full object-contain"
+                        playsInline
+                      />
+                    ) : (
+                      <div className="text-center text-th-muted text-[13px] p-4">
+                        <p>No video stream available for v{selV2?.version ?? '?'}</p>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

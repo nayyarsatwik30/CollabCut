@@ -97,7 +97,8 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
   return (
     <div ref={containerRef} className="flex flex-col h-full overflow-hidden">
       <div
-        className="flex-1 bg-black flex items-center justify-center relative overflow-hidden min-h-0 cursor-pointer"
+        className="flex-1 flex items-center justify-center relative overflow-hidden min-h-0 cursor-pointer"
+        style={{ background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 0 }}
         onClick={togglePlay}
       >
         {src ? (

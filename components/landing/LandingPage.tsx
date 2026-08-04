@@ -22,16 +22,14 @@ const FEATURES = [
   { title: 'Navigate easily', body: 'Panel-based workspaces and nested folder trees make finding everything easier. No more screen hopping.', icon: Lock, color: '#60a5fa' },
 ]
 
-const PLAN_FEATURES = [
-  'Unlimited reviewers — no per-seat charge',
-  'Frame-accurate timecoded notes',
-  'Version stacking with side-by-side compare',
-  'Shareable links — no reviewer account needed',
-  'Drawing and annotation tools',
-  '200 GB storage included',
-  'Password-protected share links',
-  'Razorpay / UPI billing',
-]
+interface Plan {
+  id: string
+  name: string
+  price_monthly: number
+  price_yearly: number
+  storage_gb: number
+  features: string[]
+}
 
 const STUDIOS = ['Odyssey', 'Kinetic', 'Northlight', 'Mirage', 'Studio 47', 'Halcyon']
 
@@ -45,6 +43,25 @@ const MOCK_COMMENTS = [
 
 export function LandingPage() {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
+
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        const res = await fetch('/api/plans')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.plans) {
+            setPlans(data.plans)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch plans:', err)
+      }
+    }
+    fetchPlans()
+  }, [])
 
   // Scroll reveal: elements with class "reveal" rise into view
   useEffect(() => {
@@ -64,7 +81,7 @@ export function LandingPage() {
 
     container.querySelectorAll('.reveal').forEach((el) => observer.observe(el))
     return () => observer.disconnect()
-  }, [])
+  }, [plans])
 
   return (
     <div ref={scrollRef} className="page-scroll">
@@ -115,7 +132,7 @@ export function LandingPage() {
           {/* Headline */}
           <h1 className="text-[clamp(2.4rem,6vw,4.2rem)] font-extrabold leading-[1.08] tracking-tight max-w-3xl mx-auto mb-6">
             From rough cut to<br />
-            <span className="font-display text-gradient">picture lock</span>.
+            <span className="font-display text-gradient">picture lock</span>
           </h1>
 
           {/* Subtitle */}
@@ -296,39 +313,98 @@ export function LandingPage() {
             Pricing
           </p>
           <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-3">
-            One plan. <span className="font-display text-gradient">No surprises</span>.
+            Simple, transparent <span className="font-display text-gradient">pricing</span>.
           </h2>
-          <p className="text-th-muted mb-12 text-[15px]">
-            Everything included. No per-seat fees. No storage upsells.
+          <p className="text-th-muted mb-8 text-[15px]">
+            Choose the plan that best fits your workflow.
           </p>
+
+          {/* Toggle */}
+          <div className="inline-flex items-center gap-1.5 p-1.5 rounded-full glass mb-12 border border-th-border">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                billingCycle === 'monthly'
+                  ? 'bg-gradient-cta text-white shadow-md'
+                  : 'text-th-muted hover:text-th-text'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('yearly')}
+              className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-all flex items-center gap-1.5 ${
+                billingCycle === 'yearly'
+                  ? 'bg-gradient-cta text-white shadow-md'
+                  : 'text-th-muted hover:text-th-text'
+              }`}
+            >
+              <span>Yearly</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
+                Save 17%
+              </span>
+            </button>
+          </div>
         </div>
 
-        <div className="pricing-card reveal" style={{ transitionDelay: '0.1s' }}>
-          <div className="flex items-center justify-between mb-6">
-            <span className="font-mono text-[11px] uppercase tracking-wider px-3 py-1 rounded-th-full bg-th-surface-alt border border-th-border text-th-text">
-              Monthly
-            </span>
-            <span className="text-[12px] text-th-muted">14-day free trial</span>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch max-w-5xl mx-auto">
+          {plans.map((plan, index) => {
+            const isPro = plan.id === 'pro'
+            const price = billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly
+            return (
+              <div
+                key={plan.id || index}
+                className={`relative flex flex-col justify-between p-8 rounded-2xl transition-all duration-300 reveal ${
+                  isPro
+                    ? 'card-elevated border-th-accent/50 shadow-xl ring-1 ring-th-accent/40'
+                    : 'glass border-th-border'
+                }`}
+                style={{ transitionDelay: `${index * 0.1}s` }}
+              >
+                {isPro && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-cta text-white text-[11px] font-bold uppercase tracking-wider shadow-md">
+                    Recommended
+                  </div>
+                )}
 
-          <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-5xl font-extrabold">₹499</span>
-            <span className="text-th-muted text-[14px]">/ month</span>
-          </div>
-          <p className="text-[12px] text-th-muted mb-8">Cancel anytime.</p>
+                <div>
+                  <div className="mb-4">
+                    <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
+                    <p className="text-[12px] text-th-muted font-mono">{plan.storage_gb} GB storage</p>
+                  </div>
 
-          <Link href="/auth/signup" className="pricing-cta mb-8 block text-center no-underline">
-            Start 14-day free trial <ArrowRight size={14} />
-          </Link>
+                  <div className="flex items-baseline gap-1.5 mb-6">
+                    <span className="text-4xl font-extrabold tracking-tight">₹{price}</span>
+                    <span className="text-[13px] text-th-muted">
+                      / {billingCycle === 'monthly' ? 'month' : 'year'}
+                    </span>
+                  </div>
 
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-            {PLAN_FEATURES.map((f) => (
-              <div key={f} className="flex items-start gap-2.5 text-[13px]">
-                <Check size={14} className="text-th-accent mt-0.5 shrink-0" />
-                {f}
+                  <div className="space-y-3 mb-8 border-t border-th-border pt-6">
+                    {plan.features?.map((feature, fIdx) => (
+                      <div key={fIdx} className="flex items-start gap-2.5 text-[13px] text-th-text">
+                        <Check size={14} className="text-th-accent mt-0.5 shrink-0" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Link
+                    href="/auth/signup"
+                    className={`w-full py-3 rounded-xl font-semibold text-[13px] transition-all flex items-center justify-center gap-2 btn-press no-underline ${
+                      isPro
+                        ? 'bg-gradient-cta text-white shadow-lg hover:opacity-90'
+                        : 'bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov'
+                    }`}
+                  >
+                    Start free trial <ArrowRight size={14} />
+                  </Link>
+                </div>
               </div>
-            ))}
-          </div>
+            )
+          })}
         </div>
       </section>
 

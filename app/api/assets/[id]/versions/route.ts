@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const { data: versions, error } = await supabaseAdmin
     .from('assets')
-    .select('id, version, name, status, created_at, size_bytes')
+    .select('id, version, name, status, created_at, size_bytes, mux_playback_id')
     .eq('project_id', current.project_id)
     .eq('name', current.name)
     .order('version', { ascending: false })
