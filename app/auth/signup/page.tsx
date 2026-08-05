@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -14,10 +14,14 @@ const PERKS = [
 
 export default function SignupPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [showPass, setShowPass] = useState(false)
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' })
+
+  const planId = searchParams.get('plan') ?? 'basic'
+  const billingCycle = searchParams.get('cycle') ?? 'monthly'
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -35,16 +39,24 @@ export default function SignupPage() {
     }
 
     setLoading(true)
-    const { error } = await supabase.auth.signUp({
-      email:    form.email,
+    const { data, error } = await supabase.auth.signUp({
+      email: form.email,
       password: form.password,
-      options:  { data: { name: `${form.firstName} ${form.lastName}`.trim() } },
+      options: { data: { name: `${form.firstName} ${form.lastName}`.trim() } },
     })
 
     if (error) {
       setError(error.message)
       setLoading(false)
       return
+    }
+
+    // Save selected plan to profile
+    if (data.user) {
+      await supabase
+        .from('profiles')
+        .update({ plan_id: planId, billing_cycle: billingCycle })
+        .eq('id', data.user.id)
     }
 
     router.push('/dashboard')
@@ -113,6 +125,9 @@ export default function SignupPage() {
 
           <p className="mt-4 text-center text-[11px] text-th-faint font-mono">
             No credit card required. 14-day free trial.
+            {planId !== 'basic' && (
+              <span className="block mt-1 text-th-accent">Selected plan: {planId} ({billingCycle})</span>
+            )}
           </p>
         </div>
 

@@ -63,7 +63,6 @@ export function LandingPage() {
     fetchPlans()
   }, [])
 
-  // Scroll reveal: elements with class "reveal" rise into view
   useEffect(() => {
     const container = scrollRef.current
     if (!container) return
@@ -89,7 +88,6 @@ export function LandingPage() {
       {/* ═══════════════ NAV ═══════════════ */}
       <header className="sticky top-0 z-50 glass">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
-          {/* Logo */}
           <div className="flex items-center gap-2.5">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold"
@@ -100,7 +98,6 @@ export function LandingPage() {
             <span className="text-[16px] font-bold tracking-tight">CollabCut</span>
           </div>
 
-          {/* Links */}
           <nav className="hidden md:flex items-center gap-6 text-[13px] text-th-muted">
             <a href="#how" className="hover:text-th-text transition-colors">How it works</a>
             <a href="#features" className="hover:text-th-text transition-colors">Features</a>
@@ -108,7 +105,6 @@ export function LandingPage() {
             <Link href="/auth/login" className="hover:text-th-text transition-colors">Log in</Link>
           </nav>
 
-          {/* CTA */}
           <Link
             href="/auth/signup"
             className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-th-full bg-gradient-cta text-white text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
@@ -121,7 +117,6 @@ export function LandingPage() {
       {/* ═══════════════ HERO ═══════════════ */}
       <section className="max-w-6xl mx-auto px-6 pt-20 pb-16">
         <div className="text-center reveal">
-          {/* Badge */}
           <div className="flex justify-center">
             <span className="hero-badge">
               <Sparkles size={14} className="text-th-accent" />
@@ -129,19 +124,16 @@ export function LandingPage() {
             </span>
           </div>
 
-          {/* Headline */}
           <h1 className="text-[clamp(2.4rem,6vw,4.2rem)] font-extrabold leading-[1.08] tracking-tight max-w-3xl mx-auto mb-6">
             From rough cut to<br />
             <span className="font-display text-gradient">picture lock</span>
           </h1>
 
-          {/* Subtitle */}
           <p className="text-[17px] text-th-muted max-w-xl mx-auto leading-relaxed mb-10">
             Upload a cut, drop notes on the exact frame, and send one link.
             Reviewers open it without an account. You never pay per reviewer.
           </p>
 
-          {/* CTAs */}
           <div className="flex flex-wrap justify-center gap-3">
             <Link
               href="/auth/signup"
@@ -161,7 +153,6 @@ export function LandingPage() {
         {/* ── Mock Video Player ── */}
         <div className="mt-16 reveal" style={{ transitionDelay: '0.15s' }}>
           <div className="mock-player max-w-4xl mx-auto">
-            {/* Toolbar */}
             <div className="mock-player-toolbar">
               <div className="flex items-center gap-1.5 mr-3">
                 <span className="mock-dot" />
@@ -175,12 +166,9 @@ export function LandingPage() {
               <span className="live-badge">Live</span>
             </div>
 
-            {/* Main area: viewport + comments */}
             <div className="flex">
-              {/* Viewport */}
               <div className="flex-1 relative">
                 <div className="mock-viewport">
-                  {/* Annotation marker */}
                   <div className="absolute z-10 flex items-center gap-2" style={{ top: '45%', left: '30%' }}>
                     <span
                       className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
@@ -194,7 +182,6 @@ export function LandingPage() {
                   </div>
                 </div>
 
-                {/* Playback controls */}
                 <div className="mock-controls">
                   <div className="w-8 h-8 rounded-full bg-th-text flex items-center justify-center">
                     <Play size={14} className="text-th-bg ml-0.5" fill="var(--th-bg)" />
@@ -208,7 +195,6 @@ export function LandingPage() {
                 </div>
               </div>
 
-              {/* Comments sidebar */}
               <div className="w-[220px] shrink-0 border-l border-th-border hidden md:block">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-th-border">
                   <span className="text-[13px] font-semibold">Comments</span>
@@ -319,25 +305,22 @@ export function LandingPage() {
             Choose the plan that best fits your workflow.
           </p>
 
-          {/* Toggle */}
           <div className="inline-flex items-center gap-1.5 p-1.5 rounded-full glass mb-12 border border-th-border">
             <button
               onClick={() => setBillingCycle('monthly')}
-              className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
-                billingCycle === 'monthly'
-                  ? 'bg-gradient-cta text-white shadow-md'
-                  : 'text-th-muted hover:text-th-text'
-              }`}
+              className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${billingCycle === 'monthly'
+                ? 'bg-gradient-cta text-white shadow-md'
+                : 'text-th-muted hover:text-th-text'
+                }`}
             >
               Monthly
             </button>
             <button
               onClick={() => setBillingCycle('yearly')}
-              className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-all flex items-center gap-1.5 ${
-                billingCycle === 'yearly'
-                  ? 'bg-gradient-cta text-white shadow-md'
-                  : 'text-th-muted hover:text-th-text'
-              }`}
+              className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-all flex items-center gap-1.5 ${billingCycle === 'yearly'
+                ? 'bg-gradient-cta text-white shadow-md'
+                : 'text-th-muted hover:text-th-text'
+                }`}
             >
               <span>Yearly</span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
@@ -354,11 +337,10 @@ export function LandingPage() {
             return (
               <div
                 key={plan.id || index}
-                className={`relative flex flex-col justify-between p-8 rounded-2xl transition-all duration-300 reveal ${
-                  isPro
-                    ? 'card-elevated border-th-accent/50 shadow-xl ring-1 ring-th-accent/40'
-                    : 'glass border-th-border'
-                }`}
+                className={`relative flex flex-col justify-between p-8 rounded-2xl transition-all duration-300 reveal ${isPro
+                  ? 'card-elevated border-th-accent/50 shadow-xl ring-1 ring-th-accent/40'
+                  : 'glass border-th-border'
+                  }`}
                 style={{ transitionDelay: `${index * 0.1}s` }}
               >
                 {isPro && (
@@ -392,12 +374,11 @@ export function LandingPage() {
 
                 <div>
                   <Link
-                    href="/auth/signup"
-                    className={`w-full py-3 rounded-xl font-semibold text-[13px] transition-all flex items-center justify-center gap-2 btn-press no-underline ${
-                      isPro
-                        ? 'bg-gradient-cta text-white shadow-lg hover:opacity-90'
-                        : 'bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov'
-                    }`}
+                    href={`/auth/signup?plan=${plan.id}&cycle=${billingCycle}`}
+                    className={`w-full py-3 rounded-xl font-semibold text-[13px] transition-all flex items-center justify-center gap-2 btn-press no-underline ${isPro
+                      ? 'bg-gradient-cta text-white shadow-lg hover:opacity-90'
+                      : 'bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov'
+                      }`}
                   >
                     Start free trial <ArrowRight size={14} />
                   </Link>

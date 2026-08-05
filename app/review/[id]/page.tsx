@@ -118,22 +118,25 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     if (!asset || targetId === asset.id) return
 
     setLoading(true)
-    router.replace(`/review/${targetId}`)
+    router.replace(`/review/${targetId}`, { scroll: false })
 
-    const assetRes = await fetch(`/api/assets/${targetId}`)
+    const [assetRes, versionsRes, commentsRes] = await Promise.all([
+      fetch(`/api/assets/${targetId}`),
+      fetch(`/api/assets/${targetId}/versions`),
+      fetch(`/api/comments?asset_id=${targetId}`),
+    ])
+
     if (assetRes.ok) {
       const { asset: newAsset } = await assetRes.json()
       setAsset(newAsset)
       setApproved(newAsset.status === 'approved')
     }
 
-    const versionsRes = await fetch(`/api/assets/${targetId}/versions`)
     if (versionsRes.ok) {
       const { versions: v } = await versionsRes.json()
       setVersions(v)
     }
 
-    const commentsRes = await fetch(`/api/comments?asset_id=${targetId}`)
     if (commentsRes.ok) {
       const data = await commentsRes.json()
       setComments(data.comments ?? [])
@@ -497,7 +500,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
       {showCompareModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
-          <div className="bg-th-surface border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+          <div className="glass border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-th-border flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Layers size={16} className="text-th-accent" />
@@ -512,7 +515,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             </div>
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-6 overflow-hidden min-h-0 bg-black/40">
-              <div className="flex flex-col h-full overflow-hidden bg-th-surface border border-th-border rounded-th-lg">
+              <div className="flex flex-col h-full overflow-hidden card-elevated border border-th-border rounded-th-lg">
                 <div className="p-3 border-b border-th-border flex items-center justify-between bg-th-surface-alt">
                   <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted font-semibold">Version A</span>
                   <select
@@ -550,7 +553,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
-              <div className="flex flex-col h-full overflow-hidden bg-th-surface border border-th-border rounded-th-lg">
+              <div className="flex flex-col h-full overflow-hidden card-elevated border border-th-border rounded-th-lg">
                 <div className="p-3 border-b border-th-border flex items-center justify-between bg-th-surface-alt">
                   <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted font-semibold">Version B</span>
                   <select
