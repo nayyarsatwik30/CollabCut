@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { MessageSquare, Clock } from 'lucide-react'
+import { MessageSquare, Clock, Film } from 'lucide-react'
 import { Asset } from '@/lib/types'
 import { StatusBadge } from '@/components/ui/Badge'
 
@@ -18,7 +18,15 @@ export function AssetCard({ asset, projectId }: AssetCardProps) {
     >
       {/* Thumbnail */}
       <div className="h-28 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
-        <span className="text-3xl">{asset.emoji}</span>
+        {asset.muxPlaybackId ? (
+          <img
+            src={`https://image.mux.com/${asset.muxPlaybackId}/thumbnail.jpg?time=1`}
+            className="w-full h-full object-cover absolute inset-0"
+            alt={asset.name}
+          />
+        ) : (
+          <Film size={28} style={{ color: 'var(--th-accent)' }} />
+        )}
         <div className="flex items-center gap-1.5 font-mono text-[11px] text-th-muted">
           <Clock size={10} />
           {asset.duration}

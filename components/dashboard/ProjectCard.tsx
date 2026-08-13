@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Film } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Project {
@@ -52,7 +52,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
           href={`/project/${project.id}`}
           className="flex items-center gap-4 px-5 py-3.5 border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors"
         >
-          <span className="text-xl">{project.emoji ?? '🎬'}</span>
+          <Film size={20} style={{ color: 'var(--th-accent)' }} />
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold truncate">{project.name}</p>
             <p className="text-[11px] text-th-muted">{project.client}</p>
@@ -83,7 +83,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
         className="block bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
       >
         <div className="h-28 bg-th-surface-alt flex items-center justify-center relative">
-          <span className="text-4xl">{project.emoji ?? '🎬'}</span>
+          <Film size={36} style={{ color: 'var(--th-accent)' }} />
           <span
             className="absolute top-2.5 right-2.5 font-mono text-[10px] px-2 py-0.5 rounded-th-full"
             style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}

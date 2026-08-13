@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Grid3X3, List, Plus, Upload, LogOut } from 'lucide-react'
+import { Search, Grid3X3, List, Plus, Upload, LogOut, Film } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { supabase } from '@/lib/supabase'
@@ -229,7 +229,7 @@ export default function DashboardPage() {
             </div>
           ) : filtered.length === 0 && !search ? (
             <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-              <div className="text-5xl">🎬</div>
+              <div className="text-5xl"><Film size={48} style={{ color: 'var(--th-accent)' }} /></div>
               <div>
                 <p className="font-semibold mb-1">No projects yet</p>
                 <p className="text-[13px] text-th-muted">Create your first project to get started.</p>

@@ -4,7 +4,7 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Share2, Upload, UserPlus, Trash2 } from 'lucide-react'
+import { ChevronRight, Share2, Upload, UserPlus, Trash2, Video, Clapperboard, Film } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { supabase } from '@/lib/supabase'
@@ -160,7 +160,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             <>
               {assets.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                  <div className="text-5xl">🎞️</div>
+                  <div className="text-5xl"><Video size={48} style={{ color: 'var(--th-accent)' }} /></div>
                   <div>
                     <p className="font-semibold mb-1">No assets yet</p>
                     <p className="text-[13px] text-th-muted">Upload your first cut to start reviewing.</p>
@@ -182,8 +182,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                         <Trash2 size={13} />
                       </button>
                       <div className="h-28 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
-                        <span className="text-3xl">🎞️</span>
-                        <span className="font-mono text-[11px] text-th-muted">{formatDuration(a.duration_sec)}</span>
+                        {a.mux_playback_id ? (
+                          <img
+                            src={`https://image.mux.com/${a.mux_playback_id}/thumbnail.jpg?time=1`}
+                            className="w-full h-full object-cover absolute inset-0"
+                            alt={a.name}
+                          />
+                        ) : (
+                          <Film size={28} style={{ color: 'var(--th-accent)' }} />
+                        )}
+                        <span className="font-mono text-[11px] text-th-muted relative z-[1]">{formatDuration(a.duration_sec)}</span>
                         <div className="absolute top-2.5 left-2.5 font-mono text-[10px] px-1.5 py-px rounded bg-th-bg/70 text-th-muted border border-th-border">
                           v{a.version}
                         </div>
@@ -245,7 +253,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           {tab === 'activity' && (
             <div className="max-w-lg">
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-                <div className="text-4xl">📋</div>
+                <div className="text-4xl"><Clapperboard size={40} style={{ color: 'var(--th-accent)' }} /></div>
                 <p className="font-semibold">No activity yet</p>
                 <p className="text-[13px] text-th-muted">Activity will appear here as your team reviews cuts.</p>
               </div>
