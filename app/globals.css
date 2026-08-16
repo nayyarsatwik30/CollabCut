@@ -53,8 +53,9 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(900px 600px at 50% -5%, rgba(217, 70, 239, 0.12), transparent 60%),
-    radial-gradient(700px 500px at 80% 20%, rgba(96, 165, 250, 0.08), transparent 60%);
+    radial-gradient(1200px 900px at 50% -5%, rgba(217, 70, 239, 0.25), transparent 65%),
+    radial-gradient(1000px 700px at 80% 15%, rgba(168, 85, 247, 0.18), transparent 60%),
+    radial-gradient(800px 600px at 20% 30%, rgba(244, 114, 182, 0.14), transparent 55%);
   background-attachment: fixed;
 }
 
@@ -143,13 +144,13 @@ h3,
 
 .reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(24px) scale(0.95);
+  transition: opacity 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .reveal.in-view {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
 
 /* ── Film strip (review page) ── */
@@ -437,12 +438,13 @@ h3,
   border: 1px solid var(--th-border);
   border-radius: var(--th-r-lg);
   padding: 28px 24px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.25s ease, box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .step-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border-color: rgba(217, 70, 239, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 20px rgba(217, 70, 239, 0.15), 0 0 40px rgba(168, 85, 247, 0.08);
+  transform: translateY(-4px) scale(1.02);
 }
 
 .step-icon {
@@ -462,12 +464,13 @@ h3,
   border: 1px solid var(--th-border);
   border-radius: var(--th-r-lg);
   padding: 32px 28px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.25s ease, box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .feature-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border-color: rgba(244, 114, 182, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 20px rgba(244, 114, 182, 0.15), 0 0 40px rgba(168, 85, 247, 0.08);
+  transform: translateY(-4px) scale(1.02);
 }
 
 .feature-icon {
@@ -490,6 +493,19 @@ h3,
   max-width: 520px;
   margin: 0 auto;
   box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.5);
+}
+
+/* Pricing cards in grid use glass/card-elevated, so target them via section */
+#pricing .glass,
+#pricing .card-elevated {
+  transition: border-color 0.25s ease, box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#pricing .glass:hover,
+#pricing .card-elevated:hover {
+  border-color: rgba(217, 70, 239, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 20px rgba(217, 70, 239, 0.15), 0 0 40px rgba(168, 85, 247, 0.08);
+  transform: translateY(-4px) scale(1.02);
 }
 
 .pricing-cta {
@@ -587,5 +603,26 @@ h3,
 
   50% {
     opacity: 0.4;
+  }
+}
+
+/* ── Cursor-follow glow dot ── */
+
+.cursor-glow-dot {
+  position: fixed;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.9), rgba(217, 70, 239, 0.6));
+  box-shadow: 0 0 12px 4px rgba(244, 114, 182, 0.4), 0 0 24px 8px rgba(217, 70, 239, 0.2);
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+}
+
+@media (pointer: coarse) {
+  .cursor-glow-dot {
+    display: none;
   }
 }

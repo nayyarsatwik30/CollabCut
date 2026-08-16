@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import {
   Check, ArrowRight, Play, Upload, MessageSquare,
@@ -45,6 +45,45 @@ export function LandingPage() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
+
+  /* ── Cursor-follow glow dot ── */
+  useEffect(() => {
+    // Hide on touch devices
+    if (typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches) return
+
+    const dot = document.createElement('div')
+    dot.className = 'cursor-glow-dot'
+    document.body.appendChild(dot)
+
+    let mouseX = -100
+    let mouseY = -100
+    let dotX = -100
+    let dotY = -100
+    let rafId: number
+
+    const onMouseMove = (e: MouseEvent) => {
+      mouseX = e.clientX
+      mouseY = e.clientY
+    }
+
+    const animate = () => {
+      // Smooth trailing: lerp toward actual cursor position
+      dotX += (mouseX - dotX) * 0.15
+      dotY += (mouseY - dotY) * 0.15
+      dot.style.left = `${dotX}px`
+      dot.style.top = `${dotY}px`
+      rafId = requestAnimationFrame(animate)
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    rafId = requestAnimationFrame(animate)
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      cancelAnimationFrame(rafId)
+      dot.remove()
+    }
+  }, [])
 
   useEffect(() => {
     async function fetchPlans() {

@@ -15,20 +15,23 @@ interface VideoPlayerProps {
 }
 
 export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, approved }: VideoPlayerProps) {
-  const videoRef     = useRef<HTMLVideoElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [playing,     setPlaying]     = useState(false)
+  const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
-  const [duration,    setDuration]    = useState(0)
-  const [muted,       setMuted]       = useState(false)
-  const [volume,      setVolume]      = useState(1)
-  const [showVolume,  setShowVolume]  = useState(false)
+  const [duration, setDuration] = useState(0)
+  const [muted, setMuted] = useState(false)
+  const [volume, setVolume] = useState(1)
+  const [showVolume, setShowVolume] = useState(false)
 
   const togglePlay = useCallback(() => {
     const v = videoRef.current
-    if (!v) return
-    v.paused ? v.play() : v.pause()
-  }, [])
+    if (!v || !src) return
+    const playPromise = v.paused ? v.play() : v.pause()
+    if (playPromise && typeof (playPromise as any).catch === 'function') {
+      (playPromise as Promise<void>).catch(() => { })
+    }
+  }, [src])
 
   const seekTo = useCallback((time: number) => {
     const v = videoRef.current
@@ -59,7 +62,7 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
     setVolume(val)
     if (videoRef.current) {
       videoRef.current.volume = val
-      videoRef.current.muted  = val === 0
+      videoRef.current.muted = val === 0
     }
     setMuted(val === 0)
   }
@@ -81,7 +84,7 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
     const handler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
       if (e.key === ' ') { e.preventDefault(); togglePlay() }
-      if (e.key === 'ArrowLeft')  stepFrame(-1)
+      if (e.key === 'ArrowLeft') stepFrame(-1)
       if (e.key === 'ArrowRight') stepFrame(1)
       if (e.key === 'm') toggleMute()
     }
@@ -91,8 +94,8 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
 
   const activeComment = comments.find((c) => Math.abs(c.timeSec - currentTime) < 0.4)
 
-  const openCount   = comments.filter((c) => !c.resolved).length
-  const resolvedCnt = comments.filter((c) =>  c.resolved).length
+  const openCount = comments.filter((c) => !c.resolved).length
+  const resolvedCnt = comments.filter((c) => c.resolved).length
 
   return (
     <div ref={containerRef} className="flex flex-col h-full overflow-hidden">
@@ -164,7 +167,7 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
             style={{ boxShadow: '0 4px 12px color-mix(in srgb, var(--th-accent) 40%, transparent)' }}>
             {playing
               ? <Pause size={16} className="text-th-accent-fg" />
-              : <Play  size={16} className="text-th-accent-fg ml-0.5" />
+              : <Play size={16} className="text-th-accent-fg ml-0.5" />
             }
           </button>
 
