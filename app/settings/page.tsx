@@ -35,6 +35,13 @@ export default function SettingsPage() {
   const [updatingPlan, setUpdatingPlan] = useState(false)
   const [modalBillingCycle, setModalBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
 
+  const [adminWorkspace, setAdminWorkspace] = useState<{ id: string; name: string } | null>(null)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole] = useState<'editor'>('editor')
+  const [sendingInvite, setSendingInvite] = useState(false)
+  const [inviteError, setInviteError] = useState('')
+  const [inviteLink, setInviteLink] = useState('')
+
   useEffect(() => {
     loadUser()
   }, [])
@@ -67,7 +74,57 @@ export default function SettingsPage() {
       console.error('Failed to fetch plans:', err)
     }
 
+    // Find a workspace where the user is an admin, so we can offer invites
+    const { data: membership } = await supabase
+      .from('workspace_members')
+      .select('workspace_id, workspaces(name)')
+      .eq('user_id', session.user.id)
+      .eq('role', 'admin')
+      .limit(1)
+      .maybeSingle()
+
+    if (membership) {
+      const workspace = Array.isArray(membership.workspaces) ? membership.workspaces[0] : membership.workspaces
+      setAdminWorkspace({ id: membership.workspace_id, name: workspace?.name ?? 'Workspace' })
+    }
+
     setLoading(false)
+  }
+
+  const sendInvite = async () => {
+    setInviteError('')
+    setInviteLink('')
+    if (!adminWorkspace) return
+    if (!inviteEmail.trim()) {
+      setInviteError('Enter an email address')
+      return
+    }
+
+    setSendingInvite(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setInviteError('Your session expired. Please log in again.')
+      setSendingInvite(false)
+      return
+    }
+
+    try {
+      const res = await fetch('/api/invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ workspace_id: adminWorkspace.id, email: inviteEmail.trim(), role: inviteRole }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setInviteError(data.error ?? 'Failed to send invite')
+      } else {
+        setInviteLink(data.url)
+        setInviteEmail('')
+      }
+    } catch (err) {
+      setInviteError('Failed to send invite')
+    }
+    setSendingInvite(false)
   }
 
   const saveChanges = async () => {
@@ -237,8 +294,80 @@ export default function SettingsPage() {
                 <>
                   <div>
                     <h2 className="text-[16px] font-bold mb-1">Team</h2>
-                    <p className="text-[13px] text-th-muted">Team invites are managed per-project for now.</p>
+                    <p className="text-[13px] text-th-muted">Invite editors to collaborate in your workspace.</p>
                   </div>
+
+                  {!adminWorkspace ? (
+                    <p className="text-[13px] text-th-muted">
+                      You need to be a workspace admin to invite team members.
+                    </p>
+                  ) : (
+                    <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-4">
+                      <div>
+                        <span className="font-mono text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent/30 text-th-accent font-semibold">
+                          {adminWorkspace.name}
+                        </span>
+                      </div>
+
+                      {inviteError && (
+                        <div className="px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
+                          {inviteError}
+                        </div>
+                      )}
+
+                      <div className="flex items-end gap-3">
+                        <div className="flex-1">
+                          <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Email</label>
+                          <input
+                            type="email"
+                            value={inviteEmail}
+                            onChange={e => setInviteEmail(e.target.value)}
+                            placeholder="editor@studio.in"
+                            className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+                          />
+                        </div>
+                        <div className="w-32">
+                          <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Role</label>
+                          <select
+                            value={inviteRole}
+                            disabled
+                            className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text outline-none cursor-not-allowed"
+                          >
+                            <option value="editor">Editor</option>
+                          </select>
+                        </div>
+                        <button
+                          onClick={sendInvite}
+                          disabled={sendingInvite}
+                          className="px-5 py-2.5 rounded-th text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
+                          style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)' }}
+                        >
+                          {sendingInvite ? 'Sending…' : 'Send invite'}
+                        </button>
+                      </div>
+
+                      {inviteLink && (
+                        <div className="pt-3 border-t border-th-border">
+                          <span className="text-th-muted block text-[11px] font-mono uppercase mb-2">Invite link</span>
+                          <div className="flex items-center gap-2">
+                            <input
+                              readOnly
+                              value={inviteLink}
+                              onFocus={e => e.target.select()}
+                              className="flex-1 px-3.5 py-2 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text outline-none"
+                            />
+                            <button
+                              onClick={() => navigator.clipboard.writeText(inviteLink)}
+                              className="px-3.5 py-2 rounded-th text-[12px] font-semibold bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov transition-colors btn-press"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          <p className="mt-2 text-[11px] text-th-faint">Share this link with the invitee. It expires in 7 days.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>
