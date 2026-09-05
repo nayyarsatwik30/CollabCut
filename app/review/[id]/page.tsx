@@ -22,6 +22,7 @@ interface Asset {
   status: string
   mux_playback_id: string | null
   project_id: string
+  is_complete?: boolean
 }
 
 interface VersionEntry {
@@ -65,6 +66,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const [sideTab, setSideTab] = useState<SideTab>('notes')
   const [shareOpen, setShareOpen] = useState(false)
   const [approved, setApproved] = useState(false)
+  const [togglingComplete, setTogglingComplete] = useState(false)
   const [drawTool, setDrawTool] = useState<AnnotationTool>(null)
   const [hasAnnotations, setHasAnnotations] = useState(false)
 
@@ -112,6 +114,27 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
     setLoading(false)
   }
+
+  // Mux can take a little while after upload before a playback ID exists,
+  // even once the asset record itself isn't "processing" any more — poll
+  // until the stream is actually ready instead of leaving the player stuck
+  // with no source.
+  useEffect(() => {
+    if (!asset) return
+    const awaitingStream = asset.status === 'processing' || !asset.mux_playback_id
+    if (!awaitingStream) return
+
+    const interval = setInterval(async () => {
+      const res = await fetch(`/api/assets/${asset.id}`)
+      if (res.ok) {
+        const { asset: fresh } = await res.json()
+        setAsset(fresh)
+        setApproved(fresh.status === 'approved')
+      }
+    }, 4000)
+
+    return () => clearInterval(interval)
+  }, [asset])
 
   const handleSwitchVersion = async (targetId: string) => {
     setShowVersions(false)
@@ -242,6 +265,34 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     showToast(newApproved ? '✓ Cut approved!' : 'Approval removed', newApproved ? 'success' : 'info')
   }
 
+  const handleToggleComplete = async () => {
+    if (!asset || !token || togglingComplete) return
+    const newComplete = !asset.is_complete
+    setTogglingComplete(true)
+    setAsset({ ...asset, is_complete: newComplete })
+
+    try {
+      const res = await fetch(`/api/assets/${asset.id}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ complete: newComplete }),
+      })
+      if (!res.ok) {
+        setAsset((prev) => (prev ? { ...prev, is_complete: !newComplete } : prev))
+        showToast('Failed to update completion status', 'info')
+      } else {
+        showToast(newComplete ? '✓ Marked complete' : 'Marked pending', newComplete ? 'success' : 'info')
+      }
+    } catch (err) {
+      setAsset((prev) => (prev ? { ...prev, is_complete: !newComplete } : prev))
+      showToast('Failed to update completion status', 'info')
+    }
+    setTogglingComplete(false)
+  }
+
   const DRAW_TOOLS: { key: AnnotationTool; icon: React.ElementType; label: string }[] = [
     { key: 'line', icon: Minus, label: 'Line' },
     { key: 'rect', icon: Square, label: 'Rectangle' },
@@ -252,6 +303,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const muxSrc = asset?.mux_playback_id
     ? `https://stream.mux.com/${asset.mux_playback_id}.m3u8`
     : undefined
+
+  const awaitingStream = !!asset && (asset.status === 'processing' || !asset.mux_playback_id)
 
   if (loading) {
     return (
@@ -289,7 +342,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         <div className="w-px h-5 bg-th-border shrink-0" />
 
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-[14px] truncate" style={{ fontFamily: 'system-ui, -apple-system, "SF Pro Display", sans-serif', fontWeight: 700, color: '#000' }}>{asset.name}</span>
+          <span className="text-[14px] truncate" style={{ fontFamily: 'system-ui, -apple-system, "SF Pro Display", sans-serif', fontWeight: 700, color: 'var(--th-text)' }}>{asset.name}</span>
 
           <div className="relative shrink-0">
             <button
@@ -344,13 +397,15 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             )}
           </div>
 
-          <button
-            onClick={handleOpenCompare}
-            className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
-          >
-            <Layers size={10} className="text-th-accent" />
-            Compare versions
-          </button>
+          {versions.length >= 2 && (
+            <button
+              onClick={handleOpenCompare}
+              className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
+            >
+              <Layers size={10} className="text-th-accent" />
+              Compare versions
+            </button>
+          )}
 
           <StatusBadge status={asset.status as any} />
         </div>
@@ -361,6 +416,16 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text font-medium btn-press hover:bg-th-surface-hov transition-colors"
           >
             <Share2 size={13} /> Share
+          </button>
+          <button
+            onClick={handleToggleComplete}
+            disabled={togglingComplete}
+            className="flex items-center gap-1.5 h-8 px-3.5 rounded-th text-[13px] font-semibold btn-press transition-colors disabled:opacity-50"
+            style={asset.is_complete
+              ? { background: 'color-mix(in srgb, var(--th-resolved) 16%, transparent)', color: 'var(--th-resolved)', border: '1px solid color-mix(in srgb, var(--th-resolved) 40%, transparent)' }
+              : { background: 'var(--th-surface-alt)', color: 'var(--th-text)', border: '1px solid var(--th-border)' }}
+          >
+            {asset.is_complete ? <><Check size={13} /> Complete</> : 'Mark complete'}
           </button>
           <button
             onClick={handleApprove}
@@ -403,12 +468,12 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          {asset.status === 'processing' ? (
+          {awaitingStream ? (
             <div className="flex-1 flex items-center justify-center bg-black">
               <div className="text-center">
                 <div className="w-8 h-8 rounded-full border-2 border-th-accent border-t-transparent animate-spin mx-auto mb-4" />
                 <p className="text-white text-[13px]">Mux is still processing this video…</p>
-                <p className="text-white/50 text-[11px] mt-1">Refresh in a minute</p>
+                <p className="text-white/50 text-[11px] mt-1">This updates automatically once it's ready</p>
               </div>
             </div>
           ) : (
@@ -419,6 +484,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 timeSec: c.time_sec,
                 status: c.status,
                 text: c.text,
+                resolved: c.resolved,
               })) as any}
               onTimeUpdate={setCurrentTime}
               onDurationChange={setDuration}

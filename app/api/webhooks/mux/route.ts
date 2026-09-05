@@ -11,13 +11,15 @@ export async function POST(req: NextRequest) {
     const playbackId   = data.playback_ids?.[0]?.id
     const durationSec  = data.duration
 
+    // Only leave the "processing" state once a playback ID actually exists —
+    // otherwise the review page would show a video player with no stream to
+    // play, since mux_playback_id would stay null indefinitely.
     await supabaseAdmin
       .from('assets')
       .update({
         mux_asset_id:    muxAssetId,
-        mux_playback_id: playbackId,
+        ...(playbackId ? { mux_playback_id: playbackId, status: 'in_review' } : {}),
         duration_sec:    durationSec,
-        status:          'in_review',
       })
       .eq('mux_upload_id', data.upload_id)
   }

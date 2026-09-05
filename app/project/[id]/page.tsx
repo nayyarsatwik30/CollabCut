@@ -4,7 +4,7 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Share2, Upload, UserPlus, Trash2, Video, Clapperboard, Film } from 'lucide-react'
+import { ChevronRight, Share2, Upload, UserPlus, Trash2, Video, Clapperboard, Film, CheckCircle2, X } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { supabase } from '@/lib/supabase'
@@ -17,6 +17,7 @@ interface Project {
   client: string
   status: string
   emoji: string
+  workspace_id?: string | null
 }
 
 interface Asset {
@@ -28,6 +29,7 @@ interface Asset {
   status: string
   mux_playback_id?: string
   created_at: string
+  is_complete?: boolean
 }
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
@@ -37,6 +39,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
+  const [showInviteForm, setShowInviteForm] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [sendingInvite, setSendingInvite] = useState(false)
+  const [inviteError, setInviteError] = useState('')
+  const [inviteLink, setInviteLink] = useState('')
 
   useEffect(() => {
     loadData()
@@ -64,6 +71,45 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   }
 
 
+
+  const sendInvite = async () => {
+    setInviteError('')
+    setInviteLink('')
+    if (!inviteEmail.trim()) {
+      setInviteError('Enter an email address')
+      return
+    }
+    if (!project?.workspace_id) {
+      setInviteError('This project isn\'t linked to a workspace yet')
+      return
+    }
+
+    setSendingInvite(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setInviteError('Your session expired. Please log in again.')
+      setSendingInvite(false)
+      return
+    }
+
+    try {
+      const res = await fetch('/api/invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ workspace_id: project.workspace_id, email: inviteEmail.trim(), role: 'editor' }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setInviteError(data.error ?? 'Failed to send invite')
+      } else {
+        setInviteLink(data.url)
+        setInviteEmail('')
+      }
+    } catch (err) {
+      setInviteError('Failed to send invite')
+    }
+    setSendingInvite(false)
+  }
 
   const handleDeleteAsset = async (e: React.MouseEvent, id: string) => {
     e.preventDefault()
@@ -175,13 +221,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                   {assets.map((a) => (
                     <Link key={a.id} href={`/review/${a.id}`}
-                      className="group relative block bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover">
+                      className="group relative flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover">
                       <button
                         onClick={(e) => handleDeleteAsset(e, a.id)}
-                        className="absolute top-2.5 right-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes z-10">
+                        className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes z-20">
                         <Trash2 size={13} />
                       </button>
-                      <div className="h-28 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
+                      <div className="aspect-video shrink-0 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
                         {a.mux_playback_id ? (
                           <img
                             src={`https://image.mux.com/${a.mux_playback_id}/thumbnail.jpg?time=1`}
@@ -192,11 +238,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           <Film size={28} style={{ color: 'var(--th-accent)' }} />
                         )}
                         <span className="font-mono text-[11px] text-th-muted relative z-[1]">{formatDuration(a.duration_sec)}</span>
-                        <div className="absolute top-2.5 left-2.5 font-mono text-[10px] px-1.5 py-px rounded bg-th-bg/70 text-th-muted border border-th-border">
+                        <div className="absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-px rounded bg-th-bg/70 text-th-muted border border-th-border z-[1]">
                           v{a.version}
                         </div>
                         <div
-                          className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-th-full font-mono"
+                          className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-th-full font-mono z-[1]"
                           style={{
                             color: a.status === 'approved' ? 'var(--th-resolved)' : a.status === 'changes' ? 'var(--th-changes)' : 'var(--th-open)',
                             background: a.status === 'approved'
@@ -211,19 +257,33 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                                 : 'IN REVIEW'}
                         </div>
                       </div>
-                      <div className="p-3.5">
-                        <p className="text-[13px] font-semibold truncate mb-3">{a.name}</p>
+                      <div className="p-3.5 flex-1 flex flex-col justify-center min-h-[64px]">
+                        <p className="text-[13px] font-semibold truncate mb-2">{a.name}</p>
                         <div className="flex items-center justify-between text-[11px] text-th-faint font-mono">
                           <span>{formatSize(a.size_bytes)}</span>
+                          {a.is_complete ? (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-th-full font-sans font-semibold text-[10px]"
+                              style={{ color: 'var(--th-resolved)', background: 'color-mix(in srgb, var(--th-resolved) 14%, transparent)' }}>
+                              <CheckCircle2 size={11} /> Complete
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-th-full font-sans font-semibold text-[10px] bg-th-surface-alt border border-th-border text-th-muted">
+                              Pending
+                            </span>
+                          )}
                         </div>
                       </div>
                     </Link>
                   ))}
                   <button
                     onClick={() => setShowUpload(true)}
-                    className="flex flex-col items-center justify-center gap-3 h-[172px] rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent transition-colors btn-press">
-                    <Upload size={20} />
-                    <span className="text-[12px] font-medium">Upload cut</span>
+                    className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent transition-colors btn-press overflow-hidden">
+                    <div className="aspect-video shrink-0 flex items-center justify-center">
+                      <Upload size={20} />
+                    </div>
+                    <div className="p-3.5 flex-1 flex items-center justify-center min-h-[64px]">
+                      <span className="text-[12px] font-medium">Upload cut</span>
+                    </div>
                   </button>
                 </div>
               )}
@@ -232,7 +292,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
           {/* Members */}
           {tab === 'members' && (
-            <div className="max-w-lg">
+            <div className="max-w-lg mx-auto">
               <div className="bg-th-surface rounded-th border border-th-border overflow-hidden mb-4">
                 <div className="flex items-center gap-3.5 px-5 py-3.5 border-b border-th-border">
                   <Avatar initials="YS" color="#4CAF7D" size="md" />
@@ -243,20 +303,86 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   <span className="text-[11px] px-2.5 py-0.5 rounded-th-full bg-th-surface-alt border border-th-border text-th-muted">Owner</span>
                 </div>
               </div>
-              <button className="flex items-center gap-2 h-9 px-4 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text btn-press">
-                <UserPlus size={14} className="text-th-muted" /> Invite reviewer
-              </button>
+
+              {!showInviteForm ? (
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => setShowInviteForm(true)}
+                    className="flex items-center gap-2 h-9 px-4 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text btn-press hover:bg-th-surface-hov transition-colors"
+                  >
+                    <UserPlus size={14} className="text-th-muted" /> Invite reviewer
+                  </button>
+                </div>
+              ) : (
+                <div className="p-5 rounded-th-lg border border-th-border bg-th-surface space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted">Invite an editor</span>
+                    <button
+                      onClick={() => { setShowInviteForm(false); setInviteError(''); setInviteLink(''); setInviteEmail('') }}
+                      className="p-1 rounded-th hover:bg-th-surface-alt text-th-muted hover:text-th-text transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  {inviteError && (
+                    <div className="px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
+                      {inviteError}
+                    </div>
+                  )}
+
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Email</label>
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder="editor@studio.in"
+                        onKeyDown={(e) => e.key === 'Enter' && sendInvite()}
+                        className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+                      />
+                    </div>
+                    <button
+                      onClick={sendInvite}
+                      disabled={sendingInvite}
+                      className="px-5 py-2.5 rounded-th text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
+                      style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)' }}
+                    >
+                      {sendingInvite ? 'Sending…' : 'Send invite'}
+                    </button>
+                  </div>
+
+                  {inviteLink && (
+                    <div className="pt-3 border-t border-th-border">
+                      <span className="text-th-muted block text-[11px] font-mono uppercase mb-2">Invite link</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          readOnly
+                          value={inviteLink}
+                          onFocus={(e) => e.target.select()}
+                          className="flex-1 px-3.5 py-2 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text outline-none"
+                        />
+                        <button
+                          onClick={() => navigator.clipboard.writeText(inviteLink)}
+                          className="px-3.5 py-2 rounded-th text-[12px] font-semibold bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov transition-colors btn-press"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {/* Activity */}
           {tab === 'activity' && (
-            <div className="max-w-lg">
-              <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-                <div className="text-4xl"><Clapperboard size={40} style={{ color: 'var(--th-accent)' }} /></div>
-                <p className="font-semibold">No activity yet</p>
-                <p className="text-[13px] text-th-muted">Activity will appear here as your team reviews cuts.</p>
-              </div>
+            <div className="h-full flex flex-col items-center justify-center gap-3 text-center">
+              <div className="text-4xl"><Clapperboard size={40} style={{ color: 'var(--th-accent)' }} /></div>
+              <p className="font-semibold">No activity yet</p>
+              <p className="text-[13px] text-th-muted">Activity will appear here as your team reviews cuts.</p>
             </div>
           )}
         </div>

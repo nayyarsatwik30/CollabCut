@@ -25,7 +25,7 @@ export default function LoginPage() {
     }
 
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email:    form.email,
       password: form.password,
     })
@@ -36,7 +36,20 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/dashboard')
+    let destination = '/dashboard'
+    if (data.user) {
+      const { data: membership } = await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('user_id', data.user.id)
+        .eq('role', 'admin')
+        .limit(1)
+        .maybeSingle()
+
+      if (membership) destination = '/admin'
+    }
+
+    router.push(destination)
   }
 
   return (

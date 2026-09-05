@@ -36,6 +36,8 @@ export default function SettingsPage() {
   const [modalBillingCycle, setModalBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
 
   const [adminWorkspace, setAdminWorkspace] = useState<{ id: string; name: string } | null>(null)
+  const [provisioningWorkspace, setProvisioningWorkspace] = useState(false)
+  const [workspaceError, setWorkspaceError] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole] = useState<'editor'>('editor')
   const [sendingInvite, setSendingInvite] = useState(false)
@@ -45,6 +47,13 @@ export default function SettingsPage() {
   useEffect(() => {
     loadUser()
   }, [])
+
+  useEffect(() => {
+    if (tab === 'team' && !loading && !adminWorkspace && !provisioningWorkspace) {
+      ensureWorkspace()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, loading])
 
   const loadUser = async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -89,6 +98,32 @@ export default function SettingsPage() {
     }
 
     setLoading(false)
+  }
+
+  const ensureWorkspace = async () => {
+    setProvisioningWorkspace(true)
+    setWorkspaceError('')
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setProvisioningWorkspace(false)
+      return
+    }
+
+    try {
+      const res = await fetch('/api/workspaces', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setWorkspaceError(data.error ?? 'Failed to set up your workspace')
+      } else {
+        setAdminWorkspace(data.workspace)
+      }
+    } catch (err) {
+      setWorkspaceError('Failed to set up your workspace')
+    }
+    setProvisioningWorkspace(false)
   }
 
   const sendInvite = async () => {
@@ -298,9 +333,20 @@ export default function SettingsPage() {
                   </div>
 
                   {!adminWorkspace ? (
-                    <p className="text-[13px] text-th-muted">
-                      You need to be a workspace admin to invite team members.
-                    </p>
+                    provisioningWorkspace ? (
+                      <div className="flex items-center gap-2 text-[13px] text-th-muted">
+                        <div className="w-4 h-4 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+                        Setting up your workspace…
+                      </div>
+                    ) : workspaceError ? (
+                      <div className="px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
+                        {workspaceError}
+                      </div>
+                    ) : (
+                      <p className="text-[13px] text-th-muted">
+                        You need to be a workspace admin to invite team members.
+                      </p>
+                    )
                   ) : (
                     <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-4">
                       <div>
@@ -342,7 +388,7 @@ export default function SettingsPage() {
                           className="px-5 py-2.5 rounded-th text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
                           style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)' }}
                         >
-                          {sendingInvite ? 'Sending…' : 'Send invite'}
+                          {sendingInvite ? 'Generating…' : 'Generate invite'}
                         </button>
                       </div>
 

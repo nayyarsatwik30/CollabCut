@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback, useEffect } from 'react'
+import Hls from 'hls.js'
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Download } from 'lucide-react'
 import { Comment } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
@@ -23,6 +24,61 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
   const [muted, setMuted] = useState(false)
   const [volume, setVolume] = useState(1)
   const [showVolume, setShowVolume] = useState(false)
+  const [videoReady, setVideoReady] = useState(false)
+  const [videoError, setVideoError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v || !src) return
+
+    setVideoReady(false)
+    setVideoError(false)
+    let hls: Hls | null = null
+
+    // Safety net: if nothing (success or error event) resolves the loading
+    // state within a reasonable window, surface an error instead of leaving
+    // the spinner spinning forever.
+    const stallTimeout = setTimeout(() => {
+      setVideoReady((ready) => {
+        if (!ready) setVideoError(true)
+        return ready
+      })
+    }, 20000)
+
+    if (src.includes('.m3u8') && v.canPlayType('application/vnd.apple.mpegurl') === '') {
+      if (Hls.isSupported()) {
+        hls = new Hls()
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data.fatal) return
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls?.startLoad()
+              break
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls?.recoverMediaError()
+              break
+            default:
+              setVideoError(true)
+              hls?.destroy()
+              break
+          }
+        })
+        hls.loadSource(src)
+        hls.attachMedia(v)
+      } else {
+        // No MSE support and no native HLS support either — nothing can play this.
+        setVideoError(true)
+      }
+    } else {
+      v.src = src
+    }
+
+    return () => {
+      clearTimeout(stallTimeout)
+      hls?.destroy()
+    }
+  }, [src, reloadKey])
 
   const togglePlay = useCallback(() => {
     const v = videoRef.current
@@ -107,12 +163,15 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
         {src ? (
           <video
             ref={videoRef}
-            src={src}
             className="w-full h-full object-contain"
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
+            onCanPlay={() => setVideoReady(true)}
+            onWaiting={() => setVideoReady(false)}
+            onPlaying={() => setVideoReady(true)}
+            onError={() => setVideoError(true)}
             playsInline
           />
         ) : (
@@ -139,7 +198,28 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
           </div>
         )}
 
-        {src && !playing && (
+        {src && videoError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+            <div className="text-center px-4">
+              <p className="text-white text-[13px] font-medium mb-1">Couldn't load this video</p>
+              <p className="text-white/60 text-[11px] mb-3">The stream failed to load. Try again, or refresh the page.</p>
+              <button
+                onClick={(e) => { e.stopPropagation(); setReloadKey((k) => k + 1) }}
+                className="pointer-events-auto px-3.5 py-1.5 rounded-th-sm bg-white/10 border border-white/20 text-white text-[12px] hover:bg-white/20 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
+        {src && !videoReady && !videoError && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/30">
+            <div className="w-8 h-8 rounded-full border-2 border-white/70 border-t-transparent animate-spin" />
+          </div>
+        )}
+
+        {src && videoReady && !videoError && !playing && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
               <Play size={22} className="text-white ml-0.5" />

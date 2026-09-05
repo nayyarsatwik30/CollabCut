@@ -77,12 +77,12 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
   }
 
   return (
-    <div className="relative group">
+    <div className="relative group h-full">
       <Link
         href={`/project/${project.id}`}
-        className="block bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
+        className="flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
       >
-        <div className="h-28 bg-th-surface-alt flex items-center justify-center relative">
+        <div className="aspect-video shrink-0 bg-th-surface-alt flex items-center justify-center relative">
           <Film size={36} style={{ color: 'var(--th-accent)' }} />
           <span
             className="absolute top-2.5 right-2.5 font-mono text-[10px] px-2 py-0.5 rounded-th-full"
@@ -91,7 +91,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
             {label}
           </span>
         </div>
-        <div className="p-3.5">
+        <div className="p-3.5 flex-1 flex flex-col justify-center min-h-[56px]">
           <p className="text-[13px] font-semibold truncate mb-1">{project.name}</p>
           <p className="text-[11px] text-th-muted truncate">{project.client}</p>
         </div>
