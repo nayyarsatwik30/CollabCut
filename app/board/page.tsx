@@ -86,7 +86,12 @@ export default function BoardPage() {
     if (!asset || asset.pipeline_status === columnKey) return
 
     const previousStatus = asset.pipeline_status
-    setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, pipeline_status: columnKey } : a)))
+    const previousComplete = asset.is_complete
+    // pipeline_status and is_complete are kept in lockstep server-side, so
+    // mirror that here for an immediate badge update instead of waiting on
+    // a refetch.
+    const nextComplete = columnKey === 'approved'
+    setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, pipeline_status: columnKey, is_complete: nextComplete } : a)))
 
     try {
       const res = await fetch(`/api/assets/${assetId}/status`, {
@@ -95,10 +100,10 @@ export default function BoardPage() {
         body: JSON.stringify({ pipeline_status: columnKey }),
       })
       if (!res.ok) {
-        setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, pipeline_status: previousStatus } : a)))
+        setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, pipeline_status: previousStatus, is_complete: previousComplete } : a)))
       }
     } catch (err) {
-      setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, pipeline_status: previousStatus } : a)))
+      setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, pipeline_status: previousStatus, is_complete: previousComplete } : a)))
     }
   }
 

@@ -50,9 +50,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (!authorized) return NextResponse.json({ error: 'Not authorized to update this asset' }, { status: 403 })
 
+  const isApproved = pipeline_status === 'approved'
+
   const { data, error } = await supabaseAdmin
     .from('assets')
-    .update({ pipeline_status })
+    .update({
+      pipeline_status,
+      is_complete: isApproved,
+      marked_complete_by: isApproved ? user.id : null,
+      marked_complete_at: isApproved ? new Date().toISOString() : null,
+    })
     .eq('id', params.id)
     .select()
     .single()

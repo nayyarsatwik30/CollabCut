@@ -54,6 +54,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       is_complete: complete,
       marked_complete_by: complete ? user.id : null,
       marked_complete_at: complete ? new Date().toISOString() : null,
+      // Keep the Kanban board's pipeline_status in lockstep with is_complete
+      // so a card only ever sits in the Approved column while is_complete
+      // is true - un-marking complete here has to move it back out, or the
+      // board and the review screen would read as out of sync again.
+      pipeline_status: complete ? 'approved' : 'review',
     })
     .eq('id', params.id)
     .select()
