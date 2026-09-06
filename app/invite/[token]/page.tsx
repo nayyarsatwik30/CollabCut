@@ -24,6 +24,7 @@ export default function InvitePage() {
   const [invite, setInvite] = useState<InviteDetails | null>(null)
   const [loadError, setLoadError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [accountExists, setAccountExists] = useState<boolean | null>(null)
 
   const [showPass, setShowPass] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -40,6 +41,16 @@ export default function InvitePage() {
           return
         }
         setInvite(data.invite)
+
+        if (data.invite?.valid) {
+          const checkRes = await fetch('/api/invites/check-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: data.invite.email }),
+          })
+          const checkData = await checkRes.json()
+          setAccountExists(checkRes.ok ? !!checkData.exists : false)
+        }
       })
       .catch(() => setLoadError('Failed to load invite'))
       .finally(() => setLoading(false))
@@ -47,6 +58,23 @@ export default function InvitePage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  const finishJoiningWorkspace = async (accessToken: string) => {
+    const acceptRes = await fetch('/api/invites/accept', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ token }),
+    })
+    const acceptData = await acceptRes.json()
+
+    if (!acceptRes.ok) {
+      setFormError(acceptData.error ?? 'Failed to join workspace')
+      setSubmitting(false)
+      return
+    }
+
+    router.push(invite?.role === 'editor' ? '/board' : '/dashboard')
   }
 
   const handleSubmit = async () => {
@@ -81,20 +109,37 @@ export default function InvitePage() {
       return
     }
 
-    const acceptRes = await fetch('/api/invites/accept', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ token }),
-    })
-    const acceptData = await acceptRes.json()
+    await finishJoiningWorkspace(accessToken)
+  }
 
-    if (!acceptRes.ok) {
-      setFormError(acceptData.error ?? 'Failed to join workspace')
+  const handleLogin = async () => {
+    setFormError('')
+    if (!invite) return
+    if (!form.password) {
+      setFormError('Password is required')
+      return
+    }
+
+    setSubmitting(true)
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: invite.email,
+      password: form.password,
+    })
+
+    if (error) {
+      setFormError(error.message)
       setSubmitting(false)
       return
     }
 
-    router.push('/dashboard')
+    const accessToken = data.session?.access_token
+    if (!accessToken) {
+      setFormError('Login succeeded but no session was returned. Try again.')
+      setSubmitting(false)
+      return
+    }
+
+    await finishJoiningWorkspace(accessToken)
   }
 
   if (loading) {
@@ -127,13 +172,30 @@ export default function InvitePage() {
                 Go to login
               </Link>
             </div>
+          ) : invite && accountExists === null ? (
+            <div className="flex justify-center py-8">
+              <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+            </div>
           ) : invite ? (
             <>
-              <h1 className="text-2xl font-extrabold mb-1">Join {invite.workspace_name}</h1>
-              <p className="text-th-muted text-[13px] mb-8">
-                You&apos;ve been invited to join <span className="text-th-text font-semibold">{invite.workspace_name}</span> as{' '}
-                {invite.role === 'admin' ? 'an Admin' : 'an Editor'}. Create your account to get started.
-              </p>
+              {accountExists ? (
+                <>
+                  <h1 className="text-2xl font-extrabold mb-1">Welcome back</h1>
+                  <p className="text-th-muted text-[13px] mb-8">
+                    An account already exists for <span className="text-th-text font-semibold">{invite.email}</span>. Log in
+                    to join <span className="text-th-text font-semibold">{invite.workspace_name}</span> as{' '}
+                    {invite.role === 'admin' ? 'an Admin' : 'an Editor'}.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-2xl font-extrabold mb-1">Join {invite.workspace_name}</h1>
+                  <p className="text-th-muted text-[13px] mb-8">
+                    You&apos;ve been invited to join <span className="text-th-text font-semibold">{invite.workspace_name}</span> as{' '}
+                    {invite.role === 'admin' ? 'an Admin' : 'an Editor'}. Create your account to get started.
+                  </p>
+                </>
+              )}
 
               {formError && (
                 <div className="mb-4 px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
@@ -142,32 +204,34 @@ export default function InvitePage() {
               )}
 
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">
-                      First name
-                    </label>
-                    <input
-                      name="firstName"
-                      value={form.firstName}
-                      onChange={handleChange}
-                      placeholder="Satwik"
-                      className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
-                    />
+                {!accountExists && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">
+                        First name
+                      </label>
+                      <input
+                        name="firstName"
+                        value={form.firstName}
+                        onChange={handleChange}
+                        placeholder="Satwik"
+                        className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">
+                        Last name
+                      </label>
+                      <input
+                        name="lastName"
+                        value={form.lastName}
+                        onChange={handleChange}
+                        placeholder="Nayyar"
+                        className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">
-                      Last name
-                    </label>
-                    <input
-                      name="lastName"
-                      value={form.lastName}
-                      onChange={handleChange}
-                      placeholder="Nayyar"
-                      className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
-                    />
-                  </div>
-                </div>
+                )}
 
                 <div>
                   <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">Email</label>
@@ -188,7 +252,8 @@ export default function InvitePage() {
                       type={showPass ? 'text' : 'password'}
                       value={form.password}
                       onChange={handleChange}
-                      placeholder="Min. 8 characters"
+                      placeholder={accountExists ? 'Your password' : 'Min. 8 characters'}
+                      onKeyDown={(e) => e.key === 'Enter' && (accountExists ? handleLogin() : handleSubmit())}
                       className="w-full px-3.5 py-2.5 pr-10 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
                     />
                     <button
@@ -202,14 +267,22 @@ export default function InvitePage() {
                 </div>
 
                 <button
-                  onClick={handleSubmit}
+                  onClick={accountExists ? handleLogin : handleSubmit}
                   disabled={submitting}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-th bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                  {submitting ? 'Creating account…' : (
-                    <>
-                      <span>Join workspace</span> <ArrowRight size={14} />
-                    </>
+                  {accountExists ? (
+                    submitting ? 'Logging in…' : (
+                      <>
+                        <span>Log in and join workspace</span> <ArrowRight size={14} />
+                      </>
+                    )
+                  ) : (
+                    submitting ? 'Creating account…' : (
+                      <>
+                        <span>Join workspace</span> <ArrowRight size={14} />
+                      </>
+                    )
                   )}
                 </button>
               </div>
