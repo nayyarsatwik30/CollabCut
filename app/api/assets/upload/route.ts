@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       name,
       version: nextVersion,
       status: 'processing',
+      pipeline_status: 'idea',
       mux_upload_id: upload.id,
     })
     .select()

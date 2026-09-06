@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Grid3X3, Clock, Star, Bell, Settings, ChevronDown, Trash2 } from 'lucide-react'
+import { Grid3X3, Kanban, Clock, Star, Bell, Settings, ChevronDown, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Grid3X3, label: 'Projects' },
+  { href: '/board', icon: Kanban, label: 'Board' },
   { href: '/recent', icon: Clock, label: 'Recent' },
   { href: '/starred', icon: Star, label: 'Starred' },
   { href: '/notifications', icon: Bell, label: 'Notifications' },

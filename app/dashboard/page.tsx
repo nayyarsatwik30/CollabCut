@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Grid3X3, List, Plus, Upload, LogOut, Film, Check } from 'lucide-react'
@@ -47,7 +47,6 @@ export default function DashboardPage() {
   const [assignedAssets, setAssignedAssets] = useState<AssignedAsset[]>([])
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
   const [authError, setAuthError] = useState('')
-  const hasRedirectedToAdmin = useRef(false)
 
   useEffect(() => {
     checkAuthAndLoad()
@@ -87,14 +86,6 @@ export default function DashboardPage() {
     const roles = (memberships ?? []).map((m) => m.role)
     const currentRole = roles.includes('admin') ? 'admin' : roles.includes('editor') ? 'editor' : null
     setRole(currentRole)
-
-    if (currentRole === 'admin') {
-      if (!hasRedirectedToAdmin.current) {
-        hasRedirectedToAdmin.current = true
-        router.replace('/admin')
-      }
-      return
-    }
 
     if (currentRole === 'editor') {
       loadAssignedAssets(session.access_token)

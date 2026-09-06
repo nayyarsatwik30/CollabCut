@@ -18,10 +18,7 @@ export async function GET(req: NextRequest) {
     .limit(1)
     .maybeSingle()
 
-  console.log('[admin/editors] role check for user', user.id, '->', {
-    membership,
-    membershipError: membershipError?.message ?? null,
-  })
+  console.log('ROLE CHECK DEBUG:', { userId: user.id, queryResult: membership, queryError: membershipError })
 
   if (membershipError) return NextResponse.json({ error: membershipError.message }, { status: 500 })
   if (!membership) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })

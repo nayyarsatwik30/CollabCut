@@ -29,9 +29,22 @@ export async function POST(req: NextRequest) {
   const { name, client, emoji } = await req.json()
   if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 })
 
+  const { data: memberships } = await supabaseAdmin
+    .from('workspace_members')
+    .select('workspace_id, role')
+    .eq('user_id', user.id)
+
+  const membership = (memberships ?? []).find((m) => m.role === 'admin') ?? (memberships ?? [])[0]
+
   const { data, error } = await supabaseAdmin
     .from('projects')
-    .insert({ name, client, emoji: emoji ?? '🎬', owner_id: user.id })
+    .insert({
+      name,
+      client,
+      emoji: emoji ?? '🎬',
+      owner_id: user.id,
+      workspace_id: membership?.workspace_id ?? null,
+    })
     .select()
     .single()
 
