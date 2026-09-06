@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { video } from '@/lib/mux'
@@ -9,21 +10,24 @@ export async function POST(req: NextRequest) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { project_id, name } = await req.json()
+  const { project_id, name, linked_asset_name } = await req.json()
   if (!project_id || !name) {
     return NextResponse.json({ error: 'project_id and name required' }, { status: 400 })
   }
 
-  // Check for existing assets with the same name in this project to auto-increment version
+  // Check for existing assets to auto-increment version. When linked_asset_name is
+  // present (uploading a new cut from the review page), match on that instead of the
+  // uploaded file's own name, since a re-export rarely keeps the original filename.
   const { data: existing } = await supabaseAdmin
     .from('assets')
-    .select('version')
+    .select('id, version, asset_group_id')
     .eq('project_id', project_id)
-    .eq('name', name)
+    .eq('name', linked_asset_name || name)
     .order('version', { ascending: false })
     .limit(1)
 
-  const nextVersion = existing && existing.length > 0 ? existing[0].version + 1 : 1
+  const linkedHead = existing && existing.length > 0 ? existing[0] : null
+  const nextVersion = linkedHead ? linkedHead.version + 1 : 1
 
   const upload = await video.uploads.create({
     cors_origin: process.env.NEXT_PUBLIC_APP_URL!,
@@ -33,9 +37,16 @@ export async function POST(req: NextRequest) {
     },
   })
 
+  // asset_group_id ties every version of the same logical video together,
+  // independent of filename: reuse the linked asset's group when stacking a
+  // new version, otherwise this row is the head of its own new group (its
+  // own id, generated up front so it can self-reference in one insert).
+  const newAssetId = randomUUID()
+
   const { data: asset, error } = await supabaseAdmin
     .from('assets')
     .insert({
+      id: newAssetId,
       project_id,
       uploaded_by: user.id,
       name,
@@ -43,6 +54,7 @@ export async function POST(req: NextRequest) {
       status: 'processing',
       pipeline_status: 'idea',
       mux_upload_id: upload.id,
+      asset_group_id: linkedHead ? linkedHead.asset_group_id : newAssetId,
     })
     .select()
     .single()

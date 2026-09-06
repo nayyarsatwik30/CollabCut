@@ -552,6 +552,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       {showUploadModal && asset && (
         <UploadModal
           projectId={asset.project_id}
+          linkedAsset={{ id: asset.id, name: asset.name }}
           onClose={() => setShowUploadModal(false)}
           onUploaded={async () => {
             setShowUploadModal(false)

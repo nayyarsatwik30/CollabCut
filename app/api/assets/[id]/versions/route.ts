@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const { data: current, error: currentError } = await supabaseAdmin
     .from('assets')
-    .select('project_id, name')
+    .select('project_id, name, asset_group_id')
     .eq('id', params.id)
     .single()
 
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     .from('assets')
     .select('id, version, name, status, created_at, size_bytes, mux_playback_id')
     .eq('project_id', current.project_id)
-    .eq('name', current.name)
+    .eq('asset_group_id', current.asset_group_id)
     .order('version', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

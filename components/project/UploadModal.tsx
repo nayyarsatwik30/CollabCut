@@ -8,11 +8,12 @@ interface UploadModalProps {
   projectId: string
   onClose: () => void
   onUploaded: () => void
+  linkedAsset?: { id: string; name: string }
 }
 
 type UploadState = 'idle' | 'requesting' | 'uploading' | 'processing' | 'done' | 'error'
 
-export function UploadModal({ projectId, onClose, onUploaded }: UploadModalProps) {
+export function UploadModal({ projectId, onClose, onUploaded, linkedAsset }: UploadModalProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [state, setState] = useState<UploadState>('idle')
   const [progress, setProgress] = useState(0)
@@ -46,6 +47,7 @@ export function UploadModal({ projectId, onClose, onUploaded }: UploadModalProps
           project_id: projectId,
           name: file.name,
           version: 1,
+          ...(linkedAsset ? { linked_asset_name: linkedAsset.name } : {}),
         }),
       })
 

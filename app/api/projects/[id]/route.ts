@@ -15,15 +15,16 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     .single()
 
   if (data?.assets) {
-    const latestByName = new Map<string, any>()
+    const latestByGroup = new Map<string, any>()
     for (const asset of data.assets) {
       if (asset.deleted_at) continue
-      const existing = latestByName.get(asset.name)
+      const key = asset.asset_group_id ?? asset.id
+      const existing = latestByGroup.get(key)
       if (!existing || asset.version > existing.version) {
-        latestByName.set(asset.name, asset)
+        latestByGroup.set(key, asset)
       }
     }
-    data.assets = Array.from(latestByName.values())
+    data.assets = Array.from(latestByGroup.values())
   }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
