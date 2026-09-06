@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X } from 'lucide-react'
 import { VideoPlayer } from '@/components/review/VideoPlayer'
+import { HlsVideo } from '@/components/review/HlsVideo'
 import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
 import { UploadModal } from '@/components/project/UploadModal'
@@ -604,12 +605,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       : undefined
 
                     return v1Src ? (
-                      <video
-                        controls
-                        src={v1Src}
-                        className="w-full h-full object-contain"
-                        playsInline
-                      />
+                      <HlsVideo src={v1Src} className="w-full h-full object-contain" />
                     ) : (
                       <div className="text-center text-th-muted text-[13px] p-4">
                         <p>No video stream available for v{selV1?.version ?? '?'}</p>
@@ -642,12 +638,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       : undefined
 
                     return v2Src ? (
-                      <video
-                        controls
-                        src={v2Src}
-                        className="w-full h-full object-contain"
-                        playsInline
-                      />
+                      <HlsVideo src={v2Src} className="w-full h-full object-contain" />
                     ) : (
                       <div className="text-center text-th-muted text-[13px] p-4">
                         <p>No video stream available for v{selV2?.version ?? '?'}</p>

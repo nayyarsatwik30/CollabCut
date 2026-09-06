@@ -41,41 +41,84 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
     // the spinner spinning forever.
     const stallTimeout = setTimeout(() => {
       setVideoReady((ready) => {
+        // TEMP DEBUG - remove after diagnosing the playback failure
+        if (!ready) console.log('[VideoPlayer debug] 20s stall timeout fired with no ready/error event - forcing error UI')
         if (!ready) setVideoError(true)
         return ready
       })
     }, 20000)
 
-    if (src.includes('.m3u8') && v.canPlayType('application/vnd.apple.mpegurl') === '') {
-      if (Hls.isSupported()) {
-        hls = new Hls()
-        hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (!data.fatal) return
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              hls?.startLoad()
-              break
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls?.recoverMediaError()
-              break
-            default:
-              setVideoError(true)
-              hls?.destroy()
-              break
-          }
+    const isM3u8 = src.includes('.m3u8')
+    const hlsSupported = Hls.isSupported()
+    const nativeHlsSupport = v.canPlayType('application/vnd.apple.mpegurl')
+
+    // TEMP DEBUG - remove after diagnosing the playback failure
+    console.log('[VideoPlayer debug] branch check:', { isM3u8, hlsSupported, nativeHlsSupport: JSON.stringify(nativeHlsSupport), src })
+
+    if (isM3u8 && hlsSupported) {
+      // Primary path: hls.js supported (Chrome/Firefox/Edge and any other
+      // browser with Media Source Extensions). This must be checked first -
+      // canPlayType() is not a reliable signal to gate this on.
+      // TEMP DEBUG - remove after diagnosing the playback failure
+      console.log('[VideoPlayer debug] creating new Hls instance for src:', src)
+      hls = new Hls()
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        // TEMP DEBUG - remove after diagnosing the playback failure
+        // (logging the raw `data` object directly, not via JSON.stringify -
+        // hls.js error payloads can carry circular frag/context references
+        // that would throw on stringify)
+        console.log('[VideoPlayer debug] hls.js ERROR event:', {
+          fatal: data.fatal,
+          type: data.type,
+          details: data.details,
+          reason: (data as any).reason,
+          url: (data as any).url ?? (data as any).response?.url ?? (data as any).frag?.url,
+          httpStatus: (data as any).response?.code,
+          errorMessage: (data as any).error?.message,
         })
-        hls.loadSource(src)
-        hls.attachMedia(v)
-      } else {
-        // No MSE support and no native HLS support either — nothing can play this.
-        setVideoError(true)
-      }
-    } else {
+        console.log('[VideoPlayer debug] hls.js ERROR event (raw):', data)
+        if (!data.fatal) return
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            console.log('[VideoPlayer debug] fatal network error, calling hls.startLoad() to retry')
+            hls?.startLoad()
+            break
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            console.log('[VideoPlayer debug] fatal media error, calling hls.recoverMediaError()')
+            hls?.recoverMediaError()
+            break
+          default:
+            console.log('[VideoPlayer debug] fatal unrecoverable error, destroying hls instance and surfacing error UI')
+            setVideoError(true)
+            hls?.destroy()
+            break
+        }
+      })
+      console.log('[VideoPlayer debug] calling hls.loadSource()', src)
+      hls.loadSource(src)
+      console.log('[VideoPlayer debug] calling hls.attachMedia()')
+      hls.attachMedia(v)
+    } else if (isM3u8 && nativeHlsSupport !== '') {
+      // Fallback: hls.js unsupported but the browser can play HLS natively
+      // (Safari). Only reached when hlsSupported is false.
+      console.log('[VideoPlayer debug] hls.js unsupported, using native <video> src for:', src)
       v.src = src
+    } else if (!isM3u8) {
+      // Not an HLS stream at all - play as a normal direct source.
+      console.log('[VideoPlayer debug] non-.m3u8 src, setting directly:', src)
+      v.src = src
+    } else {
+      // .m3u8 source but neither hls.js nor native HLS support exists.
+      console.log('[VideoPlayer debug] no hls.js and no native HLS support - cannot play', src)
+      setVideoError(true)
     }
 
     return () => {
       clearTimeout(stallTimeout)
+      if (hls) {
+        // TEMP DEBUG - remove after diagnosing the playback failure
+        console.log('[VideoPlayer debug] effect cleanup - destroying hls instance for src:', src)
+      }
       hls?.destroy()
     }
   }, [src, reloadKey])
@@ -171,7 +214,16 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
             onCanPlay={() => setVideoReady(true)}
             onWaiting={() => setVideoReady(false)}
             onPlaying={() => setVideoReady(true)}
-            onError={() => setVideoError(true)}
+            onError={(e) => {
+              // TEMP DEBUG - remove after diagnosing the playback failure
+              const mediaError = (e.target as HTMLVideoElement).error
+              console.log('[VideoPlayer debug] native <video> onError:', {
+                code: mediaError?.code,
+                message: mediaError?.message,
+                currentSrc: (e.target as HTMLVideoElement).currentSrc,
+              })
+              setVideoError(true)
+            }}
             playsInline
           />
         ) : (
