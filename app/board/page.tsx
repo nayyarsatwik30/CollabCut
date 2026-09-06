@@ -57,7 +57,7 @@ export default function BoardPage() {
       setAssets(data.assets ?? [])
 
       if (data.role === 'admin') {
-        const editorsRes = await fetch('/api/admin/editors', {
+        const editorsRes = await fetch('/api/board/editors', {
           headers: { Authorization: `Bearer ${session.access_token}` },
         })
         const editorsData = await editorsRes.json()
@@ -113,13 +113,13 @@ export default function BoardPage() {
 
     try {
       if (previousEditor) {
-        await fetch(`/api/admin/editor/${previousEditor.id}/assets`, {
+        await fetch(`/api/board/editor/${previousEditor.id}/assets`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ assetId }),
         })
       }
-      const res = await fetch(`/api/admin/editor/${editorId}/assets`, {
+      const res = await fetch(`/api/board/editor/${editorId}/assets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ assetId }),

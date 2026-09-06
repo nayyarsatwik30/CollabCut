@@ -76,8 +76,8 @@ export default function DashboardPage() {
       .eq('user_id', session.user.id)
 
     if (membershipError) {
-      // Never redirect off a failed role check - show an error instead so we
-      // can't end up bouncing between /admin and /dashboard.
+      // Never redirect off a failed role check - show an error instead of
+      // silently rendering the wrong view.
       setAuthError('Failed to verify your workspace role. Please refresh and try again.')
       setLoading(false)
       return

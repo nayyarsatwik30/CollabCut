@@ -46,7 +46,7 @@ export default function LoginPage() {
         .limit(1)
         .maybeSingle()
 
-      if (membership) destination = '/admin'
+      if (membership) destination = '/board'
     }
 
     router.push(destination)

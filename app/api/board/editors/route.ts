@@ -3,11 +3,9 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  console.log('[admin/editors] incoming request, token present:', !!token)
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-  console.log('[admin/editors] auth.getUser result:', { userId: user?.id, authError: authError?.message ?? null })
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: membership, error: membershipError } = await supabaseAdmin
@@ -17,8 +15,6 @@ export async function GET(req: NextRequest) {
     .eq('role', 'admin')
     .limit(1)
     .maybeSingle()
-
-  console.log('ROLE CHECK DEBUG:', { userId: user.id, queryResult: membership, queryError: membershipError })
 
   if (membershipError) return NextResponse.json({ error: membershipError.message }, { status: 500 })
   if (!membership) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
