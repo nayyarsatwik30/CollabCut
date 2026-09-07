@@ -100,6 +100,23 @@ export async function POST(req: NextRequest) {
       .order('version', { ascending: false })
       .limit(1)
     linkedHead = existing?.[0] ?? null
+
+    // A lineage's v1 (its earliest version) must have a real file before any
+    // new version can stack on top of it - otherwise the placeholder never
+    // gets fulfilled and is left orphaned underneath a "v2".
+    if (linkedHead) {
+      const { data: origin } = await supabaseAdmin
+        .from('assets')
+        .select('mux_upload_id')
+        .eq('asset_group_id', linkedHead.asset_group_id)
+        .order('version', { ascending: true })
+        .limit(1)
+        .single()
+
+      if (origin && !origin.mux_upload_id) {
+        return NextResponse.json({ error: 'Fulfill v1 before uploading a new version' }, { status: 400 })
+      }
+    }
   } else if ((cut_type ?? 'board') === 'board') {
     const { data: existing } = await supabaseAdmin
       .from('assets')

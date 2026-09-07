@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X, FileText, ExternalLink } from 'lucide-react'
+import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X, FileText, ExternalLink, StickyNote, Link2 } from 'lucide-react'
 import { VideoPlayer } from '@/components/review/VideoPlayer'
 import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
@@ -13,7 +13,7 @@ import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 
-type SideTab = 'notes' | 'versions' | 'activity'
+type SideTab = 'notes' | 'brief' | 'activity'
 
 interface Asset {
   id: string
@@ -39,6 +39,7 @@ interface VersionEntry {
   created_at: string
   size_bytes: number
   mux_playback_id?: string | null
+  mux_upload_id?: string | null
 }
 
 interface Comment {
@@ -77,7 +78,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showFulfillModal, setShowFulfillModal] = useState(false)
-  const [briefOverride, setBriefOverride] = useState<boolean | null>(null)
   const [showCompareModal, setShowCompareModal] = useState(false)
   const [compareV1Id, setCompareV1Id] = useState<string>('')
   const [compareV2Id, setCompareV2Id] = useState<string>('')
@@ -297,9 +297,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const unfulfilled = !!asset && !asset.mux_upload_id
   const awaitingStream = !!asset && (asset.status === 'processing' || !asset.mux_playback_id)
   const hasBrief = !!asset && !!(asset.notes || asset.reference || asset.deadline || asset.raw_file_url)
-  // Open by default while there's no file yet (it's the main thing to see); once a
-  // file exists it collapses out of the way, unless the user has toggled it manually.
-  const briefOpen = briefOverride === null ? unfulfilled : briefOverride
+  // v1 (the lineage's original placeholder, lowest version number in `versions`)
+  // must have a real file before a new version can be stacked on top of it -
+  // otherwise the placeholder gets orphaned instead of ever being fulfilled.
+  const originVersion = versions.reduce<VersionEntry | null>((min, v) => (!min || v.version < min.version ? v : min), null)
+  const v1Fulfilled = originVersion ? !!originVersion.mux_upload_id : true
 
   if (loading) {
     return (
@@ -378,16 +380,22 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       </div>
 
                       <div className="p-2 border-t border-th-border bg-th-surface-alt/50">
-                        <button
-                          onClick={() => {
-                            setShowVersions(false)
-                            setShowUploadModal(true)
-                          }}
-                          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-th text-[12px] font-semibold bg-th-surface border border-th-border text-th-text hover:border-th-accent hover:text-th-accent transition-colors btn-press"
-                        >
-                          <Upload size={13} />
-                          Upload new version
-                        </button>
+                        {v1Fulfilled ? (
+                          <button
+                            onClick={() => {
+                              setShowVersions(false)
+                              setShowUploadModal(true)
+                            }}
+                            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-th text-[12px] font-semibold bg-th-surface border border-th-border text-th-text hover:border-th-accent hover:text-th-accent transition-colors btn-press"
+                          >
+                            <Upload size={13} />
+                            Upload new version
+                          </button>
+                        ) : (
+                          <p className="text-center text-[11px] text-th-muted px-2 py-1">
+                            Fulfill v1 before adding new versions
+                          </p>
+                        )}
                       </div>
                     </div>
                   </>
@@ -465,81 +473,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       </div>
 
       <div className="flex flex-1 overflow-hidden min-h-0">
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
-          {hasBrief && (
-            <>
-              <button
-                onClick={() => setBriefOverride(!briefOpen)}
-                className="absolute top-3 left-3 z-20 flex items-center gap-1.5 h-7 px-3 rounded-th-full bg-th-surface/95 backdrop-blur border border-th-accent/50 font-mono text-[11px] uppercase tracking-wider text-th-accent font-bold btn-press hover:bg-th-surface transition-colors shadow-panel"
-              >
-                <FileText size={12} />
-                Content brief
-                <ChevronDown
-                  size={11}
-                  className="transition-transform"
-                  style={{ transform: briefOpen ? 'rotate(180deg)' : 'none' }}
-                />
-              </button>
-
-              {briefOpen && (
-                <>
-                  <div className="fixed inset-0 z-20" onClick={() => setBriefOverride(false)} />
-                  <div className="absolute top-12 left-3 z-30 w-[380px] max-w-[calc(100%-24px)] max-h-[calc(100%-64px)] overflow-y-auto rounded-th-lg border border-th-border bg-th-surface shadow-panel animate-slide-up">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-th-border">
-                      <div className="flex items-center gap-2">
-                        <FileText size={13} className="text-th-accent" />
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-th-accent font-bold">Content brief</span>
-                      </div>
-                      <button
-                        onClick={() => setBriefOverride(false)}
-                        className="text-th-muted hover:text-th-text p-0.5 rounded-th hover:bg-th-surface-alt transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-
-                    <div className="p-4 space-y-3.5">
-                      {asset.notes && (
-                        <div>
-                          <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Notes</p>
-                          <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.notes}</p>
-                        </div>
-                      )}
-
-                      {asset.reference && (
-                        <div>
-                          <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Reference</p>
-                          <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.reference}</p>
-                        </div>
-                      )}
-
-                      {asset.deadline && (
-                        <div>
-                          <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Deadline</p>
-                          <p className="flex items-center gap-1.5 text-[13px] text-th-text">
-                            <Clock size={12} className="text-th-muted" />
-                            {new Date(asset.deadline).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
-                          </p>
-                        </div>
-                      )}
-
-                      {asset.raw_file_url && (
-                        <a
-                          href={asset.raw_file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent transition-colors btn-press"
-                        >
-                          <ExternalLink size={12} /> Open raw file
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {unfulfilled ? (
             <div className="flex-1 flex items-center justify-center bg-black">
               <div className="text-center">
@@ -582,6 +516,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           <div className="flex shrink-0 border-b border-th-border">
             {([
               { key: 'notes', icon: MessageSquare, label: `Notes (${comments.length})` },
+              ...(hasBrief ? [{ key: 'brief', icon: FileText, label: 'Brief' }] : []),
               { key: 'activity', icon: Clock, label: 'Activity' },
             ] as { key: SideTab; icon: React.ElementType; label: string }[]).map(({ key, icon: Icon, label }) => (
               <button
@@ -621,6 +556,66 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 onDelete={handleDelete}
                 onReply={handleReply}
               />
+            )}
+            {sideTab === 'brief' && (
+              <div className="flex-1 overflow-y-auto divide-y divide-th-border">
+                <div className="px-4 py-3.5">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <FileText size={11} className="text-th-muted" />
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Title</span>
+                  </div>
+                  <p className="text-[14px] font-bold text-th-text leading-snug">{asset.name}</p>
+                </div>
+
+                {asset.notes && (
+                  <div className="px-4 py-3.5">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <StickyNote size={11} className="text-th-muted" />
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Notes</span>
+                    </div>
+                    <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.notes}</p>
+                  </div>
+                )}
+
+                {asset.reference && (
+                  <div className="px-4 py-3.5">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Link2 size={11} className="text-th-muted" />
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Reference</span>
+                    </div>
+                    <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.reference}</p>
+                  </div>
+                )}
+
+                {asset.deadline && (
+                  <div className="px-4 py-3.5">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Clock size={11} className="text-th-muted" />
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Deadline</span>
+                    </div>
+                    <p className="text-[13px] text-th-text">
+                      {new Date(asset.deadline).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                  </div>
+                )}
+
+                {asset.raw_file_url && (
+                  <div className="px-4 py-3.5">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <ExternalLink size={11} className="text-th-muted" />
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Raw file</span>
+                    </div>
+                    <a
+                      href={asset.raw_file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent transition-colors btn-press"
+                    >
+                      <ExternalLink size={12} /> Open raw file
+                    </a>
+                  </div>
+                )}
+              </div>
             )}
             {sideTab === 'activity' && (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
@@ -675,10 +670,17 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           onClose={() => setShowFulfillModal(false)}
           onUploaded={async () => {
             setShowFulfillModal(false)
-            const assetRes = await fetch(`/api/assets/${asset.id}`)
+            const [assetRes, versionsRes] = await Promise.all([
+              fetch(`/api/assets/${asset.id}`),
+              fetch(`/api/assets/${asset.id}/versions`),
+            ])
             if (assetRes.ok) {
               const { asset: fresh } = await assetRes.json()
               setAsset(fresh)
+            }
+            if (versionsRes.ok) {
+              const { versions: v } = await versionsRes.json()
+              setVersions(v)
             }
             showToast('Cut uploaded!', 'success')
           }}
