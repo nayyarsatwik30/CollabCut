@@ -81,12 +81,6 @@ export function BoardCard({ asset, color, isAdmin, editors, onAssign, onDragStar
         >
           <Film size={11} style={{ color }} />
         </span>
-        <span
-          className="font-mono text-[10px] px-1.5 py-0.5 rounded-th-sm truncate"
-          style={{ color, background: `color-mix(in srgb, ${color} 12%, transparent)` }}
-        >
-          {asset.project_name}
-        </span>
         {asset.is_complete && (
           <span
             className="ml-auto w-4 h-4 rounded-full flex items-center justify-center shrink-0"
@@ -98,7 +92,8 @@ export function BoardCard({ asset, color, isAdmin, editors, onAssign, onDragStar
         )}
       </div>
 
-      <p className="text-[13px] font-semibold leading-snug mb-3 line-clamp-2">{asset.name}</p>
+      <p className="text-[13px] font-semibold leading-snug mb-0.5 line-clamp-2">{asset.name}</p>
+      <p className="text-[11px] text-th-muted truncate mb-3">{asset.project_name}</p>
 
       <div className="flex items-center justify-between">
         {asset.editor ? (

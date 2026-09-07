@@ -328,18 +328,14 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                             <Film size={28} style={{ color: 'var(--th-accent)' }} />
                           )}
                           <span className="font-mono text-[11px] text-th-muted relative z-[1]">{formatDuration(a.duration_sec)}</span>
-                          <div className="absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-px rounded bg-th-bg/70 text-th-muted border border-th-border z-[1]">
+                          <div className="absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/70 text-white z-[1]">
                             v{a.version}
                           </div>
                           <div
                             className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-th-full font-mono z-[1]"
                             style={{
                               color: a.status === 'approved' ? 'var(--th-resolved)' : a.status === 'changes' ? 'var(--th-changes)' : 'var(--th-open)',
-                              background: a.status === 'approved'
-                                ? 'color-mix(in srgb, var(--th-resolved) 14%, transparent)'
-                                : a.status === 'changes'
-                                  ? 'color-mix(in srgb, var(--th-changes) 14%, transparent)'
-                                  : 'color-mix(in srgb, var(--th-open) 14%, transparent)',
+                              background: 'rgba(0,0,0,0.7)',
                             }}>
                             {a.status === 'approved' ? 'APPROVED'
                               : a.status === 'changes' ? 'NEEDS CHANGES'
