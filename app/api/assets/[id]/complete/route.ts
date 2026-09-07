@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { syncProjectStatus } from '@/lib/project-status'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
@@ -54,16 +55,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       is_complete: complete,
       marked_complete_by: complete ? user.id : null,
       marked_complete_at: complete ? new Date().toISOString() : null,
-      // Keep the Kanban board's pipeline_status in lockstep with is_complete
-      // so a card only ever sits in the Approved column while is_complete
-      // is true - un-marking complete here has to move it back out, or the
-      // board and the review screen would read as out of sync again.
+      // Keep the Kanban board's pipeline_status and the review screen's own
+      // status badge in lockstep with is_complete, so a card only ever sits
+      // in the Approved column - and only ever shows as Approved on the
+      // review page - while is_complete is true.
       pipeline_status: complete ? 'approved' : 'review',
+      status: complete ? 'approved' : 'in_review',
     })
     .eq('id', params.id)
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (data.project_id) await syncProjectStatus(data.project_id)
   return NextResponse.json({ asset: data })
 }

@@ -66,7 +66,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   const [sideTab, setSideTab] = useState<SideTab>('notes')
   const [shareOpen, setShareOpen] = useState(false)
-  const [approved, setApproved] = useState(false)
   const [togglingComplete, setTogglingComplete] = useState(false)
   const [drawTool, setDrawTool] = useState<AnnotationTool>(null)
   const [hasAnnotations, setHasAnnotations] = useState(false)
@@ -98,7 +97,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     if (assetRes.ok) {
       const { asset: assetData } = await assetRes.json()
       setAsset(assetData)
-      setApproved(assetData.status === 'approved')
     }
 
     const versionsRes = await fetch(`/api/assets/${params.id}/versions`)
@@ -130,7 +128,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       if (res.ok) {
         const { asset: fresh } = await res.json()
         setAsset(fresh)
-        setApproved(fresh.status === 'approved')
       }
     }, 4000)
 
@@ -153,7 +150,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     if (assetRes.ok) {
       const { asset: newAsset } = await assetRes.json()
       setAsset(newAsset)
-      setApproved(newAsset.status === 'approved')
     }
 
     if (versionsRes.ok) {
@@ -251,21 +247,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     }
   }, [userName, token])
 
-  const handleApprove = async () => {
-    if (!asset || !token) return
-    const newApproved = !approved
-    setApproved(newApproved)
-    await fetch(`/api/projects/${asset.project_id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status: newApproved ? 'approved' : 'in_review' }),
-    })
-    showToast(newApproved ? '✓ Cut approved!' : 'Approval removed', newApproved ? 'success' : 'info')
-  }
-
   const handleToggleComplete = async () => {
     if (!asset || !token || togglingComplete) return
     const newComplete = !asset.is_complete
@@ -285,7 +266,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         setAsset((prev) => (prev ? { ...prev, is_complete: !newComplete } : prev))
         showToast('Failed to update completion status', 'info')
       } else {
-        showToast(newComplete ? '✓ Marked complete' : 'Marked pending', newComplete ? 'success' : 'info')
+        showToast(newComplete ? '✓ Cut approved!' : 'Approval removed', newComplete ? 'success' : 'info')
       }
     } catch (err) {
       setAsset((prev) => (prev ? { ...prev, is_complete: !newComplete } : prev))
@@ -421,22 +402,13 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           <button
             onClick={handleToggleComplete}
             disabled={togglingComplete}
-            className="flex items-center gap-1.5 h-8 px-3.5 rounded-th text-[13px] font-semibold btn-press transition-colors disabled:opacity-50"
-            style={asset.is_complete
-              ? { background: 'color-mix(in srgb, var(--th-resolved) 16%, transparent)', color: 'var(--th-resolved)', border: '1px solid color-mix(in srgb, var(--th-resolved) 40%, transparent)' }
-              : { background: 'var(--th-surface-alt)', color: 'var(--th-text)', border: '1px solid var(--th-border)' }}
-          >
-            {asset.is_complete ? <><Check size={13} /> Complete</> : 'Mark complete'}
-          </button>
-          <button
-            onClick={handleApprove}
-            className="flex items-center gap-1.5 h-8 px-3.5 rounded-th text-[13px] font-bold btn-press transition-all approve-glow"
+            className="flex items-center gap-1.5 h-8 px-3.5 rounded-th text-[13px] font-bold btn-press transition-all approve-glow disabled:opacity-50"
             style={{
-              background: approved ? 'var(--th-resolved)' : 'var(--th-accent)',
-              color: approved ? '#fff' : 'var(--th-accent-fg)',
+              background: asset.is_complete ? 'var(--th-resolved)' : 'var(--th-accent)',
+              color: asset.is_complete ? '#fff' : 'var(--th-accent-fg)',
             }}
           >
-            {approved ? <><Check size={13} /> Approved</> : <><ThumbsUp size={13} /> Approve cut</>}
+            {asset.is_complete ? <><Check size={13} /> Approved</> : <><ThumbsUp size={13} /> Approve cut</>}
           </button>
         </div>
       </header>
@@ -489,7 +461,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               })) as any}
               onTimeUpdate={setCurrentTime}
               onDurationChange={setDuration}
-              approved={approved}
+              approved={!!asset.is_complete}
             />
           )}
         </div>

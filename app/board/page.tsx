@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, LayoutGrid } from 'lucide-react'
+import { LayoutGrid } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BoardCard, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
 import { supabase } from '@/lib/supabase'
@@ -14,13 +14,11 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
-  { key: 'idea',      label: 'Idea',      color: 'var(--th-muted)' },
-  { key: 'scripting', label: 'Scripting', color: 'var(--th-info)' },
-  { key: 'filming',   label: 'Filming',   color: '#fbbf24' },
-  { key: 'editing',   label: 'Editing',   color: 'var(--th-accent)' },
-  { key: 'review',    label: 'Review',    color: 'var(--th-changes)' },
-  { key: 'revision',  label: 'Revision',  color: '#fb923c' },
-  { key: 'approved',  label: 'Approved',  color: 'var(--th-resolved)' },
+  { key: 'idea',      label: 'Assigned Cut', color: 'var(--th-muted)' },
+  { key: 'editing',   label: 'Editing',      color: 'var(--th-accent)' },
+  { key: 'review',    label: 'Review',       color: 'var(--th-changes)' },
+  { key: 'revision',  label: 'Revision',     color: '#fb923c' },
+  { key: 'approved',  label: 'Approved',     color: 'var(--th-resolved)' },
 ]
 
 export default function BoardPage() {
@@ -147,8 +145,6 @@ export default function BoardPage() {
     return map
   }, [assets])
 
-  const completeCount = assets.filter((a) => a.is_complete).length
-
   if (loading) {
     return (
       <div className="flex h-screen overflow-hidden bg-th-bg">
@@ -187,11 +183,6 @@ export default function BoardPage() {
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-th bg-th-surface border border-th-border">
                 <span className="text-[15px] font-extrabold">{assets.length}</span>
                 <span className="text-[11px] text-th-muted">total</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-th bg-th-surface border border-th-border">
-                <Check size={12} style={{ color: 'var(--th-resolved)' }} />
-                <span className="text-[15px] font-extrabold">{completeCount}</span>
-                <span className="text-[11px] text-th-muted">complete</span>
               </div>
               <div className="w-px h-6 bg-th-border mx-1" />
               {COLUMNS.map((col) => (

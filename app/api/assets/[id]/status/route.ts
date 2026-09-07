@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { syncProjectStatus } from '@/lib/project-status'
 
-const PIPELINE_STATUSES = ['idea', 'scripting', 'filming', 'editing', 'review', 'revision', 'approved']
+const PIPELINE_STATUSES = ['idea', 'editing', 'review', 'revision', 'approved']
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
@@ -65,5 +66,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (data.project_id) await syncProjectStatus(data.project_id)
   return NextResponse.json({ asset: data })
 }

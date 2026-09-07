@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { video } from '@/lib/mux'
+import { syncProjectStatus } from '@/lib/project-status'
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
@@ -60,6 +61,10 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // A new version reopens the pipeline (e.g. re-cutting an already-approved
+  // asset), so the project's aggregate status can no longer be "approved".
+  if (linkedHead) await syncProjectStatus(project_id)
 
   return NextResponse.json({ asset, upload_url: upload.url, upload_id: upload.id }, { status: 201 })
 }
