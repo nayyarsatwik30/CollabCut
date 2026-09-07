@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LayoutGrid } from 'lucide-react'
+import { LayoutGrid, Plus } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BoardCard, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
+import { NewContentModal } from '@/components/board/NewContentModal'
+import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
 
 interface Column {
@@ -30,6 +32,8 @@ export default function BoardPage() {
   const [assets, setAssets] = useState<BoardAsset[]>([])
   const [editors, setEditors] = useState<BoardEditorOption[]>([])
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
+  const [showNewContent, setShowNewContent] = useState(false)
+  const { toast, showToast, dismissToast } = useToast()
 
   useEffect(() => {
     loadBoard()
@@ -165,9 +169,19 @@ export default function BoardPage() {
             <LayoutGrid size={15} style={{ color: 'var(--th-accent)' }} />
             <h1 className="text-[15px] font-bold">Board</h1>
           </div>
-          <span className="font-mono text-[11px] text-th-muted">
-            {role === 'editor' ? 'Showing assets assigned to you' : 'Showing all workspace assets'}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[11px] text-th-muted">
+              {role === 'editor' ? 'Showing assets assigned to you' : 'Showing all workspace assets'}
+            </span>
+            {role === 'admin' && (
+              <button
+                onClick={() => setShowNewContent(true)}
+                className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
+              >
+                <Plus size={13} /> New
+              </button>
+            )}
+          </div>
         </div>
 
         {error ? (
@@ -245,6 +259,19 @@ export default function BoardPage() {
           </>
         )}
       </div>
+
+      <Toast toast={toast} onDismiss={dismissToast} />
+
+      {showNewContent && (
+        <NewContentModal
+          onClose={() => setShowNewContent(false)}
+          onCreated={() => {
+            setShowNewContent(false)
+            showToast('New content created!', 'success')
+            loadBoard()
+          }}
+        />
+      )}
     </div>
   )
 }

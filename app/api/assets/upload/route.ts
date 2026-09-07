@@ -11,7 +11,47 @@ export async function POST(req: NextRequest) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { project_id, name, linked_asset_name, cut_type } = await req.json()
+  const { project_id, name, linked_asset_name, cut_type, fulfill_asset_id } = await req.json()
+
+  // Fulfilling a New Content placeholder: attach the file to the EXISTING
+  // asset row in place (same id/version/group), rather than creating a new
+  // one - the placeholder just goes from "no file" to "has a file."
+  if (fulfill_asset_id) {
+    const { data: target, error: targetError } = await supabaseAdmin
+      .from('assets')
+      .select('id, project_id, mux_upload_id')
+      .eq('id', fulfill_asset_id)
+      .single()
+
+    if (targetError || !target) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    if (target.mux_upload_id) return NextResponse.json({ error: 'This asset already has a file' }, { status: 400 })
+
+    const upload = await video.uploads.create({
+      cors_origin: process.env.NEXT_PUBLIC_APP_URL!,
+      new_asset_settings: {
+        playback_policy: ['public'],
+        mp4_support: 'capped-1080p',
+      },
+    })
+
+    const { data: asset, error } = await supabaseAdmin
+      .from('assets')
+      .update({
+        status: 'processing',
+        pipeline_status: 'review',
+        mux_upload_id: upload.id,
+      })
+      .eq('id', fulfill_asset_id)
+      .select()
+      .single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    await syncProjectStatus(target.project_id)
+
+    return NextResponse.json({ asset, upload_url: upload.url, upload_id: upload.id }, { status: 201 })
+  }
+
   if (!project_id || !name) {
     return NextResponse.json({ error: 'project_id and name required' }, { status: 400 })
   }

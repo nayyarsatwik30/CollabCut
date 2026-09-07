@@ -21,6 +21,7 @@ interface Asset {
   version: number
   status: string
   mux_playback_id: string | null
+  mux_upload_id: string | null
   project_id: string
   is_complete?: boolean
   cut_type: 'custom' | 'board'
@@ -71,6 +72,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const [hasAnnotations, setHasAnnotations] = useState(false)
 
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showFulfillModal, setShowFulfillModal] = useState(false)
   const [showCompareModal, setShowCompareModal] = useState(false)
   const [compareV1Id, setCompareV1Id] = useState<string>('')
   const [compareV2Id, setCompareV2Id] = useState<string>('')
@@ -120,6 +122,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   // with no source.
   useEffect(() => {
     if (!asset) return
+    if (!asset.mux_upload_id) return // no file yet - nothing to poll for until it's fulfilled
     const awaitingStream = asset.status === 'processing' || !asset.mux_playback_id
     if (!awaitingStream) return
 
@@ -286,6 +289,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     ? `https://stream.mux.com/${asset.mux_playback_id}.m3u8`
     : undefined
 
+  const unfulfilled = !!asset && !asset.mux_upload_id
   const awaitingStream = !!asset && (asset.status === 'processing' || !asset.mux_playback_id)
 
   if (loading) {
@@ -453,7 +457,20 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          {awaitingStream ? (
+          {unfulfilled ? (
+            <div className="flex-1 flex items-center justify-center bg-black">
+              <div className="text-center">
+                <p className="text-white text-[13px] font-medium mb-1">No file uploaded yet</p>
+                <p className="text-white/50 text-[11px] mb-4">Upload a cut to fulfill this content request</p>
+                <button
+                  onClick={() => setShowFulfillModal(true)}
+                  className="flex items-center gap-1.5 mx-auto px-4 py-2 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
+                >
+                  <Upload size={13} /> Upload cut
+                </button>
+              </div>
+            </div>
+          ) : awaitingStream ? (
             <div className="flex-1 flex items-center justify-center bg-black">
               <div className="text-center">
                 <div className="w-8 h-8 rounded-full border-2 border-th-accent border-t-transparent animate-spin mx-auto mb-4" />
@@ -566,6 +583,23 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             }}
           />
         )
+      )}
+
+      {showFulfillModal && asset && (
+        <UploadModal
+          projectId={asset.project_id}
+          fulfillAssetId={asset.id}
+          onClose={() => setShowFulfillModal(false)}
+          onUploaded={async () => {
+            setShowFulfillModal(false)
+            const assetRes = await fetch(`/api/assets/${asset.id}`)
+            if (assetRes.ok) {
+              const { asset: fresh } = await assetRes.json()
+              setAsset(fresh)
+            }
+            showToast('Cut uploaded!', 'success')
+          }}
+        />
       )}
 
       {showCompareModal && (

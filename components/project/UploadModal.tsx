@@ -10,11 +10,12 @@ interface UploadModalProps {
   onUploaded: () => void
   linkedAsset?: { id: string; name: string }
   cutType?: 'custom' | 'board'
+  fulfillAssetId?: string
 }
 
 type UploadState = 'idle' | 'requesting' | 'uploading' | 'processing' | 'done' | 'error'
 
-export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutType = 'board' }: UploadModalProps) {
+export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutType = 'board', fulfillAssetId }: UploadModalProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [state, setState] = useState<UploadState>('idle')
   const [progress, setProgress] = useState(0)
@@ -50,6 +51,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
           version: 1,
           cut_type: cutType,
           ...(linkedAsset ? { linked_asset_name: linkedAsset.name } : {}),
+          ...(fulfillAssetId ? { fulfill_asset_id: fulfillAssetId } : {}),
         }),
       })
 
