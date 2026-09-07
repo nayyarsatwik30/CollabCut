@@ -1,13 +1,25 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { LayoutGrid, Plus } from 'lucide-react'
+import { LayoutGrid, Plus, FolderKanban, Users, ChevronLeft, Film } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { BoardCard, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
+import { BoardCard, initialsFor, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
 import { NewContentModal } from '@/components/board/NewContentModal'
+import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
+
+type BoardView = 'board' | 'projects' | 'editors'
+
+interface WorkspaceProject {
+  id: string
+  name: string
+  client: string
+  status: string
+  emoji?: string
+}
 
 interface Column {
   key: string
@@ -33,6 +45,18 @@ export default function BoardPage() {
   const [editors, setEditors] = useState<BoardEditorOption[]>([])
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [showNewContent, setShowNewContent] = useState(false)
+
+  // Admin-only Projects/Editors views alongside the regular Kanban - gated
+  // both by not rendering the tab bar for non-admins (below) and by the
+  // /api/board/projects and /api/board/editor/[id]/assets endpoints
+  // themselves rejecting non-admin requests server-side.
+  const [boardView, setBoardView] = useState<BoardView>('board')
+  const [projects, setProjects] = useState<WorkspaceProject[]>([])
+  const [projectsLoading, setProjectsLoading] = useState(false)
+  const [selectedEditor, setSelectedEditor] = useState<BoardEditorOption | null>(null)
+  const [editorAssets, setEditorAssets] = useState<BoardAsset[] | null>(null)
+  const [editorAssetsLoading, setEditorAssetsLoading] = useState(false)
+
   const { toast, showToast, dismissToast } = useToast()
 
   useEffect(() => {
@@ -145,6 +169,42 @@ export default function BoardPage() {
     }
   }
 
+  const handleBoardViewChange = async (view: BoardView) => {
+    setBoardView(view)
+    setSelectedEditor(null)
+    setEditorAssets(null)
+
+    if (view === 'projects' && projects.length === 0) {
+      setProjectsLoading(true)
+      try {
+        const res = await fetch('/api/board/projects', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await res.json()
+        if (res.ok) setProjects(data.projects ?? [])
+      } catch (err) {
+        // leave projects empty - the grid will just show nothing to pick
+      }
+      setProjectsLoading(false)
+    }
+  }
+
+  const handleSelectEditor = async (editor: BoardEditorOption) => {
+    setSelectedEditor(editor)
+    setEditorAssets(null)
+    setEditorAssetsLoading(true)
+    try {
+      const res = await fetch(`/api/board/editor/${editor.id}/assets`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (res.ok) setEditorAssets(data.assets ?? [])
+    } catch (err) {
+      setEditorAssets([])
+    }
+    setEditorAssetsLoading(false)
+  }
+
   const grouped = useMemo(() => {
     const map: Record<string, BoardAsset[]> = {}
     for (const col of COLUMNS) map[col.key] = []
@@ -190,11 +250,137 @@ export default function BoardPage() {
           </div>
         </div>
 
+        {role === 'admin' && (
+          <div className="shrink-0 bg-th-surface border-b border-th-border px-6 flex gap-1">
+            {([
+              { key: 'board', icon: LayoutGrid, label: 'Board' },
+              { key: 'projects', icon: FolderKanban, label: 'Projects' },
+              { key: 'editors', icon: Users, label: 'Editors' },
+            ] as { key: BoardView; icon: React.ElementType; label: string }[]).map(({ key, icon: Icon, label }) => (
+              <button
+                key={key}
+                onClick={() => handleBoardViewChange(key)}
+                className="flex items-center gap-1.5 px-3 py-2.5 text-[12px] border-b-2 btn-press transition-colors"
+                style={{
+                  color: boardView === key ? 'var(--th-accent)' : 'var(--th-muted)',
+                  borderColor: boardView === key ? 'var(--th-accent)' : 'transparent',
+                  fontWeight: boardView === key ? 700 : 400,
+                }}
+              >
+                <Icon size={12} /> {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {error ? (
           <div className="flex-1 flex items-center justify-center p-8">
             <div className="max-w-sm px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
               {error}
             </div>
+          </div>
+        ) : boardView === 'projects' ? (
+          <div className="flex-1 overflow-y-auto p-6">
+            {projectsLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+                <FolderKanban size={32} className="text-th-faint" />
+                <p className="text-[13px] text-th-muted">No projects in this workspace yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
+                {projects.map((p) => (
+                  <ProjectCard key={p.id} project={{ ...p, client: p.client ?? '' }} view="grid" />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : boardView === 'editors' ? (
+          <div className="flex-1 overflow-y-auto p-6">
+            {selectedEditor ? (
+              <div>
+                <button
+                  onClick={() => { setSelectedEditor(null); setEditorAssets(null) }}
+                  className="flex items-center gap-1.5 mb-4 h-8 px-3 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-muted hover:text-th-text transition-colors btn-press"
+                >
+                  <ChevronLeft size={13} /> All editors
+                </button>
+                <div className="flex items-center gap-2.5 mb-4">
+                  <span
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-extrabold shrink-0"
+                    style={{ background: '#22D3EE', color: '#000' }}
+                  >
+                    {initialsFor(selectedEditor.name)}
+                  </span>
+                  <div>
+                    <p className="text-[14px] font-bold">{selectedEditor.name}</p>
+                    <p className="text-[11px] text-th-muted">{editorAssets?.length ?? 0} assigned assets</p>
+                  </div>
+                </div>
+
+                {editorAssetsLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+                  </div>
+                ) : !editorAssets || editorAssets.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+                    <Film size={32} className="text-th-faint" />
+                    <p className="text-[13px] text-th-muted">No assets assigned to this editor.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
+                    {editorAssets.map((a) => {
+                      const col = COLUMNS.find((c) => c.key === a.pipeline_status) ?? COLUMNS[0]
+                      return (
+                        <Link
+                          key={a.id}
+                          href={`/review/${a.id}`}
+                          className="flex flex-col bg-th-surface border border-th-border rounded-th-lg p-3.5 hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
+                        >
+                          <p className="text-[13px] font-semibold leading-snug mb-0.5 line-clamp-2">{a.name}</p>
+                          <p className="text-[11px] text-th-muted truncate mb-2.5">{a.project_name}</p>
+                          <span
+                            className="w-fit text-[10px] font-medium px-2 py-0.5 rounded-th-full"
+                            style={{ color: col.color, background: `color-mix(in srgb, ${col.color} 14%, transparent)` }}
+                          >
+                            {col.label}
+                          </span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : editors.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+                <Users size={32} className="text-th-faint" />
+                <p className="text-[13px] text-th-muted">No editors in this workspace yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
+                {editors.map((ed) => (
+                  <button
+                    key={ed.id}
+                    onClick={() => handleSelectEditor(ed)}
+                    className="flex flex-col items-center text-center gap-2.5 bg-th-surface border border-th-border rounded-th-lg p-5 hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover btn-press"
+                  >
+                    <span
+                      className="w-11 h-11 rounded-full flex items-center justify-center text-[13px] font-extrabold shrink-0"
+                      style={{ background: '#22D3EE', color: '#000' }}
+                    >
+                      {initialsFor(ed.name)}
+                    </span>
+                    <div>
+                      <p className="text-[13px] font-semibold truncate">{ed.name}</p>
+                      <p className="font-mono text-[10px] text-th-muted">{ed.assetCount ?? 0} assigned</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <>

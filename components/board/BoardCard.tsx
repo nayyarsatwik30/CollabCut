@@ -19,6 +19,7 @@ export interface BoardEditorOption {
   id: string
   name: string
   email: string
+  assetCount?: number
 }
 
 export interface BoardColumnOption {
@@ -38,7 +39,7 @@ interface BoardCardProps {
   onDragEnd: () => void
 }
 
-function initialsFor(name: string) {
+export function initialsFor(name: string) {
   return name
     .split(' ')
     .filter(Boolean)

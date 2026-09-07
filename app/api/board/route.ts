@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { latestPerGroup } from '@/lib/asset-lineage'
 
 interface BoardAsset {
   id: string
@@ -18,20 +19,6 @@ function pickEditor(assetEditors: any): { id: string; name: string } | null {
   if (!row) return null
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
   return { id: row.editor_id, name: profile?.name ?? 'Unknown' }
-}
-
-// Keep only the highest-version row per logical video, so the Board shows one
-// card per asset lineage instead of one per version.
-function latestPerGroup<T extends { asset_group_id: string | null; id: string; version: number }>(rows: T[]): T[] {
-  const latestByGroup = new Map<string, T>()
-  for (const row of rows) {
-    const key = row.asset_group_id ?? row.id
-    const existing = latestByGroup.get(key)
-    if (!existing || row.version > existing.version) {
-      latestByGroup.set(key, row)
-    }
-  }
-  return Array.from(latestByGroup.values())
 }
 
 export async function GET(req: NextRequest) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { latestPerGroup } from '@/lib/asset-lineage'
 
 async function requireAdminWorkspace(token: string) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
@@ -29,6 +30,58 @@ async function verifyAssetInWorkspace(assetId: string, workspaceId: string) {
 
   if (error) return false
   return !!data
+}
+
+// Admin-only lookup of one editor's assigned Board Cut assets, scoped to the
+// admin's own workspace - same asset_editors -> assets -> projects join and
+// per-lineage dedup GET /api/board uses for an editor's own view, just
+// parameterized by an arbitrary editor id instead of the caller's own.
+export async function GET(req: NextRequest, { params }: { params: { editorId: string } }) {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const auth = await requireAdminWorkspace(token)
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('name, email')
+    .eq('id', params.editorId)
+    .maybeSingle()
+
+  const { data, error } = await supabaseAdmin
+    .from('asset_editors')
+    .select('assets!inner(id, name, version, asset_group_id, pipeline_status, is_complete, project_id, deleted_at, mux_upload_id, projects!inner(id, name, workspace_id, deleted_at))')
+    .eq('editor_id', params.editorId)
+    .eq('assets.cut_type', 'board')
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const assets = latestPerGroup(
+    (data ?? [])
+      .map((row: any) => (Array.isArray(row.assets) ? row.assets[0] : row.assets))
+      .filter((asset: any) => {
+        if (!asset || asset.deleted_at) return false
+        const project = Array.isArray(asset.projects) ? asset.projects[0] : asset.projects
+        return project && !project.deleted_at && project.workspace_id === auth.workspaceId
+      })
+  ).map((asset: any) => {
+    const project = Array.isArray(asset.projects) ? asset.projects[0] : asset.projects
+    return {
+      id: asset.id,
+      name: asset.name,
+      pipeline_status: asset.pipeline_status ?? 'idea',
+      is_complete: asset.is_complete,
+      project_id: asset.project_id,
+      project_name: project?.name ?? 'Untitled project',
+      mux_upload_id: asset.mux_upload_id ?? null,
+    }
+  })
+
+  return NextResponse.json({
+    editor: { id: params.editorId, name: profile?.name ?? profile?.email ?? 'Unknown' },
+    assets,
+  })
 }
 
 export async function POST(req: NextRequest, { params }: { params: { editorId: string } }) {
