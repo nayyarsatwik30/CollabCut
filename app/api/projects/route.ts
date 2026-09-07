@@ -36,6 +36,13 @@ export async function POST(req: NextRequest) {
 
   const membership = (memberships ?? []).find((m) => m.role === 'admin') ?? (memberships ?? [])[0]
 
+  // A project with no workspace_id can never pass the workspace-membership
+  // check in GET /api/projects/[id] or GET /api/board for anyone - reject
+  // up front instead of silently creating an unreachable project.
+  if (!membership) {
+    return NextResponse.json({ error: 'You must belong to a workspace before creating a project' }, { status: 403 })
+  }
+
   const { data, error } = await supabaseAdmin
     .from('projects')
     .insert({
@@ -43,7 +50,7 @@ export async function POST(req: NextRequest) {
       client,
       emoji: emoji ?? '🎬',
       owner_id: user.id,
-      workspace_id: membership?.workspace_id ?? null,
+      workspace_id: membership.workspace_id,
     })
     .select()
     .single()
