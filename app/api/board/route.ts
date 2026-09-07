@@ -19,6 +19,20 @@ function pickEditor(assetEditors: any): { id: string; name: string } | null {
   return { id: row.editor_id, name: profile?.name ?? 'Unknown' }
 }
 
+// Keep only the highest-version row per logical video, so the Board shows one
+// card per asset lineage instead of one per version.
+function latestPerGroup<T extends { asset_group_id: string | null; id: string; version: number }>(rows: T[]): T[] {
+  const latestByGroup = new Map<string, T>()
+  for (const row of rows) {
+    const key = row.asset_group_id ?? row.id
+    const existing = latestByGroup.get(key)
+    if (!existing || row.version > existing.version) {
+      latestByGroup.set(key, row)
+    }
+  }
+  return Array.from(latestByGroup.values())
+}
+
 export async function GET(req: NextRequest) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -48,7 +62,7 @@ export async function GET(req: NextRequest) {
   if (role === 'admin') {
     const { data, error } = await supabaseAdmin
       .from('assets')
-      .select('id, name, pipeline_status, is_complete, project_id, projects!inner(id, name, workspace_id, deleted_at), asset_editors(editor_id, profiles(name, email))')
+      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, projects!inner(id, name, workspace_id, deleted_at), asset_editors(editor_id, profiles(name, email))')
       .eq('projects.workspace_id', workspaceId)
       .is('deleted_at', null)
 
@@ -56,11 +70,12 @@ export async function GET(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    assets = (data ?? [])
-      .filter((row: any) => {
+    assets = latestPerGroup(
+      (data ?? []).filter((row: any) => {
         const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
         return project && !project.deleted_at
       })
+    )
       .map((row: any) => {
         const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
         return {
@@ -82,20 +97,22 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('asset_editors')
-      .select('editor_id, assets!inner(id, name, pipeline_status, is_complete, project_id, deleted_at, projects!inner(id, name, workspace_id, deleted_at))')
+      .select('editor_id, assets!inner(id, name, version, asset_group_id, pipeline_status, is_complete, project_id, deleted_at, projects!inner(id, name, workspace_id, deleted_at))')
       .eq('editor_id', user.id)
 
     console.log('[api/board] editor raw query result (pre-filter):', JSON.stringify(data), 'error:', error?.message ?? null)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    assets = (data ?? [])
-      .map((row: any) => (Array.isArray(row.assets) ? row.assets[0] : row.assets))
-      .filter((asset: any) => {
-        if (!asset || asset.deleted_at) return false
-        const project = Array.isArray(asset.projects) ? asset.projects[0] : asset.projects
-        return project && !project.deleted_at && project.workspace_id === workspaceId
-      })
+    assets = latestPerGroup(
+      (data ?? [])
+        .map((row: any) => (Array.isArray(row.assets) ? row.assets[0] : row.assets))
+        .filter((asset: any) => {
+          if (!asset || asset.deleted_at) return false
+          const project = Array.isArray(asset.projects) ? asset.projects[0] : asset.projects
+          return project && !project.deleted_at && project.workspace_id === workspaceId
+        })
+    )
       .map((asset: any) => {
         const project = Array.isArray(asset.projects) ? asset.projects[0] : asset.projects
         return {

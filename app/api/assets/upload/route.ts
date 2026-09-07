@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       name,
       version: nextVersion,
       status: 'processing',
-      pipeline_status: 'idea',
+      pipeline_status: linkedHead ? 'review' : 'idea',
       mux_upload_id: upload.id,
       asset_group_id: linkedHead ? linkedHead.asset_group_id : newAssetId,
     })
