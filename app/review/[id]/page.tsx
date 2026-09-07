@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X } from 'lucide-react'
 import { VideoPlayer } from '@/components/review/VideoPlayer'
-import { HlsVideo } from '@/components/review/HlsVideo'
 import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
 import { UploadModal } from '@/components/project/UploadModal'
@@ -570,20 +569,14 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                     ))}
                   </select>
                 </div>
-                <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden">
+                <div className="flex-1 bg-black relative overflow-hidden">
                   {(() => {
                     const selV1 = versions.find((v) => v.id === compareV1Id)
                     const v1Src = selV1?.mux_playback_id
                       ? `https://stream.mux.com/${selV1.mux_playback_id}.m3u8`
                       : undefined
 
-                    return v1Src ? (
-                      <HlsVideo src={v1Src} className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="text-center text-th-muted text-[13px] p-4">
-                        <p>No video stream available for v{selV1?.version ?? '?'}</p>
-                      </div>
-                    )
+                    return <VideoPlayer src={v1Src} comments={[]} />
                   })()}
                 </div>
               </div>
@@ -603,20 +596,14 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                     ))}
                   </select>
                 </div>
-                <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden">
+                <div className="flex-1 bg-black relative overflow-hidden">
                   {(() => {
                     const selV2 = versions.find((v) => v.id === compareV2Id)
                     const v2Src = selV2?.mux_playback_id
                       ? `https://stream.mux.com/${selV2.mux_playback_id}.m3u8`
                       : undefined
 
-                    return v2Src ? (
-                      <HlsVideo src={v2Src} className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="text-center text-th-muted text-[13px] p-4">
-                        <p>No video stream available for v{selV2?.version ?? '?'}</p>
-                      </div>
-                    )
+                    return <VideoPlayer src={v2Src} comments={[]} />
                   })()}
                 </div>
               </div>
