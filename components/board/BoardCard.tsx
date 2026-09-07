@@ -21,12 +21,19 @@ export interface BoardEditorOption {
   email: string
 }
 
+export interface BoardColumnOption {
+  key: string
+  label: string
+}
+
 interface BoardCardProps {
   asset: BoardAsset
   color: string
   isAdmin: boolean
   editors: BoardEditorOption[]
+  columns: BoardColumnOption[]
   onAssign: (assetId: string, editorId: string) => void
+  onStatusChange: (assetId: string, status: string) => void
   onDragStart: (e: React.DragEvent<HTMLDivElement>, assetId: string) => void
   onDragEnd: () => void
 }
@@ -41,7 +48,7 @@ function initialsFor(name: string) {
     .toUpperCase() || '?'
 }
 
-export function BoardCard({ asset, color, isAdmin, editors, onAssign, onDragStart, onDragEnd }: BoardCardProps) {
+export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, onStatusChange, onDragStart, onDragEnd }: BoardCardProps) {
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const draggingRef = useRef(false)
@@ -106,7 +113,21 @@ export function BoardCard({ asset, color, isAdmin, editors, onAssign, onDragStar
       </div>
 
       <p className="text-[13px] font-semibold leading-snug mb-0.5 line-clamp-2">{asset.name}</p>
-      <p className="text-[11px] text-th-muted truncate mb-3">{asset.project_name}</p>
+      <p className="text-[11px] text-th-muted truncate mb-2">{asset.project_name}</p>
+
+      {!isPlaceholder && (
+        <select
+          value={asset.pipeline_status}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => { e.stopPropagation(); onStatusChange(asset.id, e.target.value) }}
+          title="Change status"
+          className="w-full mb-3 bg-th-surface-alt border border-th-border rounded-th-sm text-[11px] text-th-muted px-2 py-1 outline-none focus:border-th-accent font-mono cursor-pointer hover:text-th-text transition-colors"
+        >
+          {columns.map((col) => (
+            <option key={col.key} value={col.key}>{col.label}</option>
+          ))}
+        </select>
+      )}
 
       <div className="flex items-center justify-between">
         {asset.editor ? (

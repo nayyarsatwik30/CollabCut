@@ -78,12 +78,10 @@ export default function BoardPage() {
 
   const handleDragEnd = () => setDragOverColumn(null)
 
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, columnKey: string) => {
-    e.preventDefault()
-    setDragOverColumn(null)
-    const assetId = e.dataTransfer.getData('text/plain')
-    if (!assetId) return
-
+  // Single source of truth for changing an asset's column - both drag-and-drop
+  // and the card's inline status dropdown call this same function, so there's
+  // exactly one code path that ever PATCHes pipeline_status.
+  const updateAssetStatus = async (assetId: string, columnKey: string) => {
     const asset = assets.find((a) => a.id === assetId)
     if (!asset || asset.pipeline_status === columnKey) return
 
@@ -107,6 +105,14 @@ export default function BoardPage() {
     } catch (err) {
       setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, pipeline_status: previousStatus, is_complete: previousComplete } : a)))
     }
+  }
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, columnKey: string) => {
+    e.preventDefault()
+    setDragOverColumn(null)
+    const assetId = e.dataTransfer.getData('text/plain')
+    if (!assetId) return
+    await updateAssetStatus(assetId, columnKey)
   }
 
   const handleAssign = async (assetId: string, editorId: string) => {
@@ -241,7 +247,9 @@ export default function BoardPage() {
                           color={col.color}
                           isAdmin={role === 'admin'}
                           editors={editors}
+                          columns={COLUMNS}
                           onAssign={handleAssign}
+                          onStatusChange={updateAssetStatus}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
                         />
