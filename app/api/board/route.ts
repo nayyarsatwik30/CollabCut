@@ -9,6 +9,7 @@ interface BoardAsset {
   project_id: string
   project_name: string
   editor: { id: string; name: string } | null
+  mux_upload_id: string | null
 }
 
 function pickEditor(assetEditors: any): { id: string; name: string } | null {
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
   if (role === 'admin') {
     const { data, error } = await supabaseAdmin
       .from('assets')
-      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, projects!inner(id, name, workspace_id, deleted_at), asset_editors(editor_id, profiles(name, email))')
+      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, workspace_id, deleted_at), asset_editors(editor_id, profiles(name, email))')
       .eq('projects.workspace_id', workspaceId)
       .eq('cut_type', 'board')
       .is('deleted_at', null)
@@ -87,6 +88,7 @@ export async function GET(req: NextRequest) {
           project_id: row.project_id,
           project_name: project?.name ?? 'Untitled project',
           editor: pickEditor(row.asset_editors),
+          mux_upload_id: row.mux_upload_id ?? null,
         }
       })
   } else {
@@ -98,7 +100,7 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('asset_editors')
-      .select('editor_id, assets!inner(id, name, version, asset_group_id, pipeline_status, is_complete, project_id, deleted_at, projects!inner(id, name, workspace_id, deleted_at))')
+      .select('editor_id, assets!inner(id, name, version, asset_group_id, pipeline_status, is_complete, project_id, deleted_at, mux_upload_id, projects!inner(id, name, workspace_id, deleted_at))')
       .eq('editor_id', user.id)
       .eq('assets.cut_type', 'board')
 
@@ -125,6 +127,7 @@ export async function GET(req: NextRequest) {
           project_id: asset.project_id,
           project_name: project?.name ?? 'Untitled project',
           editor: { id: user.id, name: myProfile?.name ?? user.email ?? 'You' },
+          mux_upload_id: asset.mux_upload_id ?? null,
         }
       })
   }

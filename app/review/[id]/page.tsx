@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X } from 'lucide-react'
+import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X, FileText, ExternalLink } from 'lucide-react'
 import { VideoPlayer } from '@/components/review/VideoPlayer'
 import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
@@ -25,6 +25,10 @@ interface Asset {
   project_id: string
   is_complete?: boolean
   cut_type: 'custom' | 'board'
+  raw_file_url?: string | null
+  notes?: string | null
+  reference?: string | null
+  deadline?: string | null
 }
 
 interface VersionEntry {
@@ -458,16 +462,64 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       <div className="flex flex-1 overflow-hidden min-h-0">
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {unfulfilled ? (
-            <div className="flex-1 flex items-center justify-center bg-black">
-              <div className="text-center">
-                <p className="text-white text-[13px] font-medium mb-1">No file uploaded yet</p>
-                <p className="text-white/50 text-[11px] mb-4">Upload a cut to fulfill this content request</p>
-                <button
-                  onClick={() => setShowFulfillModal(true)}
-                  className="flex items-center gap-1.5 mx-auto px-4 py-2 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
-                >
-                  <Upload size={13} /> Upload cut
-                </button>
+            <div className="flex-1 flex items-center justify-center bg-black overflow-y-auto p-6">
+              <div className="w-full max-w-md">
+                <div className="rounded-th-lg border border-th-accent/50 bg-th-surface p-5 mb-5 text-left shadow-panel">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText size={14} className="text-th-accent" />
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-th-accent font-bold">Content brief</span>
+                  </div>
+
+                  {asset.notes && (
+                    <div className="mb-3.5">
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Notes</p>
+                      <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.notes}</p>
+                    </div>
+                  )}
+
+                  {asset.reference && (
+                    <div className="mb-3.5">
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Reference</p>
+                      <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.reference}</p>
+                    </div>
+                  )}
+
+                  {asset.deadline && (
+                    <div className="mb-3.5">
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Deadline</p>
+                      <p className="flex items-center gap-1.5 text-[13px] text-th-text">
+                        <Clock size={12} className="text-th-muted" />
+                        {new Date(asset.deadline).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                      </p>
+                    </div>
+                  )}
+
+                  {asset.raw_file_url && (
+                    <a
+                      href={asset.raw_file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent transition-colors btn-press"
+                    >
+                      <ExternalLink size={12} /> Open raw file
+                    </a>
+                  )}
+
+                  {!asset.notes && !asset.reference && !asset.deadline && !asset.raw_file_url && (
+                    <p className="text-[12px] text-th-muted italic">No brief was provided for this request.</p>
+                  )}
+                </div>
+
+                <div className="text-center">
+                  <p className="text-white text-[13px] font-medium mb-1">No file uploaded yet</p>
+                  <p className="text-white/50 text-[11px] mb-4">Upload a cut to fulfill this content request</p>
+                  <button
+                    onClick={() => setShowFulfillModal(true)}
+                    className="flex items-center gap-1.5 mx-auto px-4 py-2 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
+                  >
+                    <Upload size={13} /> Upload cut
+                  </button>
+                </div>
               </div>
             </div>
           ) : awaitingStream ? (

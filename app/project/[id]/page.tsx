@@ -4,7 +4,7 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Share2, Upload, UserPlus, Trash2, Video, Clapperboard, Film, CheckCircle2, X } from 'lucide-react'
+import { ChevronRight, Share2, Upload, UserPlus, Trash2, Video, Clapperboard, Film, CheckCircle2, X, Clock } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { supabase } from '@/lib/supabase'
@@ -28,6 +28,7 @@ interface Asset {
   size_bytes: number
   status: string
   mux_playback_id?: string
+  mux_upload_id?: string | null
   created_at: string
   is_complete?: boolean
   cut_type: 'custom' | 'board'
@@ -309,45 +310,58 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   </div>
                 ) : (
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
-                    {boardAssets.map((a) => (
+                    {boardAssets.map((a) => {
+                      const isPlaceholder = !a.mux_upload_id
+                      return (
                       <Link key={a.id} href={`/review/${a.id}`}
-                        className="group relative flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover">
+                        className={`group relative flex flex-col h-full bg-th-surface rounded-th-lg overflow-hidden transition-colors shadow-card hover:shadow-card-hover ${isPlaceholder ? 'border border-dashed border-th-faint hover:border-th-accent' : 'border border-th-border hover:border-th-accent'}`}>
                         <button
                           onClick={(e) => handleDeleteAsset(e, a.id)}
                           className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes z-20">
                           <Trash2 size={13} />
                         </button>
-                        <div className="aspect-video shrink-0 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
-                          {a.mux_playback_id ? (
-                            <img
-                              src={`https://image.mux.com/${a.mux_playback_id}/thumbnail.jpg?time=1`}
-                              className="w-full h-full object-cover absolute inset-0"
-                              alt={a.name}
-                            />
-                          ) : (
-                            <Film size={28} style={{ color: 'var(--th-accent)' }} />
-                          )}
-                          <span className="font-mono text-[11px] text-th-muted relative z-[1]">{formatDuration(a.duration_sec)}</span>
-                          <div className="absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/70 text-white z-[1]">
-                            v{a.version}
+                        {isPlaceholder ? (
+                          <div className="aspect-video shrink-0 bg-th-surface-alt/40 flex flex-col items-center justify-center gap-2 relative">
+                            <Clock size={26} className="text-th-faint" />
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-th-faint">Awaiting upload</span>
                           </div>
-                          <div
-                            className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-th-full font-mono z-[1]"
-                            style={{
-                              color: a.status === 'approved' ? 'var(--th-resolved)' : a.status === 'changes' ? 'var(--th-changes)' : 'var(--th-open)',
-                              background: 'rgba(0,0,0,0.7)',
-                            }}>
-                            {a.status === 'approved' ? 'APPROVED'
-                              : a.status === 'changes' ? 'NEEDS CHANGES'
-                                : a.status === 'processing' ? 'PROCESSING'
-                                  : 'IN REVIEW'}
+                        ) : (
+                          <div className="aspect-video shrink-0 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
+                            {a.mux_playback_id ? (
+                              <img
+                                src={`https://image.mux.com/${a.mux_playback_id}/thumbnail.jpg?time=1`}
+                                className="w-full h-full object-cover absolute inset-0"
+                                alt={a.name}
+                              />
+                            ) : (
+                              <Film size={28} style={{ color: 'var(--th-accent)' }} />
+                            )}
+                            <span className="font-mono text-[11px] text-th-muted relative z-[1]">{formatDuration(a.duration_sec)}</span>
+                            <div className="absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/70 text-white z-[1]">
+                              v{a.version}
+                            </div>
+                            <div
+                              className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-th-full font-mono z-[1]"
+                              style={{
+                                color: a.status === 'approved' ? 'var(--th-resolved)' : a.status === 'changes' ? 'var(--th-changes)' : 'var(--th-open)',
+                                background: 'rgba(0,0,0,0.7)',
+                              }}>
+                              {a.status === 'approved' ? 'APPROVED'
+                                : a.status === 'changes' ? 'NEEDS CHANGES'
+                                  : a.status === 'processing' ? 'PROCESSING'
+                                    : 'IN REVIEW'}
+                            </div>
                           </div>
-                        </div>
+                        )}
                         <div className="p-3.5 flex-1 flex flex-col justify-center min-h-[64px]">
                           <p className="text-[13px] font-semibold truncate mb-2">{a.name}</p>
                           <div className="flex items-center justify-between text-[11px] text-th-faint font-mono">
                             <span>{formatSize(a.size_bytes)}</span>
-                            {a.is_complete ? (
+                            {isPlaceholder ? (
+                              <span className="px-2 py-0.5 rounded-th-full font-sans font-semibold text-[10px] bg-th-surface-alt border border-dashed border-th-faint text-th-faint">
+                                Requested
+                              </span>
+                            ) : a.is_complete ? (
                               <span className="flex items-center gap-1 px-2 py-0.5 rounded-th-full font-sans font-semibold text-[10px]"
                                 style={{ color: 'var(--th-resolved)', background: 'color-mix(in srgb, var(--th-resolved) 14%, transparent)' }}>
                                 <CheckCircle2 size={11} /> Complete
@@ -360,7 +374,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           </div>
                         </div>
                       </Link>
-                    ))}
+                      )
+                    })}
                     <button
                       onClick={() => setShowUploadBoard(true)}
                       className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent transition-colors btn-press overflow-hidden">

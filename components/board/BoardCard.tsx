@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronDown, Film, UserPlus } from 'lucide-react'
+import { Check, ChevronDown, Clock, Film, UserPlus } from 'lucide-react'
 
 export interface BoardAsset {
   id: string
@@ -12,6 +12,7 @@ export interface BoardAsset {
   project_id: string
   project_name: string
   editor: { id: string; name: string } | null
+  mux_upload_id: string | null
 }
 
 export interface BoardEditorOption {
@@ -60,6 +61,8 @@ export function BoardCard({ asset, color, isAdmin, editors, onAssign, onDragStar
     router.push(`/review/${asset.id}`)
   }
 
+  const isPlaceholder = !asset.mux_upload_id
+
   return (
     <div
       draggable
@@ -72,16 +75,26 @@ export function BoardCard({ asset, color, isAdmin, editors, onAssign, onDragStar
         setTimeout(() => { draggingRef.current = false }, 0)
       }}
       onClick={handleClick}
-      className="group bg-th-surface border border-th-border rounded-th-lg p-3 cursor-pointer hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
+      className={`group bg-th-surface rounded-th-lg p-3 cursor-pointer hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover ${isPlaceholder ? 'border border-dashed border-th-faint' : 'border border-th-border'}`}
     >
       <div className="flex items-center gap-2 mb-2">
-        <span
-          className="w-5 h-5 rounded-th-sm flex items-center justify-center shrink-0"
-          style={{ background: `color-mix(in srgb, ${color} 16%, transparent)` }}
-        >
-          <Film size={11} style={{ color }} />
-        </span>
-        {asset.is_complete && (
+        {isPlaceholder ? (
+          <span
+            className="w-5 h-5 rounded-th-sm border border-dashed border-th-faint flex items-center justify-center shrink-0 text-th-faint"
+          >
+            <Clock size={11} />
+          </span>
+        ) : (
+          <span
+            className="w-5 h-5 rounded-th-sm flex items-center justify-center shrink-0"
+            style={{ background: `color-mix(in srgb, ${color} 16%, transparent)` }}
+          >
+            <Film size={11} style={{ color }} />
+          </span>
+        )}
+        {isPlaceholder ? (
+          <span className="ml-auto font-mono text-[9px] uppercase tracking-wider text-th-faint">Awaiting upload</span>
+        ) : asset.is_complete && (
           <span
             className="ml-auto w-4 h-4 rounded-full flex items-center justify-center shrink-0"
             style={{ background: 'color-mix(in srgb, var(--th-resolved) 20%, transparent)', color: 'var(--th-resolved)' }}
