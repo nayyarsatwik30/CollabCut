@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
       .from('assets')
       .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, projects!inner(id, name, workspace_id, deleted_at), asset_editors(editor_id, profiles(name, email))')
       .eq('projects.workspace_id', workspaceId)
+      .eq('cut_type', 'board')
       .is('deleted_at', null)
 
     console.log('[api/board] admin raw query result (pre-filter):', JSON.stringify(data), 'error:', error?.message ?? null)
@@ -99,6 +100,7 @@ export async function GET(req: NextRequest) {
       .from('asset_editors')
       .select('editor_id, assets!inner(id, name, version, asset_group_id, pipeline_status, is_complete, project_id, deleted_at, projects!inner(id, name, workspace_id, deleted_at))')
       .eq('editor_id', user.id)
+      .eq('assets.cut_type', 'board')
 
     console.log('[api/board] editor raw query result (pre-filter):', JSON.stringify(data), 'error:', error?.message ?? null)
 

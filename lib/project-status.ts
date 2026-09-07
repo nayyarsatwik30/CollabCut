@@ -4,10 +4,14 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 // it back, so projects.status (the dashboard badge) never has to be set
 // directly by a single-asset action again.
 export async function syncProjectStatus(projectId: string) {
+  // Custom Cuts don't go through pipeline_status/review at all, so they're
+  // excluded here - otherwise a project could never read as "approved"
+  // while it still had an untouched Custom Cut sitting at the default status.
   const { data: assets } = await supabaseAdmin
     .from('assets')
     .select('id, version, asset_group_id, pipeline_status')
     .eq('project_id', projectId)
+    .eq('cut_type', 'board')
     .is('deleted_at', null)
 
   if (!assets || assets.length === 0) return

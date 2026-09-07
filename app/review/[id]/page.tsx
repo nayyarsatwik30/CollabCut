@@ -23,6 +23,7 @@ interface Asset {
   mux_playback_id: string | null
   project_id: string
   is_complete?: boolean
+  cut_type: 'custom' | 'board'
 }
 
 interface VersionEntry {
@@ -325,66 +326,78 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="text-[14px] truncate" style={{ fontFamily: 'system-ui, -apple-system, "SF Pro Display", sans-serif', fontWeight: 700, color: 'var(--th-text)' }}>{asset.name}</span>
 
-          <div className="relative shrink-0">
+          {asset.cut_type === 'board' ? (
+            <>
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setShowVersions(!showVersions)}
+                  className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
+                >
+                  <Layers size={10} />
+                  v{asset.version}
+                  <ChevronDown size={10} />
+                </button>
+
+                {showVersions && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowVersions(false)} />
+                    <div className="absolute left-0 top-full mt-1.5 z-50 bg-th-surface border border-th-border rounded-th-lg shadow-panel w-60 overflow-hidden animate-slide-up">
+                      <div className="px-4 py-2.5 border-b border-th-border font-mono text-[10px] text-th-muted uppercase tracking-wider">
+                        Version history
+                      </div>
+                      <div className="max-h-60 overflow-y-auto">
+                        {versions.map((v) => (
+                          <button
+                            key={v.id}
+                            onClick={() => handleSwitchVersion(v.id)}
+                            className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
+                          >
+                            <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-muted)' }} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-text)' }}>
+                                v{v.version}
+                              </p>
+                              <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
+                            </div>
+                            {v.id === asset.id && <Check size={12} className="text-th-accent shrink-0" />}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="p-2 border-t border-th-border bg-th-surface-alt/50">
+                        <button
+                          onClick={() => {
+                            setShowVersions(false)
+                            setShowUploadModal(true)
+                          }}
+                          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-th text-[12px] font-semibold bg-th-surface border border-th-border text-th-text hover:border-th-accent hover:text-th-accent transition-colors btn-press"
+                        >
+                          <Upload size={13} />
+                          Upload new version
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {versions.length >= 2 && (
+                <button
+                  onClick={handleOpenCompare}
+                  className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
+                >
+                  <Layers size={10} className="text-th-accent" />
+                  Compare versions
+                </button>
+              )}
+            </>
+          ) : (
             <button
-              onClick={() => setShowVersions(!showVersions)}
-              className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
-            >
-              <Layers size={10} />
-              v{asset.version}
-              <ChevronDown size={10} />
-            </button>
-
-            {showVersions && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowVersions(false)} />
-                <div className="absolute left-0 top-full mt-1.5 z-50 bg-th-surface border border-th-border rounded-th-lg shadow-panel w-60 overflow-hidden animate-slide-up">
-                  <div className="px-4 py-2.5 border-b border-th-border font-mono text-[10px] text-th-muted uppercase tracking-wider">
-                    Version history
-                  </div>
-                  <div className="max-h-60 overflow-y-auto">
-                    {versions.map((v) => (
-                      <button
-                        key={v.id}
-                        onClick={() => handleSwitchVersion(v.id)}
-                        className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
-                      >
-                        <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-muted)' }} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-text)' }}>
-                            v{v.version}
-                          </p>
-                          <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
-                        </div>
-                        {v.id === asset.id && <Check size={12} className="text-th-accent shrink-0" />}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="p-2 border-t border-th-border bg-th-surface-alt/50">
-                    <button
-                      onClick={() => {
-                        setShowVersions(false)
-                        setShowUploadModal(true)
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-th text-[12px] font-semibold bg-th-surface border border-th-border text-th-text hover:border-th-accent hover:text-th-accent transition-colors btn-press"
-                    >
-                      <Upload size={13} />
-                      Upload new version
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {versions.length >= 2 && (
-            <button
-              onClick={handleOpenCompare}
+              onClick={() => setShowUploadModal(true)}
               className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
             >
-              <Layers size={10} className="text-th-accent" />
-              Compare versions
+              <Upload size={10} />
+              Upload new file
             </button>
           )}
 
@@ -521,20 +534,38 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       </div>
 
       {showUploadModal && asset && (
-        <UploadModal
-          projectId={asset.project_id}
-          linkedAsset={{ id: asset.id, name: asset.name }}
-          onClose={() => setShowUploadModal(false)}
-          onUploaded={async () => {
-            setShowUploadModal(false)
-            const versionsRes = await fetch(`/api/assets/${asset.id}/versions`)
-            if (versionsRes.ok) {
-              const { versions: v } = await versionsRes.json()
-              setVersions(v)
-            }
-            showToast('New version uploaded!', 'success')
-          }}
-        />
+        asset.cut_type === 'board' ? (
+          <UploadModal
+            projectId={asset.project_id}
+            cutType="board"
+            linkedAsset={{ id: asset.id, name: asset.name }}
+            onClose={() => setShowUploadModal(false)}
+            onUploaded={async () => {
+              setShowUploadModal(false)
+              const versionsRes = await fetch(`/api/assets/${asset.id}/versions`)
+              if (versionsRes.ok) {
+                const { versions: v } = await versionsRes.json()
+                setVersions(v)
+              }
+              showToast('New version uploaded!', 'success')
+            }}
+          />
+        ) : (
+          // Custom Cut has no versioning - this always creates a brand new,
+          // independent asset (no linkedAsset), so there's nothing on this
+          // page to refresh. Send the user to the project's Custom Cut grid
+          // where the new upload actually shows up.
+          <UploadModal
+            projectId={asset.project_id}
+            cutType="custom"
+            onClose={() => setShowUploadModal(false)}
+            onUploaded={() => {
+              setShowUploadModal(false)
+              showToast('New cut uploaded!', 'success')
+              router.push(`/project/${asset.project_id}`)
+            }}
+          />
+        )
       )}
 
       {showCompareModal && (

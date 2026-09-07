@@ -11,23 +11,50 @@ export async function POST(req: NextRequest) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { project_id, name, linked_asset_name } = await req.json()
+  const { project_id, name, linked_asset_name, cut_type } = await req.json()
   if (!project_id || !name) {
     return NextResponse.json({ error: 'project_id and name required' }, { status: 400 })
   }
+  if (cut_type && cut_type !== 'custom' && cut_type !== 'board') {
+    return NextResponse.json({ error: 'Invalid cut_type' }, { status: 400 })
+  }
 
-  // Check for existing assets to auto-increment version. When linked_asset_name is
-  // present (uploading a new cut from the review page), match on that instead of the
-  // uploaded file's own name, since a re-export rarely keeps the original filename.
-  const { data: existing } = await supabaseAdmin
-    .from('assets')
-    .select('id, version, asset_group_id')
-    .eq('project_id', project_id)
-    .eq('name', linked_asset_name || name)
-    .order('version', { ascending: false })
-    .limit(1)
+  // Custom Cuts have no versioning concept at all, so the auto-stacking lookup
+  // below only ever runs for a Board Cut. Two branches:
+  //  - linked_asset_name present: a real "new version" upload (review screen).
+  //    Matched by name only - cut_type isn't known yet, that's exactly what
+  //    this lookup is for, so it can't be used to filter it.
+  //  - no linked_asset_name, requested type is 'board': a first-time upload
+  //    that happens to share a filename with an existing Board Cut auto-stacks
+  //    onto it, same as before. Requested type 'custom' skips this entirely -
+  //    every Custom Cut upload is always its own independent asset.
+  let linkedHead: { id: string; version: number; asset_group_id: string | null; cut_type: string } | null = null
 
-  const linkedHead = existing && existing.length > 0 ? existing[0] : null
+  if (linked_asset_name) {
+    const { data: existing } = await supabaseAdmin
+      .from('assets')
+      .select('id, version, asset_group_id, cut_type')
+      .eq('project_id', project_id)
+      .eq('name', linked_asset_name)
+      .order('version', { ascending: false })
+      .limit(1)
+    linkedHead = existing?.[0] ?? null
+  } else if ((cut_type ?? 'board') === 'board') {
+    const { data: existing } = await supabaseAdmin
+      .from('assets')
+      .select('id, version, asset_group_id, cut_type')
+      .eq('project_id', project_id)
+      .eq('name', name)
+      .eq('cut_type', 'board')
+      .order('version', { ascending: false })
+      .limit(1)
+    linkedHead = existing?.[0] ?? null
+  }
+
+  // A version upload always inherits its lineage's real cut_type - never
+  // whatever the client sent - so a Custom Cut asset can't be flipped to
+  // 'board' (or vice versa) by an "Upload new version" request.
+  const cutType = linkedHead ? linkedHead.cut_type : (cut_type ?? 'board')
   const nextVersion = linkedHead ? linkedHead.version + 1 : 1
 
   const upload = await video.uploads.create({
@@ -54,6 +81,7 @@ export async function POST(req: NextRequest) {
       version: nextVersion,
       status: 'processing',
       pipeline_status: linkedHead ? 'review' : 'idea',
+      cut_type: cutType,
       mux_upload_id: upload.id,
       asset_group_id: linkedHead ? linkedHead.asset_group_id : newAssetId,
     })
