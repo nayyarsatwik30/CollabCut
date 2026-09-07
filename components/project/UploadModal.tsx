@@ -138,7 +138,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset }: Upl
                 }}
               >
                 <Upload size={28} className="mx-auto mb-3 text-th-muted" />
-                <p className="font-semibold text-[14px] mb-1">Drop your video here</p>
+                <p className="font-semibold text-[14px] mb-1">Drop your cut here</p>
                 <p className="text-[12px] text-th-muted">or click to browse</p>
                 <p className="text-[11px] text-th-faint font-mono mt-3">MP4, MOV, MXF, ProRes — any format</p>
               </div>
