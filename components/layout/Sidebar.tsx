@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: Grid3X3, label: 'Projects' },
   { href: '/board', icon: Kanban, label: 'Board' },
+  { href: '/dashboard', icon: Grid3X3, label: 'Projects' },
   { href: '/recent', icon: Clock, label: 'Recent' },
   { href: '/starred', icon: Star, label: 'Starred' },
   { href: '/notifications', icon: Bell, label: 'Notifications' },
@@ -42,7 +42,7 @@ export function Sidebar() {
     <aside className="w-[220px] h-full flex flex-col shrink-0 bg-th-surface border-r border-th-border">
       {/* Logo */}
       <div className="h-13 flex items-center px-5 border-b border-th-border shrink-0">
-        <Link href="/dashboard" className="flex items-center gap-2.5">
+        <Link href="/board" className="flex items-center gap-2.5">
           <span className="w-2.5 h-2.5 rounded-full bg-th-accent block shrink-0" />
           <span className="text-[17px] font-extrabold tracking-tight font-display">COLLABCUT</span>
         </Link>

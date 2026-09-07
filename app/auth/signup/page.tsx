@@ -58,7 +58,7 @@ function SignupForm() {
         .eq('id', data.user.id)
     }
 
-    router.push('/dashboard')
+    router.push('/board')
   }
 
   return (

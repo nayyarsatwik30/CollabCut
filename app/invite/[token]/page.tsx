@@ -74,7 +74,7 @@ export default function InvitePage() {
       return
     }
 
-    router.push(invite?.role === 'editor' ? '/board' : '/dashboard')
+    router.push('/board')
   }
 
   const handleSubmit = async () => {
