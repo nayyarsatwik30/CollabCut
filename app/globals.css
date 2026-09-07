@@ -153,6 +153,28 @@ h3,
   transform: translateY(0) scale(1);
 }
 
+/* ── Overlay badges on video thumbnails ──
+   Text sitting on a thumbnail image can't rely on a fixed text color for
+   contrast - the pixels underneath vary. A near-opaque dark backdrop keeps
+   it legible regardless; any status color moves to a small dot instead of
+   the text itself. */
+
+.thumb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.thumb-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 /* ── Film strip (review page) ── */
 
 .film-strip {

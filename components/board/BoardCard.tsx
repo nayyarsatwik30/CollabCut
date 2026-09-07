@@ -80,7 +80,7 @@ export function BoardCard({ asset, color, isAdmin, editors, onAssign, onDragStar
       <div className="flex items-center gap-2 mb-2">
         {isPlaceholder ? (
           <span
-            className="w-5 h-5 rounded-th-sm border border-dashed border-th-faint flex items-center justify-center shrink-0 text-th-faint"
+            className="w-5 h-5 rounded-th-sm border border-dashed border-th-faint flex items-center justify-center shrink-0 text-th-muted"
           >
             <Clock size={11} />
           </span>
@@ -93,7 +93,7 @@ export function BoardCard({ asset, color, isAdmin, editors, onAssign, onDragStar
           </span>
         )}
         {isPlaceholder ? (
-          <span className="ml-auto font-mono text-[9px] uppercase tracking-wider text-th-faint">Awaiting upload</span>
+          <span className="ml-auto font-mono text-[9px] uppercase tracking-wider text-th-muted">Awaiting upload</span>
         ) : asset.is_complete && (
           <span
             className="ml-auto w-4 h-4 rounded-full flex items-center justify-center shrink-0"

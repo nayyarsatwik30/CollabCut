@@ -257,7 +257,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           ) : (
                             <Film size={28} style={{ color: 'var(--th-accent)' }} />
                           )}
-                          <span className="font-mono text-[11px] text-th-muted relative z-[1]">{formatDuration(a.duration_sec)}</span>
+                          <span className="thumb-badge font-mono text-[11px] px-1.5 py-0.5 rounded relative z-[1]">{formatDuration(a.duration_sec)}</span>
                         </div>
                         <div className="p-3.5 flex-1 flex flex-col justify-center min-h-[64px]">
                           <p className="text-[13px] font-semibold truncate mb-2">{a.name}</p>
@@ -315,15 +315,17 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                       return (
                       <Link key={a.id} href={`/review/${a.id}`}
                         className={`group relative flex flex-col h-full bg-th-surface rounded-th-lg overflow-hidden transition-colors shadow-card hover:shadow-card-hover ${isPlaceholder ? 'border border-dashed border-th-faint hover:border-th-accent' : 'border border-th-border hover:border-th-accent'}`}>
-                        <button
-                          onClick={(e) => handleDeleteAsset(e, a.id)}
-                          className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes z-20">
-                          <Trash2 size={13} />
-                        </button>
+                        {!isPlaceholder && (
+                          <button
+                            onClick={(e) => handleDeleteAsset(e, a.id)}
+                            className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes z-20">
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                         {isPlaceholder ? (
                           <div className="aspect-video shrink-0 bg-th-surface-alt/40 flex flex-col items-center justify-center gap-2 relative">
-                            <Clock size={26} className="text-th-faint" />
-                            <span className="font-mono text-[10px] uppercase tracking-wider text-th-faint">Awaiting upload</span>
+                            <Clock size={26} className="text-th-muted" />
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted">Awaiting upload</span>
                           </div>
                         ) : (
                           <div className="aspect-video shrink-0 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
@@ -336,16 +338,17 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                             ) : (
                               <Film size={28} style={{ color: 'var(--th-accent)' }} />
                             )}
-                            <span className="font-mono text-[11px] text-th-muted relative z-[1]">{formatDuration(a.duration_sec)}</span>
-                            <div className="absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/70 text-white z-[1]">
+                            <span className="thumb-badge font-mono text-[11px] px-1.5 py-0.5 rounded relative z-[1]">{formatDuration(a.duration_sec)}</span>
+                            <div className="thumb-badge absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-0.5 rounded z-[1]">
                               v{a.version}
                             </div>
-                            <div
-                              className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-th-full font-mono z-[1]"
-                              style={{
-                                color: a.status === 'approved' ? 'var(--th-resolved)' : a.status === 'changes' ? 'var(--th-changes)' : 'var(--th-open)',
-                                background: 'rgba(0,0,0,0.7)',
-                              }}>
+                            <div className="thumb-badge absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-th-full font-mono z-[1]">
+                              <span
+                                className="thumb-badge-dot"
+                                style={{
+                                  background: a.status === 'approved' ? 'var(--th-resolved)' : a.status === 'changes' ? 'var(--th-changes)' : 'var(--th-open)',
+                                }}
+                              />
                               {a.status === 'approved' ? 'APPROVED'
                                 : a.status === 'changes' ? 'NEEDS CHANGES'
                                   : a.status === 'processing' ? 'PROCESSING'
@@ -358,7 +361,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           <div className="flex items-center justify-between text-[11px] text-th-faint font-mono">
                             <span>{formatSize(a.size_bytes)}</span>
                             {isPlaceholder ? (
-                              <span className="px-2 py-0.5 rounded-th-full font-sans font-semibold text-[10px] bg-th-surface-alt border border-dashed border-th-faint text-th-faint">
+                              <span className="px-2 py-0.5 rounded-th-full font-sans font-semibold text-[10px] bg-th-surface-alt border border-dashed border-th-faint text-th-muted">
                                 Requested
                               </span>
                             ) : a.is_complete ? (

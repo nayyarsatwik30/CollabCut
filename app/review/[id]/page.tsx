@@ -77,6 +77,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showFulfillModal, setShowFulfillModal] = useState(false)
+  const [briefOverride, setBriefOverride] = useState<boolean | null>(null)
   const [showCompareModal, setShowCompareModal] = useState(false)
   const [compareV1Id, setCompareV1Id] = useState<string>('')
   const [compareV2Id, setCompareV2Id] = useState<string>('')
@@ -295,6 +296,10 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   const unfulfilled = !!asset && !asset.mux_upload_id
   const awaitingStream = !!asset && (asset.status === 'processing' || !asset.mux_playback_id)
+  const hasBrief = !!asset && !!(asset.notes || asset.reference || asset.deadline || asset.raw_file_url)
+  // Open by default while there's no file yet (it's the main thing to see); once a
+  // file exists it collapses out of the way, unless the user has toggled it manually.
+  const briefOpen = briefOverride === null ? unfulfilled : briefOverride
 
   if (loading) {
     return (
@@ -460,66 +465,92 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       </div>
 
       <div className="flex flex-1 overflow-hidden min-h-0">
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          {unfulfilled ? (
-            <div className="flex-1 flex items-center justify-center bg-black overflow-y-auto p-6">
-              <div className="w-full max-w-md">
-                <div className="rounded-th-lg border border-th-accent/50 bg-th-surface p-5 mb-5 text-left shadow-panel">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText size={14} className="text-th-accent" />
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-th-accent font-bold">Content brief</span>
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
+          {hasBrief && (
+            <>
+              <button
+                onClick={() => setBriefOverride(!briefOpen)}
+                className="absolute top-3 left-3 z-20 flex items-center gap-1.5 h-7 px-3 rounded-th-full bg-th-surface/95 backdrop-blur border border-th-accent/50 font-mono text-[11px] uppercase tracking-wider text-th-accent font-bold btn-press hover:bg-th-surface transition-colors shadow-panel"
+              >
+                <FileText size={12} />
+                Content brief
+                <ChevronDown
+                  size={11}
+                  className="transition-transform"
+                  style={{ transform: briefOpen ? 'rotate(180deg)' : 'none' }}
+                />
+              </button>
+
+              {briefOpen && (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setBriefOverride(false)} />
+                  <div className="absolute top-12 left-3 z-30 w-[380px] max-w-[calc(100%-24px)] max-h-[calc(100%-64px)] overflow-y-auto rounded-th-lg border border-th-border bg-th-surface shadow-panel animate-slide-up">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-th-border">
+                      <div className="flex items-center gap-2">
+                        <FileText size={13} className="text-th-accent" />
+                        <span className="font-mono text-[10px] uppercase tracking-wider text-th-accent font-bold">Content brief</span>
+                      </div>
+                      <button
+                        onClick={() => setBriefOverride(false)}
+                        className="text-th-muted hover:text-th-text p-0.5 rounded-th hover:bg-th-surface-alt transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    <div className="p-4 space-y-3.5">
+                      {asset.notes && (
+                        <div>
+                          <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Notes</p>
+                          <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.notes}</p>
+                        </div>
+                      )}
+
+                      {asset.reference && (
+                        <div>
+                          <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Reference</p>
+                          <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.reference}</p>
+                        </div>
+                      )}
+
+                      {asset.deadline && (
+                        <div>
+                          <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Deadline</p>
+                          <p className="flex items-center gap-1.5 text-[13px] text-th-text">
+                            <Clock size={12} className="text-th-muted" />
+                            {new Date(asset.deadline).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                          </p>
+                        </div>
+                      )}
+
+                      {asset.raw_file_url && (
+                        <a
+                          href={asset.raw_file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent transition-colors btn-press"
+                        >
+                          <ExternalLink size={12} /> Open raw file
+                        </a>
+                      )}
+                    </div>
                   </div>
+                </>
+              )}
+            </>
+          )}
 
-                  {asset.notes && (
-                    <div className="mb-3.5">
-                      <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Notes</p>
-                      <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.notes}</p>
-                    </div>
-                  )}
-
-                  {asset.reference && (
-                    <div className="mb-3.5">
-                      <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Reference</p>
-                      <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.reference}</p>
-                    </div>
-                  )}
-
-                  {asset.deadline && (
-                    <div className="mb-3.5">
-                      <p className="font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1">Deadline</p>
-                      <p className="flex items-center gap-1.5 text-[13px] text-th-text">
-                        <Clock size={12} className="text-th-muted" />
-                        {new Date(asset.deadline).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
-                      </p>
-                    </div>
-                  )}
-
-                  {asset.raw_file_url && (
-                    <a
-                      href={asset.raw_file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent transition-colors btn-press"
-                    >
-                      <ExternalLink size={12} /> Open raw file
-                    </a>
-                  )}
-
-                  {!asset.notes && !asset.reference && !asset.deadline && !asset.raw_file_url && (
-                    <p className="text-[12px] text-th-muted italic">No brief was provided for this request.</p>
-                  )}
-                </div>
-
-                <div className="text-center">
-                  <p className="text-white text-[13px] font-medium mb-1">No file uploaded yet</p>
-                  <p className="text-white/50 text-[11px] mb-4">Upload a cut to fulfill this content request</p>
-                  <button
-                    onClick={() => setShowFulfillModal(true)}
-                    className="flex items-center gap-1.5 mx-auto px-4 py-2 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
-                  >
-                    <Upload size={13} /> Upload cut
-                  </button>
-                </div>
+          {unfulfilled ? (
+            <div className="flex-1 flex items-center justify-center bg-black">
+              <div className="text-center">
+                <p className="text-white text-[13px] font-medium mb-1">No file uploaded yet</p>
+                <p className="text-white/50 text-[11px] mb-4">Upload a cut to fulfill this content request</p>
+                <button
+                  onClick={() => setShowFulfillModal(true)}
+                  className="flex items-center gap-1.5 mx-auto px-4 py-2 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
+                >
+                  <Upload size={13} /> Upload cut
+                </button>
               </div>
             </div>
           ) : awaitingStream ? (
