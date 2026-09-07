@@ -11,7 +11,28 @@ export async function POST(req: NextRequest) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { project_id, name, linked_asset_name, cut_type, fulfill_asset_id } = await req.json()
+  const { project_id, name, linked_asset_name, cut_type, fulfill_asset_id: requestedFulfillAssetId } = await req.json()
+
+  let fulfill_asset_id = requestedFulfillAssetId
+
+  // A plain Board Cut upload (the section's generic "Upload" button, not the
+  // placeholder's own "Upload cut" button) auto-fulfills a pending New
+  // Content placeholder in the same project if one exists, instead of
+  // silently creating a disconnected asset next to it - same outcome as
+  // using the placeholder's own upload button, regardless of which button
+  // was actually clicked.
+  if (!fulfill_asset_id && !linked_asset_name && project_id && (cut_type ?? 'board') === 'board') {
+    const { data: pending } = await supabaseAdmin
+      .from('assets')
+      .select('id')
+      .eq('project_id', project_id)
+      .eq('cut_type', 'board')
+      .is('mux_upload_id', null)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+      .limit(1)
+    fulfill_asset_id = pending?.[0]?.id
+  }
 
   // Fulfilling a New Content placeholder: attach the file to the EXISTING
   // asset row in place (same id/version/group), rather than creating a new
