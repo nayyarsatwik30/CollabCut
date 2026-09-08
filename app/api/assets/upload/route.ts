@@ -3,6 +3,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { video } from '@/lib/mux'
 import { syncProjectStatus } from '@/lib/project-status'
+import { notifyWorkspaceAdmins } from '@/lib/notifications'
+
+// Shared context every upload-triggered notification needs - the project's
+// display name/workspace (to fan a notification out to its admins) and the
+// uploader's display name (for the message text).
+async function getUploadNotificationContext(projectId: string, uploaderId: string) {
+  const [{ data: projectRow }, { data: uploaderProfile }] = await Promise.all([
+    supabaseAdmin.from('projects').select('name, workspace_id').eq('id', projectId).maybeSingle(),
+    supabaseAdmin.from('profiles').select('name, email').eq('id', uploaderId).maybeSingle(),
+  ])
+  return {
+    projectName: projectRow?.name ?? 'Untitled project',
+    workspaceId: (projectRow?.workspace_id as string | null) ?? null,
+    uploaderName: uploaderProfile?.name ?? uploaderProfile?.email ?? 'An editor',
+  }
+}
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
@@ -69,6 +85,18 @@ export async function POST(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     await syncProjectStatus(target.project_id)
+
+    // Trigger 2: a fulfilled placeholder is always a Board Cut v1 - no prior
+    // version, so trigger 4 never applies here.
+    const { projectName, workspaceId, uploaderName } = await getUploadNotificationContext(target.project_id, user.id)
+    if (workspaceId) {
+      await notifyWorkspaceAdmins(workspaceId, {
+        type: 'cut_uploaded',
+        message: `${uploaderName} uploaded v${asset.version} for ${projectName} — ready for review`,
+        link: `/review/${fulfill_asset_id}`,
+        assetId: fulfill_asset_id,
+      })
+    }
 
     return NextResponse.json({ asset, upload_url: upload.url, upload_id: upload.id }, { status: 201 })
   }
@@ -171,6 +199,46 @@ export async function POST(req: NextRequest) {
   // A new version reopens the pipeline (e.g. re-cutting an already-approved
   // asset), so the project's aggregate status can no longer be "approved".
   if (linkedHead) await syncProjectStatus(project_id)
+
+  // Triggers 2 & 4: Custom Cut uploads never notify (no review pipeline).
+  // Trigger 4 supersedes trigger 2 when this new version is stacked on a
+  // previous version that already has a comment thread - two notifications
+  // instead of the generic one, never both, per spec.
+  if (cutType === 'board') {
+    const { projectName, workspaceId, uploaderName } = await getUploadNotificationContext(project_id, user.id)
+    if (workspaceId) {
+      let hasPriorComment = false
+      if (linkedHead) {
+        const { count } = await supabaseAdmin
+          .from('comments')
+          .select('id', { count: 'exact', head: true })
+          .eq('asset_id', linkedHead.id)
+        hasPriorComment = (count ?? 0) > 0
+      }
+
+      if (linkedHead && hasPriorComment) {
+        await notifyWorkspaceAdmins(workspaceId, {
+          type: 'comment_reply',
+          message: `${uploaderName} replied to your comment on ${projectName}`,
+          link: `/review/${linkedHead.id}`,
+          assetId: linkedHead.id,
+        })
+        await notifyWorkspaceAdmins(workspaceId, {
+          type: 'version_ready',
+          message: `Version ${nextVersion} uploaded for ${projectName} — ready to approve`,
+          link: `/review/${newAssetId}`,
+          assetId: newAssetId,
+        })
+      } else {
+        await notifyWorkspaceAdmins(workspaceId, {
+          type: 'cut_uploaded',
+          message: `${uploaderName} uploaded v${nextVersion} for ${projectName} — ready for review`,
+          link: `/review/${newAssetId}`,
+          assetId: newAssetId,
+        })
+      }
+    }
+  }
 
   return NextResponse.json({ asset, upload_url: upload.url, upload_id: upload.id }, { status: 201 })
 }

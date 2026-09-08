@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { latestPerGroup } from '@/lib/asset-lineage'
+import { createNotification } from '@/lib/notifications'
 
 async function requireAdminWorkspace(token: string) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
@@ -102,6 +103,26 @@ export async function POST(req: NextRequest, { params }: { params: { editorId: s
     .upsert({ asset_id: assetId, editor_id: params.editorId }, { onConflict: 'asset_id,editor_id' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Trigger 1: notify the newly-assigned editor. Best-effort - the
+  // assignment itself already succeeded above regardless of this.
+  const { data: assetRow } = await supabaseAdmin
+    .from('assets')
+    .select('project_id, projects(name)')
+    .eq('id', assetId)
+    .maybeSingle()
+
+  if (assetRow?.project_id) {
+    const project = Array.isArray(assetRow.projects) ? assetRow.projects[0] : assetRow.projects
+    await createNotification({
+      userId: params.editorId,
+      type: 'editor_assigned',
+      message: `New project assigned: ${project?.name ?? 'Untitled project'}`,
+      link: `/project/${assetRow.project_id}`,
+      assetId,
+    })
+  }
+
   return NextResponse.json({ success: true }, { status: 201 })
 }
 

@@ -21,6 +21,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     loadUser()
@@ -31,6 +32,14 @@ export function Sidebar() {
     if (session) {
       setName(session.user.user_metadata?.name ?? session.user.email ?? 'User')
       setEmail(session.user.email ?? '')
+
+      const res = await fetch('/api/notifications/unread-count', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setUnreadCount(data.count ?? 0)
+      }
     }
   }
 
@@ -65,6 +74,14 @@ export function Sidebar() {
             >
               <Icon size={15} className={active ? 'text-th-accent' : ''} />
               <span className="flex-1">{label}</span>
+              {href === '/notifications' && unreadCount > 0 && (
+                <span
+                  className="min-w-[16px] h-4 px-1 rounded-th-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                  style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)' }}
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </Link>
           )
         })}
