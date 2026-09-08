@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X, FileText, ExternalLink, StickyNote, Link2 } from 'lucide-react'
-import { VideoPlayer } from '@/components/review/VideoPlayer'
+import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
 import { UploadModal } from '@/components/project/UploadModal'
@@ -62,10 +62,12 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true)
   const [token, setToken] = useState<string | null>(null)
   const [userName, setUserName] = useState('You')
+  const [role, setRole] = useState<'admin' | 'editor' | null>(null)
 
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [comments, setComments] = useState<Comment[]>([])
+  const videoPlayerRef = useRef<VideoPlayerHandle>(null)
 
   const [versions, setVersions] = useState<VersionEntry[]>([])
   const [showVersions, setShowVersions] = useState(false)
@@ -99,6 +101,15 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     if (!session) { router.push('/auth/login'); return }
     setToken(session.access_token)
     setUserName(session.user.user_metadata?.name ?? session.user.email ?? 'You')
+
+    // Same workspace_members role lookup used on the dashboard/board admin-only
+    // gates - Approve Cut is an admin-only action, not an editor one.
+    const { data: memberships } = await supabase
+      .from('workspace_members')
+      .select('role')
+      .eq('user_id', session.user.id)
+    const roles = (memberships ?? []).map((m) => m.role)
+    setRole(roles.includes('admin') ? 'admin' : roles.includes('editor') ? 'editor' : null)
 
     const assetRes = await fetch(`/api/assets/${params.id}`)
     if (assetRes.ok) {
@@ -432,17 +443,19 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           >
             <Share2 size={13} /> Share
           </button>
-          <button
-            onClick={handleToggleComplete}
-            disabled={togglingComplete}
-            className="flex items-center gap-1.5 h-8 px-3.5 rounded-th text-[13px] font-bold btn-press transition-all approve-glow disabled:opacity-50"
-            style={{
-              background: asset.is_complete ? 'var(--th-resolved)' : 'var(--th-accent)',
-              color: asset.is_complete ? '#fff' : 'var(--th-accent-fg)',
-            }}
-          >
-            {asset.is_complete ? <><Check size={13} /> Approved</> : <><ThumbsUp size={13} /> Approve cut</>}
-          </button>
+          {role === 'admin' && (
+            <button
+              onClick={handleToggleComplete}
+              disabled={togglingComplete}
+              className="flex items-center gap-1.5 h-8 px-3.5 rounded-th text-[13px] font-bold btn-press transition-all approve-glow disabled:opacity-50"
+              style={{
+                background: asset.is_complete ? 'var(--th-resolved)' : 'var(--th-accent)',
+                color: asset.is_complete ? '#fff' : 'var(--th-accent-fg)',
+              }}
+            >
+              {asset.is_complete ? <><Check size={13} /> Approved</> : <><ThumbsUp size={13} /> Approve cut</>}
+            </button>
+          )}
         </div>
       </header>
 
@@ -497,6 +510,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             </div>
           ) : (
             <VideoPlayer
+              ref={videoPlayerRef}
               src={muxSrc}
               comments={comments.map(c => ({
                 id: c.id,
@@ -550,7 +564,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   createdAt: new Date(c.created_at).toLocaleString(),
                 })) as any}
                 currentTime={currentTime}
-                onSeek={() => {}}
+                onSeek={(time) => videoPlayerRef.current?.seekTo(time)}
                 onAdd={handleAddComment}
                 onResolve={handleResolve}
                 onDelete={handleDelete}

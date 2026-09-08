@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, X } from 'lucide-react'
+import { Check, X, LogOut } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
+import { performLogout } from '@/lib/auth'
 
 type Tab = 'profile' | 'plan' | 'notifications' | 'team'
 
@@ -24,6 +26,7 @@ interface Plan {
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
   const [tab, setTab] = useState<Tab>('profile')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -166,6 +169,15 @@ export default function SettingsPage() {
     await supabase.auth.updateUser({ data: { name } })
   }
 
+  const handleLogout = async () => {
+    await performLogout(router)
+  }
+
+  const handleLogoutClick = async () => {
+    const ok = await confirm({ title: 'Log out of CollabCut?', confirmLabel: 'Yes, log out' })
+    if (ok) handleLogout()
+  }
+
   const handleSelectPlan = async (newPlanId: string) => {
     setUpdatingPlan(true)
     const { data: { session } } = await supabase.auth.getSession()
@@ -205,7 +217,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex flex-1 overflow-hidden min-h-0">
-          <div className="w-48 shrink-0 border-r border-th-border p-3 space-y-0.5">
+          <div className="w-48 shrink-0 border-r border-th-border p-3 space-y-0.5 flex flex-col">
             {(['profile', 'plan', 'notifications', 'team'] as Tab[]).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className="w-full text-left px-3 py-2 rounded-th-sm text-[13px] transition-colors capitalize"
@@ -217,6 +229,14 @@ export default function SettingsPage() {
                 {t === 'plan' ? 'Plan & billing' : t}
               </button>
             ))}
+            <div className="pt-2 mt-1 border-t border-th-border">
+              <button
+                onClick={handleLogoutClick}
+                className="w-full flex items-center gap-1.5 text-left px-3 py-2 rounded-th-sm text-[13px] text-th-muted hover:text-th-changes hover:bg-th-surface-alt transition-colors"
+              >
+                <LogOut size={13} /> Logout
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-8">
@@ -420,6 +440,8 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
 
       {/* Plan Selection Modal */}
       {isModalOpen && (

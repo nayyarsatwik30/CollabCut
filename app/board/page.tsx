@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { LayoutGrid, Plus, FolderKanban, Users, ChevronLeft, Film } from 'lucide-react'
+import { LayoutGrid, Plus, FolderKanban, Users, ChevronLeft, Film, LogOut } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BoardCard, initialsFor, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
 import { NewContentModal } from '@/components/board/NewContentModal'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { Toast, useToast } from '@/components/ui/Toast'
+import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
+import { performLogout } from '@/lib/auth'
 
 type BoardView = 'board' | 'projects' | 'editors'
 
@@ -58,6 +60,7 @@ export default function BoardPage() {
   const [editorAssetsLoading, setEditorAssetsLoading] = useState(false)
 
   const { toast, showToast, dismissToast } = useToast()
+  const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
 
   useEffect(() => {
     loadBoard()
@@ -101,6 +104,15 @@ export default function BoardPage() {
   }
 
   const handleDragEnd = () => setDragOverColumn(null)
+
+  const handleLogout = async () => {
+    await performLogout(router)
+  }
+
+  const handleLogoutClick = async () => {
+    const ok = await confirm({ title: 'Log out of CollabCut?', confirmLabel: 'Yes, log out' })
+    if (ok) handleLogout()
+  }
 
   // Single source of truth for changing an asset's column - both drag-and-drop
   // and the card's inline status dropdown call this same function, so there's
@@ -247,6 +259,12 @@ export default function BoardPage() {
                 <Plus size={13} /> New
               </button>
             )}
+            <button
+              onClick={handleLogoutClick}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-muted btn-press hover:text-th-changes transition-colors"
+            >
+              <LogOut size={13} /> Logout
+            </button>
           </div>
         </div>
 
@@ -455,6 +473,7 @@ export default function BoardPage() {
       </div>
 
       <Toast toast={toast} onDismiss={dismissToast} />
+      <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
 
       {showNewContent && (
         <NewContentModal

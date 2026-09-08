@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Search, Grid3X3, List, Plus, Upload, LogOut, Film, Check } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
+import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
 
@@ -34,6 +35,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [search, setSearch] = useState('')
   const [projects, setProjects] = useState<Project[]>([])
@@ -265,7 +267,10 @@ export default function DashboardPage() {
 
           <div className="ml-auto flex items-center gap-2.5">
             <button
-              onClick={handleLogout}
+              onClick={async () => {
+                const ok = await confirm({ title: 'Log out of CollabCut?', confirmLabel: 'Yes, log out' })
+                if (ok) handleLogout()
+              }}
               className="flex items-center gap-1.5 h-8 px-3 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-muted btn-press hover:text-th-changes transition-colors"
             >
               <LogOut size={13} /> Logout
@@ -473,6 +478,7 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
     </div>
   )
 }

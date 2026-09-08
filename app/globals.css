@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -24,7 +24,7 @@
   --th-r-sm: 10px;
   --th-r-lg: 20px;
   --th-r-full: 9999px;
-  --th-font: 'Inter', sans-serif;
+  --th-font: 'IBM Plex Sans', sans-serif;
   --th-mono: 'JetBrains Mono', monospace;
   --th-display: 'Instrument Serif', serif;
 
@@ -48,7 +48,7 @@ body {
 body {
   background-color: var(--th-bg);
   color: var(--th-text);
-  font-family: Helvetica, Arial, var(--th-font);
+  font-family: var(--th-font);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;

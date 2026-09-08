@@ -14,40 +14,33 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: 'complete (boolean) required' }, { status: 400 })
   }
 
-  const { data: assignment } = await supabaseAdmin
-    .from('asset_editors')
-    .select('id')
-    .eq('asset_id', params.id)
-    .eq('editor_id', user.id)
-    .maybeSingle()
+  // Approving a cut is admin-only - an assigned editor is never authorized
+  // here, regardless of asset_editors assignment.
+  const { data: asset } = await supabaseAdmin
+    .from('assets')
+    .select('project_id, projects(workspace_id)')
+    .eq('id', params.id)
+    .single()
 
-  let authorized = !!assignment
+  const workspaceId = asset?.projects
+    ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
+    : null
 
-  if (!authorized) {
-    const { data: asset } = await supabaseAdmin
-      .from('assets')
-      .select('project_id, projects(workspace_id)')
-      .eq('id', params.id)
-      .single()
+  let authorized = false
 
-    const workspaceId = asset?.projects
-      ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
-      : null
+  if (workspaceId) {
+    const { data: membership } = await supabaseAdmin
+      .from('workspace_members')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle()
 
-    if (workspaceId) {
-      const { data: membership } = await supabaseAdmin
-        .from('workspace_members')
-        .select('id')
-        .eq('workspace_id', workspaceId)
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle()
-
-      authorized = !!membership
-    }
+    authorized = !!membership
   }
 
-  if (!authorized) return NextResponse.json({ error: 'Not authorized to update this asset' }, { status: 403 })
+  if (!authorized) return NextResponse.json({ error: 'Admin access required to approve a cut' }, { status: 403 })
 
   const { data, error } = await supabaseAdmin
     .from('assets')

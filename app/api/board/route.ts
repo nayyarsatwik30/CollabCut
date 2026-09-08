@@ -85,38 +85,61 @@ export async function GET(req: NextRequest) {
       .eq('id', user.id)
       .maybeSingle()
 
-    const { data, error } = await supabaseAdmin
+    // asset_editors pins an assignment to one specific version's row, not the
+    // whole lineage - resolve which asset_group_id(s) this editor is assigned
+    // to first (auth check), then pull every version in those groups so
+    // latestPerGroup has the sibling versions to actually pick a latest from.
+    // It can't promote a version it was never given.
+    const { data: assignedRows, error: assignedError } = await supabaseAdmin
       .from('asset_editors')
-      .select('editor_id, assets!inner(id, name, version, asset_group_id, pipeline_status, is_complete, project_id, deleted_at, mux_upload_id, projects!inner(id, name, workspace_id, deleted_at))')
+      .select('assets!inner(asset_group_id, cut_type, deleted_at, projects!inner(workspace_id, deleted_at))')
       .eq('editor_id', user.id)
       .eq('assets.cut_type', 'board')
 
-    console.log('[api/board] editor raw query result (pre-filter):', JSON.stringify(data), 'error:', error?.message ?? null)
+    if (assignedError) return NextResponse.json({ error: assignedError.message }, { status: 500 })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    assets = latestPerGroup(
-      (data ?? [])
+    const assignedGroupIds = Array.from(new Set(
+      (assignedRows ?? [])
         .map((row: any) => (Array.isArray(row.assets) ? row.assets[0] : row.assets))
         .filter((asset: any) => {
           if (!asset || asset.deleted_at) return false
           const project = Array.isArray(asset.projects) ? asset.projects[0] : asset.projects
           return project && !project.deleted_at && project.workspace_id === workspaceId
         })
-    )
-      .map((asset: any) => {
-        const project = Array.isArray(asset.projects) ? asset.projects[0] : asset.projects
-        return {
-          id: asset.id,
-          name: asset.name,
-          pipeline_status: asset.pipeline_status ?? 'idea',
-          is_complete: asset.is_complete,
-          project_id: asset.project_id,
-          project_name: project?.name ?? 'Untitled project',
-          editor: { id: user.id, name: myProfile?.name ?? user.email ?? 'You' },
-          mux_upload_id: asset.mux_upload_id ?? null,
-        }
-      })
+        .map((asset: any) => asset.asset_group_id)
+    ))
+
+    if (assignedGroupIds.length > 0) {
+      const { data, error } = await supabaseAdmin
+        .from('assets')
+        .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, workspace_id, deleted_at)')
+        .in('asset_group_id', assignedGroupIds)
+        .is('deleted_at', null)
+
+      console.log('[api/board] editor raw query result (pre-filter):', JSON.stringify(data), 'error:', error?.message ?? null)
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+      assets = latestPerGroup(
+        (data ?? []).filter((row: any) => {
+          const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
+          return project && !project.deleted_at
+        })
+      )
+        .map((row: any) => {
+          const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
+          return {
+            id: row.id,
+            name: row.name,
+            pipeline_status: row.pipeline_status ?? 'idea',
+            is_complete: row.is_complete,
+            project_id: row.project_id,
+            project_name: project?.name ?? 'Untitled project',
+            editor: { id: user.id, name: myProfile?.name ?? user.email ?? 'You' },
+            mux_upload_id: row.mux_upload_id ?? null,
+          }
+        })
+    }
   }
 
   console.log('[api/board] final assets after filtering:', assets.length)

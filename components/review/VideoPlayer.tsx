@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
 import Hls from 'hls.js'
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Download } from 'lucide-react'
 import { Comment } from '@/lib/types'
@@ -15,7 +15,15 @@ interface VideoPlayerProps {
   approved?: boolean
 }
 
-export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, approved }: VideoPlayerProps) {
+export interface VideoPlayerHandle {
+  /** Seeks to `time` (same mechanism as the timeline scrubber) and pauses on that frame. */
+  seekTo: (time: number) => void
+}
+
+export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
+  { src, comments, onTimeUpdate, onDurationChange, approved },
+  ref
+) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [playing, setPlaying] = useState(false)
@@ -141,6 +149,13 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
   const stepFrame = useCallback((dir: 1 | -1) => {
     seekTo(currentTime + (dir / 24))
   }, [currentTime, seekTo])
+
+  useImperativeHandle(ref, () => ({
+    seekTo: (time: number) => {
+      videoRef.current?.pause()
+      seekTo(time)
+    },
+  }), [seekTo])
 
   const handleTimeUpdate = useCallback(() => {
     const v = videoRef.current
@@ -352,4 +367,4 @@ export function VideoPlayer({ src, comments, onTimeUpdate, onDurationChange, app
       </div>
     </div>
   )
-}
+})
