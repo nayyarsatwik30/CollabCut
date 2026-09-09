@@ -335,6 +335,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       <Toast toast={toast} onDismiss={dismissToast} />
       <ShareModal
         open={shareOpen}
+        assetId={asset.id}
+        token={token ?? ''}
         onClose={() => setShareOpen(false)}
         onCopied={() => showToast('Review link copied!', 'success')}
       />

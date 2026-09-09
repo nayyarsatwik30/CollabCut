@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { hashSharePassword } from '@/lib/share-password'
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { asset_id, downloads_disabled, comments_only, expires_at } = await req.json()
+  const { asset_id, downloads_disabled, comments_only, expires_at, password } = await req.json()
   if (!asset_id) return NextResponse.json({ error: 'asset_id required' }, { status: 400 })
 
   const { data, error } = await supabaseAdmin
@@ -19,14 +20,16 @@ export async function POST(req: NextRequest) {
       downloads_disabled: downloads_disabled ?? false,
       comments_only: comments_only ?? false,
       expires_at: expires_at ?? null,
+      password_hash: password ? hashSharePassword(password) : null,
     })
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  const { password_hash, ...safeShareLink } = data
   const url = `${process.env.NEXT_PUBLIC_APP_URL}/r/${data.token}`
-  return NextResponse.json({ share_link: data, url }, { status: 201 })
+  return NextResponse.json({ share_link: safeShareLink, url }, { status: 201 })
 }
 
 export async function GET(req: NextRequest) {
