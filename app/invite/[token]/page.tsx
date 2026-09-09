@@ -144,7 +144,7 @@ export default function InvitePage() {
 
   if (loading) {
     return (
-      <div className="page-scroll bg-th-bg font-display min-h-screen flex items-center justify-center">
+      <div className="page-scroll bg-th-bg min-h-screen flex items-center justify-center">
         <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
       </div>
     )
@@ -154,7 +154,7 @@ export default function InvitePage() {
     loadError || (invite?.used ? 'This invite has already been used.' : invite?.expired ? 'This invite has expired.' : '')
 
   return (
-    <div className="page-scroll bg-th-bg font-display">
+    <div className="page-scroll bg-th-bg">
       <header className="h-14 border-b border-th-border flex items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
           <span className="w-2.5 h-2.5 rounded-full bg-th-accent block" />
