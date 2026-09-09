@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { SignupForm } from '@/components/auth/SignupForm'
 
-export default function SignupPage() {
+export default function AgencySignupPage() {
   return (
     <div className="page-scroll bg-th-bg">
       <header className="h-14 border-b border-th-border flex items-center justify-between px-6">
@@ -15,7 +15,7 @@ export default function SignupPage() {
       </header>
 
       <Suspense fallback={<div className="p-10 text-center text-th-muted">Loading…</div>}>
-        <SignupForm allowWorkspaceChoice={false} showPricingSidebar={true} />
+        <SignupForm allowWorkspaceChoice={true} showPricingSidebar={false} />
       </Suspense>
     </div>
   )
