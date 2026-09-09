@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, X, LogOut } from 'lucide-react'
+import { Check, X, LogOut, Copy } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
@@ -38,7 +38,7 @@ export default function SettingsPage() {
   const [updatingPlan, setUpdatingPlan] = useState(false)
   const [modalBillingCycle, setModalBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
 
-  const [adminWorkspace, setAdminWorkspace] = useState<{ id: string; name: string } | null>(null)
+  const [adminWorkspace, setAdminWorkspace] = useState<{ id: string; name: string; invite_code: string } | null>(null)
   const [provisioningWorkspace, setProvisioningWorkspace] = useState(false)
   const [workspaceError, setWorkspaceError] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
@@ -89,7 +89,7 @@ export default function SettingsPage() {
     // Find a workspace where the user is an admin, so we can offer invites
     const { data: membership } = await supabase
       .from('workspace_members')
-      .select('workspace_id, workspaces(name)')
+      .select('workspace_id, workspaces(name, invite_code)')
       .eq('user_id', session.user.id)
       .eq('role', 'admin')
       .limit(1)
@@ -97,7 +97,11 @@ export default function SettingsPage() {
 
     if (membership) {
       const workspace = Array.isArray(membership.workspaces) ? membership.workspaces[0] : membership.workspaces
-      setAdminWorkspace({ id: membership.workspace_id, name: workspace?.name ?? 'Workspace' })
+      setAdminWorkspace({
+        id: membership.workspace_id,
+        name: workspace?.name ?? 'Workspace',
+        invite_code: workspace?.invite_code ?? '',
+      })
     }
 
     setLoading(false)
@@ -368,13 +372,36 @@ export default function SettingsPage() {
                       </p>
                     )
                   ) : (
-                    <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-4">
+                    <>
+                    <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-3">
                       <div>
                         <span className="font-mono text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent/30 text-th-accent font-semibold">
                           {adminWorkspace.name}
                         </span>
                       </div>
+                      <div>
+                        <span className="text-th-muted block text-[11px] font-mono uppercase mb-2">Invite code</span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            readOnly
+                            value={adminWorkspace.invite_code}
+                            onFocus={e => e.target.select()}
+                            className="flex-1 px-3.5 py-2 rounded-th bg-th-surface-alt border border-th-border text-[14px] font-mono uppercase tracking-widest text-th-text outline-none"
+                          />
+                          <button
+                            onClick={() => navigator.clipboard.writeText(adminWorkspace.invite_code)}
+                            className="px-3.5 py-2 rounded-th text-[12px] font-semibold bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov transition-colors btn-press flex items-center gap-1.5"
+                          >
+                            <Copy size={12} /> Copy
+                          </button>
+                        </div>
+                        <p className="mt-2 text-[11px] text-th-faint">
+                          Anyone who signs up with this code joins {adminWorkspace.name} as an editor.
+                        </p>
+                      </div>
+                    </div>
 
+                    <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-4">
                       {inviteError && (
                         <div className="px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
                           {inviteError}
@@ -433,6 +460,7 @@ export default function SettingsPage() {
                         </div>
                       )}
                     </div>
+                    </>
                   )}
                 </>
               )}

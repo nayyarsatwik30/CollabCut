@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
   const { data: existing, error: existingError } = await supabaseAdmin
     .from('workspace_members')
-    .select('workspace_id, workspaces(name)')
+    .select('workspace_id, workspaces(name, invite_code)')
     .eq('user_id', user.id)
     .eq('role', 'admin')
     .limit(1)
@@ -22,7 +22,9 @@ export async function POST(req: NextRequest) {
 
   if (existing) {
     const workspace = Array.isArray(existing.workspaces) ? existing.workspaces[0] : existing.workspaces
-    return NextResponse.json({ workspace: { id: existing.workspace_id, name: workspace?.name ?? 'Workspace' } })
+    return NextResponse.json({
+      workspace: { id: existing.workspace_id, name: workspace?.name ?? 'Workspace', invite_code: workspace?.invite_code ?? '' },
+    })
   }
 
   const { data: profile } = await supabaseAdmin
@@ -47,5 +49,8 @@ export async function POST(req: NextRequest) {
 
   if (memberError) return NextResponse.json({ error: memberError.message }, { status: 500 })
 
-  return NextResponse.json({ workspace: { id: workspace.id, name: workspace.name } }, { status: 201 })
+  return NextResponse.json(
+    { workspace: { id: workspace.id, name: workspace.name, invite_code: workspace.invite_code } },
+    { status: 201 }
+  )
 }
