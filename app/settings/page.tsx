@@ -41,11 +41,6 @@ export default function SettingsPage() {
   const [adminWorkspace, setAdminWorkspace] = useState<{ id: string; name: string; invite_code: string } | null>(null)
   const [provisioningWorkspace, setProvisioningWorkspace] = useState(false)
   const [workspaceError, setWorkspaceError] = useState('')
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole] = useState<'editor'>('editor')
-  const [sendingInvite, setSendingInvite] = useState(false)
-  const [inviteError, setInviteError] = useState('')
-  const [inviteLink, setInviteLink] = useState('')
 
   useEffect(() => {
     loadUser()
@@ -131,42 +126,6 @@ export default function SettingsPage() {
       setWorkspaceError('Failed to set up your workspace')
     }
     setProvisioningWorkspace(false)
-  }
-
-  const sendInvite = async () => {
-    setInviteError('')
-    setInviteLink('')
-    if (!adminWorkspace) return
-    if (!inviteEmail.trim()) {
-      setInviteError('Enter an email address')
-      return
-    }
-
-    setSendingInvite(true)
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      setInviteError('Your session expired. Please log in again.')
-      setSendingInvite(false)
-      return
-    }
-
-    try {
-      const res = await fetch('/api/invites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ workspace_id: adminWorkspace.id, email: inviteEmail.trim(), role: inviteRole }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setInviteError(data.error ?? 'Failed to send invite')
-      } else {
-        setInviteLink(data.url)
-        setInviteEmail('')
-      }
-    } catch (err) {
-      setInviteError('Failed to send invite')
-    }
-    setSendingInvite(false)
   }
 
   const saveChanges = async () => {
@@ -372,7 +331,6 @@ export default function SettingsPage() {
                       </p>
                     )
                   ) : (
-                    <>
                     <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-3">
                       <div>
                         <span className="font-mono text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent/30 text-th-accent font-semibold">
@@ -400,67 +358,6 @@ export default function SettingsPage() {
                         </p>
                       </div>
                     </div>
-
-                    <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-4">
-                      {inviteError && (
-                        <div className="px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
-                          {inviteError}
-                        </div>
-                      )}
-
-                      <div className="flex items-end gap-3">
-                        <div className="flex-1">
-                          <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Email</label>
-                          <input
-                            type="email"
-                            value={inviteEmail}
-                            onChange={e => setInviteEmail(e.target.value)}
-                            placeholder="editor@studio.in"
-                            className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
-                          />
-                        </div>
-                        <div className="w-32">
-                          <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Role</label>
-                          <select
-                            value={inviteRole}
-                            disabled
-                            className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text outline-none cursor-not-allowed"
-                          >
-                            <option value="editor">Editor</option>
-                          </select>
-                        </div>
-                        <button
-                          onClick={sendInvite}
-                          disabled={sendingInvite}
-                          className="px-5 py-2.5 rounded-th text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
-                          style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)' }}
-                        >
-                          {sendingInvite ? 'Generating…' : 'Generate invite'}
-                        </button>
-                      </div>
-
-                      {inviteLink && (
-                        <div className="pt-3 border-t border-th-border">
-                          <span className="text-th-muted block text-[11px] font-mono uppercase mb-2">Invite link</span>
-                          <div className="flex items-center gap-2">
-                            <input
-                              readOnly
-                              value={inviteLink}
-                              onFocus={e => e.target.select()}
-                              className="flex-1 px-3.5 py-2 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text outline-none"
-                            />
-                            <button
-                              onClick={() => navigator.clipboard.writeText(inviteLink)}
-                              className="px-3.5 py-2 rounded-th text-[12px] font-semibold bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov transition-colors btn-press"
-                            >
-                              Copy
-                            </button>
-                          </div>
-                          <p className="mt-2 text-[11px] text-th-faint">Share this link with the invitee. It expires in 7 days.</p>
-                        </div>
-                      )}
-                    </div>
-                    </>
                   )}
                 </>
               )}

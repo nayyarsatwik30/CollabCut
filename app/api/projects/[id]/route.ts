@@ -61,6 +61,37 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     data.assets = Array.from(latestByGroup.values())
   }
 
+  const { data: ownerProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, name, email, avatar_color')
+    .eq('id', data.owner_id)
+    .maybeSingle()
+
+  // Members = editors actually assigned to an asset in this project, per
+  // asset_editors - there's no separate project-membership table for this.
+  const { data: editorRows } = await supabaseAdmin
+    .from('asset_editors')
+    .select('editor_id, profiles(id, name, email, avatar_color), assets!inner(project_id, deleted_at)')
+    .eq('assets.project_id', params.id)
+    .is('assets.deleted_at', null)
+
+  const seenEditors = new Set<string>()
+  const members = []
+  for (const row of editorRows ?? []) {
+    if (seenEditors.has(row.editor_id)) continue
+    seenEditors.add(row.editor_id)
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+    members.push({
+      id: row.editor_id,
+      name: profile?.name ?? 'Unknown',
+      email: profile?.email ?? '',
+      avatar_color: profile?.avatar_color ?? '#4CAF7D',
+    })
+  }
+
+  data.owner = ownerProfile ?? null
+  data.members = members
+
   return NextResponse.json({ project: data })
 }
 

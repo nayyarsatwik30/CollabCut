@@ -4,12 +4,19 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Share2, Upload, UserPlus, Trash2, Video, Clapperboard, Film, CheckCircle2, X, Clock } from 'lucide-react'
+import { ChevronRight, Share2, Upload, Trash2, Video, Clapperboard, Film, CheckCircle2, Clock } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { supabase } from '@/lib/supabase'
 
 type Tab = 'assets' | 'members' | 'activity'
+
+interface Member {
+  id: string
+  name: string
+  email: string
+  avatar_color: string
+}
 
 interface Project {
   id: string
@@ -18,6 +25,8 @@ interface Project {
   status: string
   emoji: string
   workspace_id?: string | null
+  owner?: Member | null
+  members?: Member[]
 }
 
 interface Asset {
@@ -42,11 +51,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true)
   const [showUploadCustom, setShowUploadCustom] = useState(false)
   const [showUploadBoard, setShowUploadBoard] = useState(false)
-  const [showInviteForm, setShowInviteForm] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [sendingInvite, setSendingInvite] = useState(false)
-  const [inviteError, setInviteError] = useState('')
-  const [inviteLink, setInviteLink] = useState('')
 
   useEffect(() => {
     loadData()
@@ -71,47 +75,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       setAssets(data.project.assets ?? [])
     }
     setLoading(false)
-  }
-
-
-
-  const sendInvite = async () => {
-    setInviteError('')
-    setInviteLink('')
-    if (!inviteEmail.trim()) {
-      setInviteError('Enter an email address')
-      return
-    }
-    if (!project?.workspace_id) {
-      setInviteError('This project isn\'t linked to a workspace yet')
-      return
-    }
-
-    setSendingInvite(true)
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      setInviteError('Your session expired. Please log in again.')
-      setSendingInvite(false)
-      return
-    }
-
-    try {
-      const res = await fetch('/api/invites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ workspace_id: project.workspace_id, email: inviteEmail.trim(), role: 'editor' }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setInviteError(data.error ?? 'Failed to send invite')
-      } else {
-        setInviteLink(data.url)
-        setInviteEmail('')
-      }
-    } catch (err) {
-      setInviteError('Failed to send invite')
-    }
-    setSendingInvite(false)
   }
 
   const handleDeleteAsset = async (e: React.MouseEvent, id: string) => {
@@ -399,86 +362,32 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           {tab === 'members' && (
             <div className="max-w-lg mx-auto">
               <div className="bg-th-surface rounded-th border border-th-border overflow-hidden mb-4">
-                <div className="flex items-center gap-3.5 px-5 py-3.5 border-b border-th-border">
-                  <Avatar initials="YS" color="#4CAF7D" size="md" />
-                  <div className="flex-1">
-                    <p className="text-[13px] font-semibold">You</p>
-                    <p className="text-[11px] text-th-muted">Owner</p>
-                  </div>
-                  <span className="text-[11px] px-2.5 py-0.5 rounded-th-full bg-th-surface-alt border border-th-border text-th-muted">Owner</span>
-                </div>
-              </div>
-
-              {!showInviteForm ? (
-                <div className="flex justify-center">
-                  <button
-                    onClick={() => setShowInviteForm(true)}
-                    className="flex items-center gap-2 h-9 px-4 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text btn-press hover:bg-th-surface-hov transition-colors"
-                  >
-                    <UserPlus size={14} className="text-th-muted" /> Invite reviewer
-                  </button>
-                </div>
-              ) : (
-                <div className="p-5 rounded-th-lg border border-th-border bg-th-surface space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted">Invite an editor</span>
-                    <button
-                      onClick={() => { setShowInviteForm(false); setInviteError(''); setInviteLink(''); setInviteEmail('') }}
-                      className="p-1 rounded-th hover:bg-th-surface-alt text-th-muted hover:text-th-text transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-
-                  {inviteError && (
-                    <div className="px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
-                      {inviteError}
-                    </div>
-                  )}
-
-                  <div className="flex items-end gap-3">
+                {project?.owner && (
+                  <div className="flex items-center gap-3.5 px-5 py-3.5 border-b border-th-border">
+                    <Avatar initials={project.owner.name?.[0]?.toUpperCase() ?? 'U'} color={project.owner.avatar_color} size="md" />
                     <div className="flex-1">
-                      <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Email</label>
-                      <input
-                        type="email"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        placeholder="editor@studio.in"
-                        onKeyDown={(e) => e.key === 'Enter' && sendInvite()}
-                        className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
-                      />
+                      <p className="text-[13px] font-semibold">{project.owner.name}</p>
+                      <p className="text-[11px] text-th-muted">{project.owner.email}</p>
                     </div>
-                    <button
-                      onClick={sendInvite}
-                      disabled={sendingInvite}
-                      className="px-5 py-2.5 rounded-th text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
-                      style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)' }}
-                    >
-                      {sendingInvite ? 'Sending…' : 'Send invite'}
-                    </button>
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-th-full bg-th-surface-alt border border-th-border text-th-muted">Owner</span>
                   </div>
+                )}
 
-                  {inviteLink && (
-                    <div className="pt-3 border-t border-th-border">
-                      <span className="text-th-muted block text-[11px] font-mono uppercase mb-2">Invite link</span>
-                      <div className="flex items-center gap-2">
-                        <input
-                          readOnly
-                          value={inviteLink}
-                          onFocus={(e) => e.target.select()}
-                          className="flex-1 px-3.5 py-2 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text outline-none"
-                        />
-                        <button
-                          onClick={() => navigator.clipboard.writeText(inviteLink)}
-                          className="px-3.5 py-2 rounded-th text-[12px] font-semibold bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov transition-colors btn-press"
-                        >
-                          Copy
-                        </button>
-                      </div>
+                {(project?.members ?? []).map((member) => (
+                  <div key={member.id} className="flex items-center gap-3.5 px-5 py-3.5 border-b border-th-border last:border-b-0">
+                    <Avatar initials={member.name?.[0]?.toUpperCase() ?? 'U'} color={member.avatar_color} size="md" />
+                    <div className="flex-1">
+                      <p className="text-[13px] font-semibold">{member.name}</p>
+                      <p className="text-[11px] text-th-muted">{member.email}</p>
                     </div>
-                  )}
-                </div>
-              )}
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-th-full bg-th-surface-alt border border-th-border text-th-muted">Editor</span>
+                  </div>
+                ))}
+
+                {!project?.owner && (project?.members ?? []).length === 0 && (
+                  <div className="px-5 py-8 text-center text-[13px] text-th-muted">No members yet.</div>
+                )}
+              </div>
             </div>
           )}
 
