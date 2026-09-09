@@ -517,14 +517,13 @@ h3,
   box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.5);
 }
 
-/* Pricing cards in grid use glass/card-elevated, so target them via section */
-#pricing .glass,
-#pricing .card-elevated {
+/* Unconditional on every pricing card - Pro's extra ring/shadow are layered
+   on top via separate classes, this owns the shared hover glow alone. */
+.pricing-plan-card {
   transition: border-color 0.25s ease, box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-#pricing .glass:hover,
-#pricing .card-elevated:hover {
+.pricing-plan-card:hover {
   border-color: rgba(217, 70, 239, 0.25);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 20px rgba(217, 70, 239, 0.15), 0 0 40px rgba(168, 85, 247, 0.08);
   transform: translateY(-4px) scale(1.02);

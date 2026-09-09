@@ -376,7 +376,7 @@ export function LandingPage() {
             return (
               <div
                 key={plan.id || index}
-                className={`relative flex flex-col justify-between p-8 rounded-2xl transition-all duration-300 reveal ${isPro
+                className={`relative flex flex-col justify-between p-8 rounded-2xl transition-all duration-300 reveal pricing-plan-card ${isPro
                   ? 'card-elevated border-th-accent/50 shadow-xl ring-1 ring-th-accent/40'
                   : 'glass border-th-border'
                   }`}
