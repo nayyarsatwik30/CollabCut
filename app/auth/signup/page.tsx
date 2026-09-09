@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight, Check, Copy } from 'lucide-react'
@@ -14,6 +14,13 @@ const PERKS = [
 
 type SignupRole = 'admin' | 'editor'
 
+interface Plan {
+  id: string
+  name: string
+  price_monthly: number
+  price_yearly: number
+}
+
 function SignupForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -23,9 +30,21 @@ function SignupForm() {
   const [role, setRole] = useState<SignupRole>('admin')
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', inviteCode: '' })
   const [createdInviteCode, setCreatedInviteCode] = useState('')
+  const [plans, setPlans] = useState<Plan[]>([])
 
   const planId = searchParams.get('plan') ?? 'basic'
   const billingCycle = searchParams.get('cycle') ?? 'monthly'
+  const selectedPlan = plans.find((p) => p.id === planId)
+  const selectedPrice = selectedPlan
+    ? billingCycle === 'yearly' ? selectedPlan.price_yearly : selectedPlan.price_monthly
+    : null
+
+  useEffect(() => {
+    fetch('/api/plans')
+      .then((res) => res.json())
+      .then((data) => setPlans(data.plans ?? []))
+      .catch(() => {})
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -230,10 +249,10 @@ function SignupForm() {
         </ul>
         <div className="mt-14 p-6 rounded-th-lg border border-th-border bg-th-surface max-w-xs">
           <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-4xl font-extrabold">₹499</span>
-            <span className="text-th-muted text-[13px]">/ month after trial</span>
+            <span className="text-4xl font-extrabold">₹{selectedPrice ?? '—'}</span>
+            <span className="text-th-muted text-[13px]">/ {billingCycle === 'yearly' ? 'year' : 'month'} after trial</span>
           </div>
-          <p className="text-[12px] text-th-muted">One plan, everything included.</p>
+          <p className="text-[12px] text-th-muted">{selectedPlan?.name ?? 'Basic'} plan, everything included.</p>
         </div>
       </div>
     </div>
