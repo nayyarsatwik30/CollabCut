@@ -21,6 +21,15 @@ interface Plan {
   price_yearly: number
 }
 
+// Renders instantly on first paint so the price box never shows a blank
+// dash while /api/plans is in flight - the fetch below then reconciles
+// with live data (source of truth stays the `plans` table).
+const FALLBACK_PLANS: Plan[] = [
+  { id: 'basic', name: 'Basic', price_monthly: 349, price_yearly: 3490 },
+  { id: 'pro', name: 'Pro', price_monthly: 499, price_yearly: 4990 },
+  { id: 'master', name: 'Master', price_monthly: 1599, price_yearly: 15990 },
+]
+
 function SignupForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -30,7 +39,7 @@ function SignupForm() {
   const [role, setRole] = useState<SignupRole>('admin')
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', inviteCode: '' })
   const [createdInviteCode, setCreatedInviteCode] = useState('')
-  const [plans, setPlans] = useState<Plan[]>([])
+  const [plans, setPlans] = useState<Plan[]>(FALLBACK_PLANS)
 
   const planId = searchParams.get('plan') ?? 'basic'
   const billingCycle = searchParams.get('cycle') ?? 'monthly'
