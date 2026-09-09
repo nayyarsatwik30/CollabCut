@@ -3,6 +3,9 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { syncProjectStatus } from '@/lib/project-status'
 
 const PIPELINE_STATUSES = ['idea', 'editing', 'review', 'revision', 'approved']
+// Moving a card TO either of these is admin-only, regardless of which
+// status it's currently in - an editor can still move OUT of them freely.
+const RESTRICTED_TO_ADMIN = ['revision', 'approved']
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
@@ -23,33 +26,37 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .eq('editor_id', user.id)
     .maybeSingle()
 
-  let authorized = !!assignment
+  const isAssignedEditor = !!assignment
 
-  if (!authorized) {
-    const { data: asset } = await supabaseAdmin
-      .from('assets')
-      .select('project_id, projects(workspace_id)')
-      .eq('id', params.id)
-      .single()
+  const { data: asset } = await supabaseAdmin
+    .from('assets')
+    .select('project_id, projects(workspace_id)')
+    .eq('id', params.id)
+    .single()
 
-    const workspaceId = asset?.projects
-      ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
-      : null
+  const workspaceId = asset?.projects
+    ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
+    : null
 
-    if (workspaceId) {
-      const { data: membership } = await supabaseAdmin
-        .from('workspace_members')
-        .select('id')
-        .eq('workspace_id', workspaceId)
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle()
+  let isAdmin = false
+  if (workspaceId) {
+    const { data: membership } = await supabaseAdmin
+      .from('workspace_members')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle()
 
-      authorized = !!membership
-    }
+    isAdmin = !!membership
   }
 
+  const authorized = isAdmin || isAssignedEditor
   if (!authorized) return NextResponse.json({ error: 'Not authorized to update this asset' }, { status: 403 })
+
+  if (RESTRICTED_TO_ADMIN.includes(pipeline_status) && !isAdmin) {
+    return NextResponse.json({ error: 'Admin access required to set this status' }, { status: 403 })
+  }
 
   const isApproved = pipeline_status === 'approved'
 

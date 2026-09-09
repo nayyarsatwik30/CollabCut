@@ -39,6 +39,11 @@ interface BoardCardProps {
   onDragEnd: () => void
 }
 
+// Moving a card TO either of these is admin-only - filtered out of the
+// dropdown for editors, except when it's the card's own current status
+// (so the select still renders correctly for a card already sitting there).
+const RESTRICTED_STATUSES = ['revision', 'approved']
+
 export function initialsFor(name: string) {
   return name
     .split(' ')
@@ -124,9 +129,11 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
           title="Change status"
           className="w-full mb-3 bg-th-surface-alt border border-th-border rounded-th-sm text-[11px] text-th-muted px-2 py-1 outline-none focus:border-th-accent font-mono cursor-pointer hover:text-th-text transition-colors"
         >
-          {columns.map((col) => (
-            <option key={col.key} value={col.key}>{col.label}</option>
-          ))}
+          {columns
+            .filter((col) => isAdmin || col.key === asset.pipeline_status || !RESTRICTED_STATUSES.includes(col.key))
+            .map((col) => (
+              <option key={col.key} value={col.key}>{col.label}</option>
+            ))}
         </select>
       )}
 

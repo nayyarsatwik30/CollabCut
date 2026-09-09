@@ -30,12 +30,18 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
-  { key: 'idea',      label: 'Assigned Cut', color: 'var(--th-muted)' },
+  { key: 'idea',      label: 'Cut',          color: 'var(--th-muted)' },
   { key: 'editing',   label: 'Editing',      color: 'var(--th-accent)' },
   { key: 'review',    label: 'Review',       color: 'var(--th-changes)' },
   { key: 'revision',  label: 'Revision',     color: '#fb923c' },
   { key: 'approved',  label: 'Approved',     color: 'var(--th-resolved)' },
 ]
+
+// Moving a card TO either of these is admin-only, regardless of which
+// status it's currently in - mirrors the backend check in
+// /api/assets/[id]/status so drag-and-drop can't bypass the dropdown's
+// filtered options.
+const RESTRICTED_TO_ADMIN = ['revision', 'approved']
 
 export default function BoardPage() {
   const router = useRouter()
@@ -120,6 +126,11 @@ export default function BoardPage() {
   const updateAssetStatus = async (assetId: string, columnKey: string) => {
     const asset = assets.find((a) => a.id === assetId)
     if (!asset || asset.pipeline_status === columnKey) return
+
+    if (role === 'editor' && RESTRICTED_TO_ADMIN.includes(columnKey)) {
+      showToast('Only an admin can move a cut to that status.', 'error')
+      return
+    }
 
     const previousStatus = asset.pipeline_status
     const previousComplete = asset.is_complete
