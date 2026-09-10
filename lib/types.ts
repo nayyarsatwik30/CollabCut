@@ -108,18 +108,6 @@ export interface ShareLink {
   commentsOnly: boolean
 }
 
-// ─── Activity ────────────────────────────────────────────────────────────────
-
-export interface ActivityItem {
-  id: string
-  who: string
-  initials: string
-  avatarColor: string
-  action: string
-  detail?: string
-  createdAt: string
-}
-
 // ─── Annotation ──────────────────────────────────────────────────────────────
 
 export type AnnotationTool = 'line' | 'rect' | 'circle' | 'arrow' | null

@@ -13,7 +13,7 @@ import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 
-type SideTab = 'notes' | 'brief' | 'activity'
+type SideTab = 'notes' | 'brief'
 
 interface Asset {
   id: string
@@ -533,7 +533,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             {([
               { key: 'notes', icon: MessageSquare, label: `Notes (${comments.length})` },
               ...(hasBrief ? [{ key: 'brief', icon: FileText, label: 'Brief' }] : []),
-              { key: 'activity', icon: Clock, label: 'Activity' },
             ] as { key: SideTab; icon: React.ElementType; label: string }[]).map(({ key, icon: Icon, label }) => (
               <button
                 key={key}
@@ -631,13 +630,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                     </a>
                   </div>
                 )}
-              </div>
-            )}
-            {sideTab === 'activity' && (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
-                <div className="text-4xl">📋</div>
-                <p className="font-semibold">No activity yet</p>
-                <p className="text-[13px] text-th-muted">Activity will appear here as your team reviews.</p>
               </div>
             )}
           </div>

@@ -4,12 +4,12 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Upload, Trash2, Video, Clapperboard, Film, CheckCircle2, Clock } from 'lucide-react'
+import { ChevronRight, Upload, Trash2, Video, Film, CheckCircle2, Clock } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { supabase } from '@/lib/supabase'
 
-type Tab = 'assets' | 'members' | 'activity'
+type Tab = 'assets' | 'members'
 
 interface Member {
   id: string
@@ -149,7 +149,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
         {/* Tabs */}
         <div className="shrink-0 bg-th-surface border-b border-th-border px-5 flex gap-0">
-          {(['assets', 'members', 'activity'] as Tab[]).map((t) => (
+          {(['assets', 'members'] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className="px-4 py-3 text-[13px] capitalize transition-colors border-b-2 btn-press"
               style={{
@@ -382,15 +382,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   <div className="px-5 py-8 text-center text-[13px] text-th-muted">No members yet.</div>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Activity */}
-          {tab === 'activity' && (
-            <div className="h-full flex flex-col items-center justify-center gap-3 text-center">
-              <div className="text-4xl"><Clapperboard size={40} style={{ color: 'var(--th-accent)' }} /></div>
-              <p className="font-semibold">No activity yet</p>
-              <p className="text-[13px] text-th-muted">Activity will appear here as your team reviews cuts.</p>
             </div>
           )}
         </div>
