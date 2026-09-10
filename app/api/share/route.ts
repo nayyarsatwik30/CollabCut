@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('share_links')
-    .select('*, assets(*)')
+    .select('token, expires_at, downloads_disabled, comments_only, password_hash, assets(id, name, mux_playback_id, mux_upload_id, is_complete, deleted_at)')
     .eq('token', token)
     .single()
 
@@ -48,5 +48,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Link expired' }, { status: 410 })
   }
 
-  return NextResponse.json({ share_link: data })
+  const asset = Array.isArray(data.assets) ? data.assets[0] : data.assets
+  if (!asset || asset.deleted_at) {
+    return NextResponse.json({ error: 'Invalid link' }, { status: 404 })
+  }
+
+  // Public route (no auth) - never hand the password hash to the client,
+  // and narrow the asset down from assets(*) so internal fields (notes,
+  // deadline, raw_file_url) never reach an outside reviewer.
+  return NextResponse.json({
+    share_link: {
+      token: data.token,
+      expires_at: data.expires_at,
+      downloads_disabled: data.downloads_disabled,
+      comments_only: data.comments_only,
+      password_protected: !!data.password_hash,
+      asset: {
+        id: asset.id,
+        name: asset.name,
+        mux_playback_id: asset.mux_playback_id,
+        mux_upload_id: asset.mux_upload_id,
+        is_complete: asset.is_complete,
+      },
+    },
+  })
 }

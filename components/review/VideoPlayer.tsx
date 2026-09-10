@@ -13,6 +13,7 @@ interface VideoPlayerProps {
   onTimeUpdate?: (time: number) => void
   onDurationChange?: (dur: number) => void
   approved?: boolean
+  hideDownload?: boolean
 }
 
 export interface VideoPlayerHandle {
@@ -21,7 +22,7 @@ export interface VideoPlayerHandle {
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
-  { src, comments, onTimeUpdate, onDurationChange, approved },
+  { src, comments, onTimeUpdate, onDurationChange, approved, hideDownload },
   ref
 ) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -348,15 +349,17 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <a
-              href={src ?? '#'}
-              download
-              className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press"
-              title="Download"
-              onClick={(e) => !src && e.preventDefault()}
-            >
-              <Download size={13} />
-            </a>
+            {!hideDownload && (
+              <a
+                href={src ?? '#'}
+                download
+                className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press"
+                title="Download"
+                onClick={(e) => !src && e.preventDefault()}
+              >
+                <Download size={13} />
+              </a>
+            )}
             <button onClick={toggleFullscreen}
               className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press"
               title="Fullscreen">
