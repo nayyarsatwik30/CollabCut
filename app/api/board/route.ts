@@ -13,14 +13,6 @@ interface BoardAsset {
   mux_upload_id: string | null
 }
 
-function pickEditor(assetEditors: any): { id: string; name: string } | null {
-  const rows = Array.isArray(assetEditors) ? assetEditors : assetEditors ? [assetEditors] : []
-  const row = rows[0]
-  if (!row) return null
-  const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
-  return { id: row.editor_id, name: profile?.name ?? 'Unknown' }
-}
-
 export async function GET(req: NextRequest) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -50,7 +42,7 @@ export async function GET(req: NextRequest) {
   if (role === 'admin') {
     const { data, error } = await supabaseAdmin
       .from('assets')
-      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, workspace_id, deleted_at), asset_editors(editor_id, profiles(name, email))')
+      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, workspace_id, deleted_at)')
       .eq('projects.workspace_id', workspaceId)
       .eq('cut_type', 'board')
       .is('deleted_at', null)
@@ -59,25 +51,51 @@ export async function GET(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    assets = latestPerGroup(
+    const latestRows = latestPerGroup(
       (data ?? []).filter((row: any) => {
         const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
         return project && !project.deleted_at
       })
     )
-      .map((row: any) => {
-        const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
-        return {
-          id: row.id,
-          name: row.name,
-          pipeline_status: row.pipeline_status ?? 'idea',
-          is_complete: row.is_complete,
-          project_id: row.project_id,
-          project_name: project?.name ?? 'Untitled project',
-          editor: pickEditor(row.asset_editors),
-          mux_upload_id: row.mux_upload_id ?? null,
-        }
-      })
+
+    // Same lineage gap the editor branch below already works around:
+    // asset_editors pins to one specific version's row, not the whole
+    // lineage, so a join on this exact (latest) row's id goes empty the
+    // moment a new version is uploaded without a fresh assignment. Resolve
+    // the assigned editor per asset_group_id across every version instead.
+    const groupIds = Array.from(new Set(latestRows.map((row: any) => row.asset_group_id ?? row.id)))
+    const editorByGroup = new Map<string, { id: string; name: string }>()
+
+    if (groupIds.length > 0) {
+      const { data: editorRows, error: editorError } = await supabaseAdmin
+        .from('asset_editors')
+        .select('editor_id, profiles(name, email), assets!inner(asset_group_id)')
+        .in('assets.asset_group_id', groupIds)
+
+      if (editorError) return NextResponse.json({ error: editorError.message }, { status: 500 })
+
+      for (const row of editorRows ?? []) {
+        const assetRow = Array.isArray(row.assets) ? row.assets[0] : row.assets
+        const groupId = assetRow?.asset_group_id
+        if (!groupId || editorByGroup.has(groupId)) continue
+        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+        editorByGroup.set(groupId, { id: row.editor_id, name: profile?.name ?? 'Unknown' })
+      }
+    }
+
+    assets = latestRows.map((row: any) => {
+      const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
+      return {
+        id: row.id,
+        name: row.name,
+        pipeline_status: row.pipeline_status ?? 'idea',
+        is_complete: row.is_complete,
+        project_id: row.project_id,
+        project_name: project?.name ?? 'Untitled project',
+        editor: editorByGroup.get(row.asset_group_id ?? row.id) ?? null,
+        mux_upload_id: row.mux_upload_id ?? null,
+      }
+    })
   } else {
     const { data: myProfile } = await supabaseAdmin
       .from('profiles')

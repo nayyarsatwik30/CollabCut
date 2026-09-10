@@ -21,16 +21,16 @@ async function requireAdminWorkspace(token: string) {
   return { workspaceId: membership.workspace_id as string }
 }
 
-async function verifyAssetInWorkspace(assetId: string, workspaceId: string) {
+async function findAssetInWorkspace(assetId: string, workspaceId: string) {
   const { data, error } = await supabaseAdmin
     .from('assets')
-    .select('id, projects!inner(workspace_id)')
+    .select('id, asset_group_id, projects!inner(workspace_id)')
     .eq('id', assetId)
     .eq('projects.workspace_id', workspaceId)
     .maybeSingle()
 
-  if (error) return false
-  return !!data
+  if (error || !data) return null
+  return data
 }
 
 // Admin-only lookup of one editor's assigned Board Cut assets, scoped to the
@@ -119,8 +119,25 @@ export async function POST(req: NextRequest, { params }: { params: { editorId: s
   const { assetId } = await req.json()
   if (!assetId) return NextResponse.json({ error: 'assetId required' }, { status: 400 })
 
-  const inWorkspace = await verifyAssetInWorkspace(assetId, auth.workspaceId)
-  if (!inWorkspace) return NextResponse.json({ error: 'Asset not found in your workspace' }, { status: 404 })
+  const asset = await findAssetInWorkspace(assetId, auth.workspaceId)
+  if (!asset) return NextResponse.json({ error: 'Asset not found in your workspace' }, { status: 404 })
+
+  // asset_editors pins to one specific version's row, so this same editor
+  // can already be assigned to an earlier version in this asset's lineage
+  // (asset_group_id) without holding a row on THIS version yet - that's
+  // exactly the gap the Board's admin query now resolves around. Check for
+  // that before writing, so re-pointing the assignment at a new version
+  // doesn't read as a brand new assignment below.
+  const groupId = asset.asset_group_id ?? asset.id
+  const { data: existingInLineage } = await supabaseAdmin
+    .from('asset_editors')
+    .select('id, assets!inner(asset_group_id)')
+    .eq('editor_id', params.editorId)
+    .eq('assets.asset_group_id', groupId)
+    .limit(1)
+    .maybeSingle()
+
+  const alreadyAssignedToLineage = !!existingInLineage
 
   const { error } = await supabaseAdmin
     .from('asset_editors')
@@ -128,23 +145,28 @@ export async function POST(req: NextRequest, { params }: { params: { editorId: s
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Trigger 1: notify the newly-assigned editor. Best-effort - the
-  // assignment itself already succeeded above regardless of this.
-  const { data: assetRow } = await supabaseAdmin
-    .from('assets')
-    .select('project_id, projects(name)')
-    .eq('id', assetId)
-    .maybeSingle()
+  // Trigger 1: notify the newly-assigned editor - but only when the
+  // assignment is genuinely new to this lineage, not when it's just
+  // correcting which version's row holds an assignment that was already
+  // effectively in place. Best-effort - the assignment itself already
+  // succeeded above regardless of this.
+  if (!alreadyAssignedToLineage) {
+    const { data: assetRow } = await supabaseAdmin
+      .from('assets')
+      .select('project_id, projects(name)')
+      .eq('id', assetId)
+      .maybeSingle()
 
-  if (assetRow?.project_id) {
-    const project = Array.isArray(assetRow.projects) ? assetRow.projects[0] : assetRow.projects
-    await createNotification({
-      userId: params.editorId,
-      type: 'editor_assigned',
-      message: `New project assigned: ${project?.name ?? 'Untitled project'}`,
-      link: `/project/${assetRow.project_id}`,
-      assetId,
-    })
+    if (assetRow?.project_id) {
+      const project = Array.isArray(assetRow.projects) ? assetRow.projects[0] : assetRow.projects
+      await createNotification({
+        userId: params.editorId,
+        type: 'editor_assigned',
+        message: `New project assigned: ${project?.name ?? 'Untitled project'}`,
+        link: `/project/${assetRow.project_id}`,
+        assetId,
+      })
+    }
   }
 
   return NextResponse.json({ success: true }, { status: 201 })
@@ -160,8 +182,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { editorId:
   const { assetId } = await req.json()
   if (!assetId) return NextResponse.json({ error: 'assetId required' }, { status: 400 })
 
-  const inWorkspace = await verifyAssetInWorkspace(assetId, auth.workspaceId)
-  if (!inWorkspace) return NextResponse.json({ error: 'Asset not found in your workspace' }, { status: 404 })
+  const asset = await findAssetInWorkspace(assetId, auth.workspaceId)
+  if (!asset) return NextResponse.json({ error: 'Asset not found in your workspace' }, { status: 404 })
 
   const { error } = await supabaseAdmin
     .from('asset_editors')
