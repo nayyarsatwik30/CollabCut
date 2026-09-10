@@ -4,7 +4,7 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Share2, Upload, Trash2, Video, Clapperboard, Film, CheckCircle2, Clock } from 'lucide-react'
+import { ChevronRight, Upload, Trash2, Video, Clapperboard, Film, CheckCircle2, Clock } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { supabase } from '@/lib/supabase'
@@ -145,12 +145,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           {project?.client && (
             <span className="text-[12px] text-th-muted">— {project.client}</span>
           )}
-          <div className="ml-auto flex items-center gap-2.5">
-
-            <button className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text btn-press">
-              <Share2 size={13} /> Share
-            </button>
-          </div>
         </div>
 
         {/* Tabs */}
