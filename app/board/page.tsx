@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { LayoutGrid, Plus, FolderKanban, Users, ChevronLeft, Film, LogOut } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BoardCard, initialsFor, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
+import { BoardSkeleton } from '@/components/board/BoardSkeleton'
 import { NewContentModal } from '@/components/board/NewContentModal'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { Toast, useToast } from '@/components/ui/Toast'
@@ -264,9 +265,7 @@ export default function BoardPage() {
     return (
       <div className="flex h-screen overflow-hidden bg-th-bg">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
-        </div>
+        <BoardSkeleton />
       </div>
     )
   }

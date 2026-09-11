@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Search, Grid3X3, List, Plus, Upload, LogOut, Film, Check, FolderKanban } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
+import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
@@ -368,12 +369,7 @@ export default function DashboardPage() {
 
               {dashTab === 'assigned' ? (
               loading ? (
-                <div className="flex items-center justify-center py-24">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
-                    <p className="text-[13px] text-th-muted">Loading assets…</p>
-                  </div>
-                </div>
+                <CardGridSkeleton count={8} minWidth={240} />
               ) : filteredAssigned.length === 0 && !search ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
                   <div className="text-5xl"><Film size={48} style={{ color: 'var(--th-accent)' }} /></div>
@@ -433,12 +429,7 @@ export default function DashboardPage() {
                 </div>
               )
               ) : myProjectsLoading ? (
-                <div className="flex items-center justify-center py-24">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
-                    <p className="text-[13px] text-th-muted">Loading projects…</p>
-                  </div>
-                </div>
+                <CardGridSkeleton count={8} minWidth={240} />
               ) : filteredMyProjects.length === 0 && !search ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
                   <FolderKanban size={48} style={{ color: 'var(--th-accent)' }} />
@@ -468,12 +459,7 @@ export default function DashboardPage() {
               </div>
 
               {loading ? (
-                <div className="flex items-center justify-center py-24">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
-                    <p className="text-[13px] text-th-muted">Loading projects…</p>
-                  </div>
-                </div>
+                <CardGridSkeleton count={8} minWidth={240} />
               ) : filtered.length === 0 && !search ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
                   <div className="text-5xl"><Film size={48} style={{ color: 'var(--th-accent)' }} /></div>

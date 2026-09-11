@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronRight, Upload, Trash2, Video, Film, CheckCircle2, Clock } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
+import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
 import { supabase } from '@/lib/supabase'
 
 type Tab = 'assets' | 'members'
@@ -110,9 +111,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     return (
       <div className="flex h-screen overflow-hidden bg-th-bg">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
-        </div>
+        <ProjectPageSkeleton />
       </div>
     )
   }
