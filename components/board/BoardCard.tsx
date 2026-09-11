@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronDown, Clock, Film, UserPlus } from 'lucide-react'
+import { Check, ChevronDown, Clock, Film, Trash2, UserPlus } from 'lucide-react'
 
 export interface BoardAsset {
   id: string
@@ -35,6 +35,7 @@ interface BoardCardProps {
   columns: BoardColumnOption[]
   onAssign: (assetId: string, editorId: string) => void
   onStatusChange: (assetId: string, status: string) => void
+  onDelete: (assetId: string) => void
   onDragStart: (e: React.DragEvent<HTMLDivElement>, assetId: string) => void
   onDragEnd: () => void
 }
@@ -54,7 +55,7 @@ export function initialsFor(name: string) {
     .toUpperCase() || '?'
 }
 
-export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, onStatusChange, onDragStart, onDragEnd }: BoardCardProps) {
+export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, onStatusChange, onDelete, onDragStart, onDragEnd }: BoardCardProps) {
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const draggingRef = useRef(false)
@@ -88,8 +89,18 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
         setTimeout(() => { draggingRef.current = false }, 0)
       }}
       onClick={handleClick}
-      className={`group bg-th-surface rounded-th-lg p-3 cursor-pointer hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover ${isPlaceholder ? 'border border-dashed border-th-faint' : 'border border-th-border'}`}
+      className={`group relative bg-th-surface rounded-th-lg p-3 cursor-pointer hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover ${isPlaceholder ? 'border border-dashed border-th-faint' : 'border border-th-border'}`}
     >
+      {!isPlaceholder && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(asset.id) }}
+          className="absolute top-2.5 right-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes z-20"
+          title="Delete"
+        >
+          <Trash2 size={13} />
+        </button>
+      )}
+
       <div className="flex items-center gap-2 mb-2">
         {isPlaceholder ? (
           <span

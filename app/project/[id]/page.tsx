@@ -49,6 +49,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null)
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
+  const [token, setToken] = useState<string | null>(null)
   const [showUploadCustom, setShowUploadCustom] = useState(false)
   const [showUploadBoard, setShowUploadBoard] = useState(false)
 
@@ -65,6 +66,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const loadData = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { router.push('/auth/login'); return }
+    setToken(session.access_token)
 
     const projectRes = await fetch(`/api/projects/${params.id}`, {
       headers: { Authorization: `Bearer ${session.access_token}` }
@@ -81,7 +83,10 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     e.preventDefault()
     e.stopPropagation()
     if (!confirm('Delete this asset?')) return
-    await fetch(`/api/assets/${id}/delete`, { method: 'POST' })
+    await fetch(`/api/assets/${id}/delete`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    })
     loadData()
   }
 

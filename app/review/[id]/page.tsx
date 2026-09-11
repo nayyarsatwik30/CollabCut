@@ -111,13 +111,17 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     const roles = (memberships ?? []).map((m) => m.role)
     setRole(roles.includes('admin') ? 'admin' : roles.includes('editor') ? 'editor' : null)
 
-    const assetRes = await fetch(`/api/assets/${params.id}`)
+    const assetRes = await fetch(`/api/assets/${params.id}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
     if (assetRes.ok) {
       const { asset: assetData } = await assetRes.json()
       setAsset(assetData)
     }
 
-    const versionsRes = await fetch(`/api/assets/${params.id}/versions`)
+    const versionsRes = await fetch(`/api/assets/${params.id}/versions`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
     if (versionsRes.ok) {
       const { versions: v } = await versionsRes.json()
       setVersions(v)
@@ -143,7 +147,9 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     if (!awaitingStream) return
 
     const interval = setInterval(async () => {
-      const res = await fetch(`/api/assets/${asset.id}`)
+      const res = await fetch(`/api/assets/${asset.id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
       if (res.ok) {
         const { asset: fresh } = await res.json()
         setAsset(fresh)
@@ -161,8 +167,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     router.replace(`/review/${targetId}`, { scroll: false })
 
     const [assetRes, versionsRes, commentsRes] = await Promise.all([
-      fetch(`/api/assets/${targetId}`),
-      fetch(`/api/assets/${targetId}/versions`),
+      fetch(`/api/assets/${targetId}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined }),
+      fetch(`/api/assets/${targetId}/versions`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined }),
       fetch(`/api/comments?asset_id=${targetId}`),
     ])
 
@@ -645,7 +651,9 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             onClose={() => setShowUploadModal(false)}
             onUploaded={async () => {
               setShowUploadModal(false)
-              const versionsRes = await fetch(`/api/assets/${asset.id}/versions`)
+              const versionsRes = await fetch(`/api/assets/${asset.id}/versions`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+              })
               if (versionsRes.ok) {
                 const { versions: v } = await versionsRes.json()
                 setVersions(v)
@@ -679,8 +687,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           onUploaded={async () => {
             setShowFulfillModal(false)
             const [assetRes, versionsRes] = await Promise.all([
-              fetch(`/api/assets/${asset.id}`),
-              fetch(`/api/assets/${asset.id}/versions`),
+              fetch(`/api/assets/${asset.id}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined }),
+              fetch(`/api/assets/${asset.id}/versions`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined }),
             ])
             if (assetRes.ok) {
               const { asset: fresh } = await assetRes.json()

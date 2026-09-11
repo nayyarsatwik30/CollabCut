@@ -162,6 +162,28 @@ export default function BoardPage() {
     await updateAssetStatus(assetId, columnKey)
   }
 
+  const handleDeleteAsset = async (assetId: string) => {
+    const ok = await confirm({ title: 'Delete this cut?', message: 'It will be moved to the Recycle Bin.', confirmLabel: 'Delete' })
+    if (!ok) return
+
+    const previousAssets = assets
+    setAssets((prev) => prev.filter((a) => a.id !== assetId))
+
+    try {
+      const res = await fetch(`/api/assets/${assetId}/delete`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        setAssets(previousAssets)
+        showToast('Failed to delete cut.', 'error')
+      }
+    } catch (err) {
+      setAssets(previousAssets)
+      showToast('Failed to delete cut.', 'error')
+    }
+  }
+
   const handleAssign = async (assetId: string, editorId: string) => {
     const asset = assets.find((a) => a.id === assetId)
     if (!asset) return
@@ -465,6 +487,7 @@ export default function BoardPage() {
                           columns={COLUMNS}
                           onAssign={handleAssign}
                           onStatusChange={updateAssetStatus}
+                          onDelete={handleDeleteAsset}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
                         />

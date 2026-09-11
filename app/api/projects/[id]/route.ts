@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { requireAuth, hasWorkspaceRole } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
@@ -96,13 +97,37 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireAuth(req)
+  if ('error' in auth) return auth.error
+  const { user } = auth
+
+  const { data: project } = await supabaseAdmin
+    .from('projects')
+    .select('workspace_id')
+    .eq('id', params.id)
+    .single()
+
+  if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
+  const authorized = project.workspace_id
+    ? await hasWorkspaceRole(project.workspace_id, user.id, 'admin')
+    : false
+
+  if (!authorized) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
 
   const body = await req.json()
+  const updates: Record<string, unknown> = {}
+  for (const field of ['name', 'client', 'emoji'] as const) {
+    if (field in body) updates[field] = body[field]
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+  }
+
   const { data, error } = await supabaseAdmin
     .from('projects')
-    .update(body)
+    .update(updates)
     .eq('id', params.id)
     .select()
     .single()
@@ -112,6 +137,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireAuth(req)
+  if ('error' in auth) return auth.error
+  const { user } = auth
+
+  const { data: project } = await supabaseAdmin
+    .from('projects')
+    .select('workspace_id')
+    .eq('id', params.id)
+    .single()
+
+  if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
+  const authorized = project.workspace_id
+    ? await hasWorkspaceRole(project.workspace_id, user.id, 'admin')
+    : false
+
+  if (!authorized) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+
   const { error } = await supabaseAdmin
     .from('projects')
     .update({ deleted_at: new Date().toISOString() })

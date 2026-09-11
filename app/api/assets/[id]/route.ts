@@ -1,7 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireAuth(req)
+  if ('error' in auth) return auth.error
+  const { user } = auth
+
+  const { data: assetMeta } = await supabaseAdmin
+    .from('assets')
+    .select('projects(workspace_id)')
+    .eq('id', params.id)
+    .single()
+
+  if (!assetMeta) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const workspaceId = assetMeta.projects
+    ? (Array.isArray(assetMeta.projects) ? assetMeta.projects[0]?.workspace_id : (assetMeta.projects as any).workspace_id)
+    : null
+
+  const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, user.id, 'admin') : false
+  const authorized = isAdmin || await isAssignedEditor(params.id, user.id)
+
+  if (!authorized) return NextResponse.json({ error: 'Not authorized to view this asset' }, { status: 403 })
+
   const { data, error } = await supabaseAdmin
     .from('assets')
     .select('*')
