@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireAuth, hasWorkspaceRole } from '@/lib/api-auth'
+import { latestPerGroup } from '@/lib/asset-lineage'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
@@ -11,8 +12,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const { data, error } = await supabaseAdmin
     .from('projects')
-    .select('*, assets(*)')
+    .select('*, assets(id, name, version, asset_group_id, duration_sec, size_bytes, status, mux_playback_id, mux_upload_id, is_complete, cut_type)')
     .eq('id', params.id)
+    .is('assets.deleted_at', null)
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -50,16 +52,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!authorized) return NextResponse.json({ error: 'Not authorized to view this project' }, { status: 403 })
 
   if (data?.assets) {
-    const latestByGroup = new Map<string, any>()
-    for (const asset of data.assets) {
-      if (asset.deleted_at) continue
-      const key = asset.asset_group_id ?? asset.id
-      const existing = latestByGroup.get(key)
-      if (!existing || asset.version > existing.version) {
-        latestByGroup.set(key, asset)
-      }
-    }
-    data.assets = Array.from(latestByGroup.values())
+    data.assets = latestPerGroup(data.assets)
   }
 
   const { data: ownerProfile } = await supabaseAdmin

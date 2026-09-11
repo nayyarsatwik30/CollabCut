@@ -40,7 +40,9 @@ export async function hasWorkspaceRole(
 // would go false the moment a new version is uploaded without a fresh
 // assignment. Resolve at the asset_group_id level instead - the same
 // resolution the editor branch of /api/board already does before deciding
-// which cards to show that editor.
+// which cards to show that editor, and the same embedded-filter shape the
+// POST handler in /api/board/editor/[editorId]/assets uses to check for an
+// existing lineage assignment.
 export async function isAssignedEditor(assetId: string, userId: string): Promise<boolean> {
   const { data: asset } = await supabaseAdmin
     .from('assets')
@@ -51,19 +53,15 @@ export async function isAssignedEditor(assetId: string, userId: string): Promise
   if (!asset) return false
   const targetGroupId = asset.asset_group_id ?? assetId
 
-  const { data: assignedRows } = await supabaseAdmin
+  const { data: assignment } = await supabaseAdmin
     .from('asset_editors')
-    .select('assets!inner(id, asset_group_id)')
+    .select('id, assets!inner(asset_group_id)')
     .eq('editor_id', userId)
+    .eq('assets.asset_group_id', targetGroupId)
+    .limit(1)
+    .maybeSingle()
 
-  const assignedGroupIds = new Set(
-    (assignedRows ?? []).map((row: any) => {
-      const a = Array.isArray(row.assets) ? row.assets[0] : row.assets
-      return a?.asset_group_id ?? a?.id
-    })
-  )
-
-  return assignedGroupIds.has(targetGroupId)
+  return !!assignment
 }
 
 // Authenticates the request, then requires `role` in `workspaceId` outright,

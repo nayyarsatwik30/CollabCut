@@ -3,16 +3,17 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = await requireAuth(req)
+  // requireAuth only needs the request's bearer token; this asset/workspace
+  // lookup only needs params.id - neither depends on the other's result, so
+  // run them concurrently instead of paying for both round trips in series.
+  const [auth, assetMetaResult] = await Promise.all([
+    requireAuth(req),
+    supabaseAdmin.from('assets').select('projects(workspace_id)').eq('id', params.id).single(),
+  ])
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data: assetMeta } = await supabaseAdmin
-    .from('assets')
-    .select('projects(workspace_id)')
-    .eq('id', params.id)
-    .single()
-
+  const { data: assetMeta } = assetMetaResult
   if (!assetMeta) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const workspaceId = assetMeta.projects

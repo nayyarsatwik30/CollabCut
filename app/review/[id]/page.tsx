@@ -157,7 +157,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     }, 4000)
 
     return () => clearInterval(interval)
-  }, [asset])
+  }, [asset?.id, asset?.mux_upload_id, asset?.status, asset?.mux_playback_id])
 
   const handleSwitchVersion = async (targetId: string) => {
     setShowVersions(false)
