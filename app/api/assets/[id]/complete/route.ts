@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { syncProjectStatus } from '@/lib/project-status'
+import { requireAuth, hasWorkspaceRole } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireAuth(req)
+  if ('error' in auth) return auth.error
+  const { user } = auth
 
   const { complete } = await req.json()
   if (typeof complete !== 'boolean') {
@@ -26,19 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
     : null
 
-  let authorized = false
-
-  if (workspaceId) {
-    const { data: membership } = await supabaseAdmin
-      .from('workspace_members')
-      .select('id')
-      .eq('workspace_id', workspaceId)
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle()
-
-    authorized = !!membership
-  }
+  const authorized = workspaceId ? await hasWorkspaceRole(workspaceId, user.id, 'admin') : false
 
   if (!authorized) return NextResponse.json({ error: 'Admin access required to approve a cut' }, { status: 403 })
 

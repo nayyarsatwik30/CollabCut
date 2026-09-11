@@ -47,7 +47,6 @@ export default function DashboardPage() {
   const [token, setToken] = useState<string | null>(null)
   const [role, setRole] = useState<'admin' | 'editor' | null>(null)
   const [assignedAssets, setAssignedAssets] = useState<AssignedAsset[]>([])
-  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
   const [authError, setAuthError] = useState('')
 
   useEffect(() => {
@@ -126,37 +125,6 @@ export default function DashboardPage() {
       console.error('Failed to load assigned assets', err)
     }
     setLoading(false)
-  }
-
-  const toggleComplete = async (assetId: string, currentlyComplete: boolean) => {
-    if (!token) return
-    setTogglingIds((prev) => new Set(prev).add(assetId))
-    setAssignedAssets((prev) =>
-      prev.map((a) => (a.id === assetId ? { ...a, is_complete: !currentlyComplete } : a))
-    )
-
-    try {
-      const res = await fetch(`/api/assets/${assetId}/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ complete: !currentlyComplete }),
-      })
-      if (!res.ok) {
-        setAssignedAssets((prev) =>
-          prev.map((a) => (a.id === assetId ? { ...a, is_complete: currentlyComplete } : a))
-        )
-      }
-    } catch (err) {
-      setAssignedAssets((prev) =>
-        prev.map((a) => (a.id === assetId ? { ...a, is_complete: currentlyComplete } : a))
-      )
-    }
-
-    setTogglingIds((prev) => {
-      const next = new Set(prev)
-      next.delete(assetId)
-      return next
-    })
   }
 
   const handleDeleteProject = async (id: string) => {
@@ -377,7 +345,6 @@ export default function DashboardPage() {
                   {filteredAssigned.map((a) => {
                     const color = STATUS_COLOR[a.status] ?? 'var(--th-muted)'
                     const label = STATUS_LABEL[a.status] ?? a.status.toUpperCase()
-                    const isToggling = togglingIds.has(a.id)
                     return (
                       <div
                         key={a.id}
@@ -395,16 +362,14 @@ export default function DashboardPage() {
                           {label}
                         </span>
                         <div className="w-32 flex justify-end">
-                          <button
-                            onClick={() => toggleComplete(a.id, a.is_complete)}
-                            disabled={isToggling}
-                            className="flex items-center gap-1.5 h-8 px-3 rounded-th text-[12px] font-semibold btn-press transition-colors disabled:opacity-50"
+                          <span
+                            className="flex items-center gap-1.5 h-8 px-3 rounded-th text-[12px] font-semibold"
                             style={a.is_complete
                               ? { background: 'color-mix(in srgb, var(--th-resolved) 16%, transparent)', color: 'var(--th-resolved)', border: '1px solid color-mix(in srgb, var(--th-resolved) 40%, transparent)' }
                               : { background: 'var(--th-surface-alt)', color: 'var(--th-muted)', border: '1px solid var(--th-border)' }}
                           >
-                            {a.is_complete ? <><Check size={13} /> Complete</> : 'Mark complete'}
-                          </button>
+                            {a.is_complete ? <><Check size={13} /> Complete</> : 'Pending'}
+                          </span>
                         </div>
                       </div>
                     )
