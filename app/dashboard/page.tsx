@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Grid3X3, List, Plus, Upload, LogOut, Film, Check } from 'lucide-react'
+import { Search, Grid3X3, List, Plus, Upload, LogOut, Film, Check, FolderKanban } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
@@ -49,6 +49,9 @@ export default function DashboardPage() {
   const [role, setRole] = useState<'admin' | 'editor' | null>(null)
   const [assignedAssets, setAssignedAssets] = useState<AssignedAsset[]>([])
   const [authError, setAuthError] = useState('')
+  const [dashTab, setDashTab] = useState<'assigned' | 'projects'>('assigned')
+  const [myProjects, setMyProjects] = useState<Project[]>([])
+  const [myProjectsLoading, setMyProjectsLoading] = useState(false)
 
   useEffect(() => {
     checkAuthAndLoad()
@@ -128,6 +131,25 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
+  const handleDashTabChange = async (tab: 'assigned' | 'projects') => {
+    setDashTab(tab)
+    if (tab === 'projects' && myProjects.length === 0 && token) {
+      setMyProjectsLoading(true)
+      try {
+        const res = await fetch('/api/projects/assigned', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setMyProjects(data.projects ?? [])
+        }
+      } catch (err) {
+        console.error('Failed to load assigned projects', err)
+      }
+      setMyProjectsLoading(false)
+    }
+  }
+
   const handleDeleteProject = async (id: string) => {
     if (!token) return
     const res = await fetch(`/api/projects/${id}`, {
@@ -186,6 +208,11 @@ export default function DashboardPage() {
     a.project_name.toLowerCase().includes(search.toLowerCase())
   )
 
+  const filteredMyProjects = myProjects.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.client ?? '').toLowerCase().includes(search.toLowerCase())
+  )
+
   if (authError) {
     return (
       <div className="flex h-screen overflow-hidden bg-th-bg">
@@ -211,7 +238,7 @@ export default function DashboardPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={role === 'editor' ? 'Search your assets…' : 'Search projects…'}
+              placeholder={role === 'editor' ? (dashTab === 'assigned' ? 'Search your assets…' : 'Search your projects…') : 'Search projects…'}
               className="w-full pl-8 pr-3 py-1.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
             />
           </div>
@@ -254,6 +281,28 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {role === 'editor' && (
+          <div className="shrink-0 bg-th-surface border-b border-th-border px-6 flex gap-1">
+            {([
+              { key: 'assigned', icon: Film, label: 'Assigned to you' },
+              { key: 'projects', icon: FolderKanban, label: 'My Projects' },
+            ] as { key: 'assigned' | 'projects'; icon: React.ElementType; label: string }[]).map(({ key, icon: Icon, label }) => (
+              <button
+                key={key}
+                onClick={() => handleDashTabChange(key)}
+                className="flex items-center gap-1.5 px-3 py-2.5 text-[12px] border-b-2 btn-press transition-colors"
+                style={{
+                  color: dashTab === key ? 'var(--th-accent)' : 'var(--th-muted)',
+                  borderColor: dashTab === key ? 'var(--th-accent)' : 'transparent',
+                  fontWeight: dashTab === key ? 700 : 400,
+                }}
+              >
+                <Icon size={12} /> {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* New project modal */}
         {showNew && (
@@ -311,11 +360,14 @@ export default function DashboardPage() {
           {role === 'editor' ? (
             <>
               <div className="flex items-center justify-between mb-5">
-                <h1 className="text-[18px] font-extrabold">Assigned to you</h1>
-                <span className="font-mono text-[11px] text-th-muted">{filteredAssigned.length} assets</span>
+                <h1 className="text-[18px] font-extrabold">{dashTab === 'assigned' ? 'Assigned to you' : 'My Projects'}</h1>
+                <span className="font-mono text-[11px] text-th-muted">
+                  {dashTab === 'assigned' ? `${filteredAssigned.length} assets` : `${filteredMyProjects.length} projects`}
+                </span>
               </div>
 
-              {loading ? (
+              {dashTab === 'assigned' ? (
+              loading ? (
                 <div className="flex items-center justify-center py-24">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
@@ -378,6 +430,33 @@ export default function DashboardPage() {
                       </Link>
                     )
                   })}
+                </div>
+              )
+              ) : myProjectsLoading ? (
+                <div className="flex items-center justify-center py-24">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+                    <p className="text-[13px] text-th-muted">Loading projects…</p>
+                  </div>
+                </div>
+              ) : filteredMyProjects.length === 0 && !search ? (
+                <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+                  <FolderKanban size={48} style={{ color: 'var(--th-accent)' }} />
+                  <div>
+                    <p className="font-semibold mb-1">No projects yet</p>
+                    <p className="text-[13px] text-th-muted">Projects with work assigned to you will show up here.</p>
+                  </div>
+                </div>
+              ) : filteredMyProjects.length === 0 && search ? (
+                <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
+                  <p className="font-semibold">No results for "{search}"</p>
+                  <p className="text-[13px] text-th-muted">Try a different search term.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+                  {filteredMyProjects.map((p) => (
+                    <ProjectCard key={p.id} project={p} view="grid" />
+                  ))}
                 </div>
               )}
             </>

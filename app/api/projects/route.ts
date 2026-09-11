@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { attachCoverPlaybackIds } from '@/lib/project-covers'
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '')
@@ -17,33 +18,7 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const projectIds = (data ?? []).map((p) => p.id)
-  const coverByProject: Record<string, string> = {}
-
-  if (projectIds.length > 0) {
-    // Most recently created Board Cut asset per project that actually has a
-    // Mux thumbnail - mux_playback_id is only ever set once a real upload
-    // finishes processing, so this already excludes placeholders and
-    // still-processing assets without a separate check.
-    const { data: coverAssets } = await supabaseAdmin
-      .from('assets')
-      .select('project_id, mux_playback_id')
-      .in('project_id', projectIds)
-      .eq('cut_type', 'board')
-      .is('deleted_at', null)
-      .not('mux_playback_id', 'is', null)
-      .order('created_at', { ascending: false })
-
-    for (const a of coverAssets ?? []) {
-      if (!coverByProject[a.project_id]) coverByProject[a.project_id] = a.mux_playback_id
-    }
-  }
-
-  const projects = (data ?? []).map((p) => ({
-    ...p,
-    cover_playback_id: coverByProject[p.id] ?? null,
-  }))
-
+  const projects = await attachCoverPlaybackIds(supabaseAdmin, data ?? [])
   return NextResponse.json({ projects })
 }
 
