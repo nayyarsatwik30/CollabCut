@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
       new_asset_settings: {
         playback_policy: ['public'],
         mp4_support: 'capped-1080p',
+        video_quality: 'plus',
       },
     })
 
@@ -168,6 +169,7 @@ export async function POST(req: NextRequest) {
     new_asset_settings: {
       playback_policy: ['public'],
       mp4_support: 'capped-1080p',
+      video_quality: 'plus',
     },
   })
 
