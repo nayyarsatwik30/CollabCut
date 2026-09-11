@@ -16,7 +16,35 @@ export async function GET(req: NextRequest) {
     .order('updated_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ projects: data ?? [] })
+
+  const projectIds = (data ?? []).map((p) => p.id)
+  const coverByProject: Record<string, string> = {}
+
+  if (projectIds.length > 0) {
+    // Most recently created Board Cut asset per project that actually has a
+    // Mux thumbnail - mux_playback_id is only ever set once a real upload
+    // finishes processing, so this already excludes placeholders and
+    // still-processing assets without a separate check.
+    const { data: coverAssets } = await supabaseAdmin
+      .from('assets')
+      .select('project_id, mux_playback_id')
+      .in('project_id', projectIds)
+      .eq('cut_type', 'board')
+      .is('deleted_at', null)
+      .not('mux_playback_id', 'is', null)
+      .order('created_at', { ascending: false })
+
+    for (const a of coverAssets ?? []) {
+      if (!coverByProject[a.project_id]) coverByProject[a.project_id] = a.mux_playback_id
+    }
+  }
+
+  const projects = (data ?? []).map((p) => ({
+    ...p,
+    cover_playback_id: coverByProject[p.id] ?? null,
+  }))
+
+  return NextResponse.json({ projects })
 }
 
 export async function POST(req: NextRequest) {

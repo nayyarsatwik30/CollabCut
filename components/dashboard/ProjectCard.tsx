@@ -11,6 +11,7 @@ interface Project {
   status: string
   emoji?: string
   updated_at?: string
+  cover_playback_id?: string | null
 }
 
 interface ProjectCardProps {
@@ -83,7 +84,15 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
         className="flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
       >
         <div className="aspect-video shrink-0 bg-th-surface-alt flex items-center justify-center relative">
-          <Film size={36} style={{ color: 'var(--th-accent)' }} />
+          {project.cover_playback_id ? (
+            <img
+              src={`https://image.mux.com/${project.cover_playback_id}/thumbnail.jpg?time=1`}
+              className="w-full h-full object-cover absolute inset-0"
+              alt={project.name}
+            />
+          ) : (
+            <Film size={36} style={{ color: 'var(--th-accent)' }} />
+          )}
           <span
             className="absolute top-2.5 right-2.5 font-mono text-[10px] px-2 py-0.5 rounded-th-full"
             style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}
