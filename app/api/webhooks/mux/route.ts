@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { mux } from '@/lib/mux'
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const { type, data } = body
+  // Signature is computed over the exact raw bytes Mux sent - req.json()
+  // would re-serialize and break verification, so read it as text first.
+  const rawBody = await req.text()
+
+  let event
+  try {
+    event = await mux.webhooks.unwrap(rawBody, req.headers)
+  } catch (err) {
+    return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 })
+  }
+
+  const { type, data } = event as any
 
   if (type === 'video.asset.ready') {
     const muxAssetId   = data.id
