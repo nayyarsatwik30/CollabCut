@@ -21,24 +21,38 @@ export function Sidebar() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
+  const [token, setToken] = useState('')
 
   useEffect(() => {
     loadUser()
   }, [])
+
+  // The notifications page dispatches this after marking one or all
+  // notifications read, so the badge here (a separate mounted instance of
+  // this component) reflects it without a full page reload.
+  useEffect(() => {
+    const handler = () => { if (token) fetchUnreadCount(token) }
+    window.addEventListener('notifications:updated', handler)
+    return () => window.removeEventListener('notifications:updated', handler)
+  }, [token])
+
+  const fetchUnreadCount = async (accessToken: string) => {
+    const res = await fetch('/api/notifications/unread-count', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setUnreadCount(data.count ?? 0)
+    }
+  }
 
   const loadUser = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
       setName(session.user.user_metadata?.name ?? session.user.email ?? 'User')
       setEmail(session.user.email ?? '')
-
-      const res = await fetch('/api/notifications/unread-count', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setUnreadCount(data.count ?? 0)
-      }
+      setToken(session.access_token)
+      await fetchUnreadCount(session.access_token)
     }
   }
 

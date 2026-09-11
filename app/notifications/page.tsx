@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, MessageSquare, UserPlus, Upload, CheckCircle2 } from 'lucide-react'
+import { Bell, MessageSquare, UserPlus, Upload, CheckCircle2, Check, CheckCheck } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { supabase } from '@/lib/supabase'
 
@@ -48,16 +48,39 @@ export default function NotificationsPage() {
     setLoading(false)
   }
 
-  const handleClick = async (n: Notification) => {
-    if (!n.read) {
-      setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)))
-      fetch(`/api/notifications/${n.id}`, {
+  // Shared by opening a notification, the per-row checkmark, and "Mark all
+  // as read" - all three just PATCH the same read-state endpoint.
+  const markAsRead = async (id: string) => {
+    setNotifications((prev) => prev.map((x) => (x.id === id ? { ...x, read: true } : x)))
+    try {
+      await fetch(`/api/notifications/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ read: true }),
-      }).catch(() => {})
-    }
+      })
+    } catch (err) {}
+    window.dispatchEvent(new Event('notifications:updated'))
+  }
+
+  const handleClick = (n: Notification) => {
+    if (!n.read) markAsRead(n.id)
     if (n.link) router.push(n.link)
+  }
+
+  const markAllAsRead = async () => {
+    const unread = notifications.filter((n) => !n.read)
+    if (unread.length === 0) return
+    setNotifications((prev) => prev.map((x) => ({ ...x, read: true })))
+    await Promise.all(
+      unread.map((n) =>
+        fetch(`/api/notifications/${n.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ read: true }),
+        }).catch(() => {})
+      )
+    )
+    window.dispatchEvent(new Event('notifications:updated'))
   }
 
   const formatTime = (iso: string) => {
@@ -79,9 +102,17 @@ export default function NotificationsPage() {
         <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center justify-between px-6">
           <h1 className="text-[15px] font-bold">Notifications</h1>
           {notifications.some((n) => !n.read) && (
-            <span className="font-mono text-[11px] text-th-muted">
-              {notifications.filter((n) => !n.read).length} unread
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[11px] text-th-muted">
+                {notifications.filter((n) => !n.read).length} unread
+              </span>
+              <button
+                onClick={markAllAsRead}
+                className="flex items-center gap-1.5 h-7 px-3 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-muted hover:text-th-text hover:border-th-accent transition-colors btn-press"
+              >
+                <CheckCheck size={13} /> Mark all as read
+              </button>
+            </div>
           )}
         </div>
 
@@ -100,26 +131,34 @@ export default function NotificationsPage() {
             {notifications.map((n) => {
               const Icon = TYPE_ICON[n.type] ?? Bell
               return (
-                <button
+                <div
                   key={n.id}
-                  onClick={() => handleClick(n)}
-                  className="w-full flex items-start gap-3 px-6 py-4 border-b border-th-border text-left hover:bg-th-surface-alt transition-colors"
+                  className="w-full flex items-start gap-3 px-6 py-4 border-b border-th-border hover:bg-th-surface-alt transition-colors"
                   style={{ background: n.read ? 'transparent' : 'color-mix(in srgb, var(--th-accent) 6%, transparent)' }}
                 >
-                  <span
-                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                    style={{ background: 'color-mix(in srgb, var(--th-accent) 16%, transparent)', color: 'var(--th-accent)' }}
-                  >
-                    <Icon size={14} />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-[13px] ${n.read ? 'text-th-text' : 'font-semibold text-th-text'}`}>{n.message}</p>
-                    <p className="font-mono text-[10px] text-th-muted mt-1">{formatTime(n.created_at)}</p>
-                  </div>
+                  <button onClick={() => handleClick(n)} className="flex-1 min-w-0 flex items-start gap-3 text-left">
+                    <span
+                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                      style={{ background: 'color-mix(in srgb, var(--th-accent) 16%, transparent)', color: 'var(--th-accent)' }}
+                    >
+                      <Icon size={14} />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[13px] ${n.read ? 'text-th-text' : 'font-semibold text-th-text'}`}>{n.message}</p>
+                      <p className="font-mono text-[10px] text-th-muted mt-1">{formatTime(n.created_at)}</p>
+                    </div>
+                  </button>
                   {!n.read && (
-                    <span className="w-2 h-2 rounded-full bg-th-accent shrink-0 mt-1.5" title="Unread" />
+                    <button
+                      onClick={() => markAsRead(n.id)}
+                      title="Mark as read"
+                      className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-1.5 text-th-accent hover:bg-th-accent hover:text-th-accent-fg transition-colors btn-press"
+                      style={{ background: 'color-mix(in srgb, var(--th-accent) 16%, transparent)' }}
+                    >
+                      <Check size={11} strokeWidth={3} />
+                    </button>
                   )}
-                </button>
+                </div>
               )
             })}
           </div>
