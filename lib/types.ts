@@ -58,18 +58,6 @@ export interface Asset {
   uploadedBy: string
 }
 
-// ─── Asset version ───────────────────────────────────────────────────────────
-
-export interface AssetVersion {
-  id: string
-  versionNumber: number
-  label: string
-  sizeLabel: string
-  uploadedAt: string
-  isCurrent: boolean
-  muxPlaybackId?: string
-}
-
 // ─── Comments ────────────────────────────────────────────────────────────────
 
 export type CommentStatus = 'open' | 'resolved' | 'changes'

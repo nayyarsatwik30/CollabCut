@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { latestPerGroup } from '@/lib/asset-lineage'
 
 // Recomputes a project's status from its assets' pipeline_status and writes
 // it back, so projects.status (the dashboard badge) never has to be set
@@ -16,15 +17,7 @@ export async function syncProjectStatus(projectId: string) {
 
   if (!assets || assets.length === 0) return
 
-  const latestByGroup = new Map<string, (typeof assets)[number]>()
-  for (const asset of assets) {
-    const key = asset.asset_group_id ?? asset.id
-    const existing = latestByGroup.get(key)
-    if (!existing || asset.version > existing.version) {
-      latestByGroup.set(key, asset)
-    }
-  }
-  const latest = Array.from(latestByGroup.values())
+  const latest = latestPerGroup(assets)
 
   const status = latest.every((a) => a.pipeline_status === 'approved')
     ? 'approved'
