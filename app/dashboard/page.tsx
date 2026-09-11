@@ -15,6 +15,7 @@ interface AssignedAsset {
   name: string
   status: string
   is_complete: boolean
+  mux_playback_id: string | null
   project_id: string | null
   project_name: string
 }
@@ -335,43 +336,46 @@ export default function DashboardPage() {
                   <p className="text-[13px] text-th-muted">Try a different search term.</p>
                 </div>
               ) : (
-                <div className="bg-th-surface rounded-th-lg border border-th-border overflow-hidden">
-                  <div className="flex items-center px-5 py-2 border-b border-th-border font-mono text-[10px] text-th-faint uppercase tracking-wider">
-                    <span className="flex-1">Video</span>
-                    <span className="w-40">Project</span>
-                    <span className="w-28">Status</span>
-                    <span className="w-32 text-right">Complete</span>
-                  </div>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
                   {filteredAssigned.map((a) => {
                     const color = STATUS_COLOR[a.status] ?? 'var(--th-muted)'
                     const label = STATUS_LABEL[a.status] ?? a.status.toUpperCase()
                     return (
-                      <div
+                      <Link
                         key={a.id}
-                        className="flex items-center gap-4 px-5 py-3.5 border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors"
+                        href={`/review/${a.id}`}
+                        className="flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
                       >
-                        <Link href={`/review/${a.id}`} className="flex-1 flex items-center gap-3 min-w-0">
-                          <Film size={18} style={{ color: 'var(--th-accent)' }} />
-                          <span className="text-[13px] font-semibold truncate">{a.name}</span>
-                        </Link>
-                        <span className="w-40 text-[12px] text-th-muted truncate">{a.project_name}</span>
-                        <span
-                          className="w-28 font-mono text-[10px] px-2 py-0.5 rounded-th-full inline-block text-center"
-                          style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}
-                        >
-                          {label}
-                        </span>
-                        <div className="w-32 flex justify-end">
+                        <div className="aspect-video shrink-0 bg-th-surface-alt flex items-center justify-center relative">
+                          {a.mux_playback_id ? (
+                            <img
+                              src={`https://image.mux.com/${a.mux_playback_id}/thumbnail.jpg?time=1`}
+                              className="w-full h-full object-cover absolute inset-0"
+                              alt={a.name}
+                            />
+                          ) : (
+                            <Film size={36} style={{ color: 'var(--th-accent)' }} />
+                          )}
                           <span
-                            className="flex items-center gap-1.5 h-8 px-3 rounded-th text-[12px] font-semibold"
+                            className="absolute top-2.5 right-2.5 font-mono text-[10px] px-2 py-0.5 rounded-th-full"
+                            style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}
+                          >
+                            {label}
+                          </span>
+                        </div>
+                        <div className="p-3.5 flex-1 flex flex-col justify-center gap-1.5 min-h-[56px]">
+                          <p className="text-[13px] font-semibold truncate">{a.name}</p>
+                          <p className="text-[11px] text-th-muted truncate">{a.project_name}</p>
+                          <span
+                            className="self-start flex items-center gap-1.5 h-7 px-2.5 rounded-th text-[11px] font-semibold mt-0.5"
                             style={a.is_complete
                               ? { background: 'color-mix(in srgb, var(--th-resolved) 16%, transparent)', color: 'var(--th-resolved)', border: '1px solid color-mix(in srgb, var(--th-resolved) 40%, transparent)' }
                               : { background: 'var(--th-surface-alt)', color: 'var(--th-muted)', border: '1px solid var(--th-border)' }}
                           >
-                            {a.is_complete ? <><Check size={13} /> Complete</> : 'Pending'}
+                            {a.is_complete ? <><Check size={12} /> Complete</> : 'Pending'}
                           </span>
                         </div>
-                      </div>
+                      </Link>
                     )
                   })}
                 </div>
