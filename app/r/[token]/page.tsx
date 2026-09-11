@@ -75,10 +75,12 @@ export default function PublicReviewPage({ params }: { params: { token: string }
 
   useEffect(() => {
     if (!unlocked || !shareLink) return
-    fetch(`/api/comments?asset_id=${shareLink.asset.id}`)
+    const query = new URLSearchParams({ asset_id: shareLink.asset.id, share_token: shareLink.token })
+    if (shareLink.password_protected && enteredPassword) query.set('share_password', enteredPassword)
+    fetch(`/api/comments?${query.toString()}`)
       .then((res) => (res.ok ? res.json() : { comments: [] }))
       .then((data) => setComments(data.comments ?? []))
-  }, [unlocked, shareLink])
+  }, [unlocked, shareLink, enteredPassword])
 
   const handleUnlock = async () => {
     if (!passwordInput.trim() || !shareLink) return

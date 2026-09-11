@@ -127,7 +127,9 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       setVersions(v)
     }
 
-    const commentsRes = await fetch(`/api/comments?asset_id=${params.id}`)
+    const commentsRes = await fetch(`/api/comments?asset_id=${params.id}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
     if (commentsRes.ok) {
       const data = await commentsRes.json()
       setComments(data.comments ?? [])
@@ -169,7 +171,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     const [assetRes, versionsRes, commentsRes] = await Promise.all([
       fetch(`/api/assets/${targetId}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined }),
       fetch(`/api/assets/${targetId}/versions`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined }),
-      fetch(`/api/comments?asset_id=${targetId}`),
+      fetch(`/api/comments?asset_id=${targetId}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined }),
     ])
 
     if (assetRes.ok) {
