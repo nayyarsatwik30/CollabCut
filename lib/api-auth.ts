@@ -34,16 +34,36 @@ export async function hasWorkspaceRole(
   return !!data
 }
 
-// True if `userId` is assigned as an editor on `assetId` - the
-// asset_editors lookup already duplicated in the asset status/detail routes.
+// True if `userId` is assigned as an editor anywhere in `assetId`'s lineage.
+// asset_editors pins an assignment to whichever specific version existed at
+// assignment time, not the whole lineage, so a literal asset_id match here
+// would go false the moment a new version is uploaded without a fresh
+// assignment. Resolve at the asset_group_id level instead - the same
+// resolution the editor branch of /api/board already does before deciding
+// which cards to show that editor.
 export async function isAssignedEditor(assetId: string, userId: string): Promise<boolean> {
-  const { data } = await supabaseAdmin
-    .from('asset_editors')
-    .select('id')
-    .eq('asset_id', assetId)
-    .eq('editor_id', userId)
+  const { data: asset } = await supabaseAdmin
+    .from('assets')
+    .select('asset_group_id')
+    .eq('id', assetId)
     .maybeSingle()
-  return !!data
+
+  if (!asset) return false
+  const targetGroupId = asset.asset_group_id ?? assetId
+
+  const { data: assignedRows } = await supabaseAdmin
+    .from('asset_editors')
+    .select('assets!inner(id, asset_group_id)')
+    .eq('editor_id', userId)
+
+  const assignedGroupIds = new Set(
+    (assignedRows ?? []).map((row: any) => {
+      const a = Array.isArray(row.assets) ? row.assets[0] : row.assets
+      return a?.asset_group_id ?? a?.id
+    })
+  )
+
+  return assignedGroupIds.has(targetGroupId)
 }
 
 // Authenticates the request, then requires `role` in `workspaceId` outright,

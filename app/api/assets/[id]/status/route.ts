@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { syncProjectStatus } from '@/lib/project-status'
+import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
 
 const PIPELINE_STATUSES = ['idea', 'editing', 'review', 'revision', 'approved']
 // Moving a card TO either of these is admin-only, regardless of which
@@ -8,25 +9,14 @@ const PIPELINE_STATUSES = ['idea', 'editing', 'review', 'revision', 'approved']
 const RESTRICTED_TO_ADMIN = ['revision', 'approved']
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireAuth(req)
+  if ('error' in auth) return auth.error
+  const { user } = auth
 
   const { pipeline_status } = await req.json()
   if (!PIPELINE_STATUSES.includes(pipeline_status)) {
     return NextResponse.json({ error: 'Invalid pipeline_status' }, { status: 400 })
   }
-
-  const { data: assignment } = await supabaseAdmin
-    .from('asset_editors')
-    .select('id')
-    .eq('asset_id', params.id)
-    .eq('editor_id', user.id)
-    .maybeSingle()
-
-  const isAssignedEditor = !!assignment
 
   const { data: asset } = await supabaseAdmin
     .from('assets')
@@ -38,20 +28,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
     : null
 
-  let isAdmin = false
-  if (workspaceId) {
-    const { data: membership } = await supabaseAdmin
-      .from('workspace_members')
-      .select('id')
-      .eq('workspace_id', workspaceId)
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle()
+  const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, user.id, 'admin') : false
 
-    isAdmin = !!membership
-  }
-
-  const authorized = isAdmin || isAssignedEditor
+  const authorized = isAdmin || await isAssignedEditor(params.id, user.id)
   if (!authorized) return NextResponse.json({ error: 'Not authorized to update this asset' }, { status: 403 })
 
   if (RESTRICTED_TO_ADMIN.includes(pipeline_status) && !isAdmin) {

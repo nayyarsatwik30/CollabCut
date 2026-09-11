@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { Trash2, RotateCcw, X } from 'lucide-react'
+import { Trash2, RotateCcw, X, FolderKanban, Film } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface Project {
@@ -119,6 +119,7 @@ export default function TrashPage() {
                                     <div className="bg-th-surface rounded-th border border-th-border overflow-hidden">
                                         {projects.map((p) => (
                                             <div key={p.id} className="flex items-center gap-4 px-5 py-3.5 border-b border-th-border last:border-b-0">
+                                                <FolderKanban size={16} className="shrink-0 text-th-muted" />
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-[13px] font-semibold truncate">{p.name}</p>
                                                     <p className="text-[11px] text-th-muted">Deleted {new Date(p.deleted_at).toLocaleDateString()}</p>
@@ -143,6 +144,7 @@ export default function TrashPage() {
                                     <div className="bg-th-surface rounded-th border border-th-border overflow-hidden">
                                         {assets.map((a) => (
                                             <div key={a.id} className="flex items-center gap-4 px-5 py-3.5 border-b border-th-border last:border-b-0">
+                                                <Film size={16} className="shrink-0 text-th-muted" />
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-[13px] font-semibold truncate">{a.name}</p>
                                                     <p className="text-[11px] text-th-muted">{a.project_name} · Deleted {new Date(a.deleted_at).toLocaleDateString()}</p>
