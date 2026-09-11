@@ -35,8 +35,6 @@ export async function GET(req: NextRequest) {
   const role = membership.role as 'admin' | 'editor'
   const workspaceId = membership.workspace_id as string
 
-  console.log('[api/board] user', user.id, 'role', role, 'workspaceId', workspaceId)
-
   let assets: BoardAsset[] = []
 
   if (role === 'admin') {
@@ -46,8 +44,6 @@ export async function GET(req: NextRequest) {
       .eq('projects.workspace_id', workspaceId)
       .eq('cut_type', 'board')
       .is('deleted_at', null)
-
-    console.log('[api/board] admin raw query result (pre-filter):', JSON.stringify(data), 'error:', error?.message ?? null)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -134,8 +130,6 @@ export async function GET(req: NextRequest) {
         .in('asset_group_id', assignedGroupIds)
         .is('deleted_at', null)
 
-      console.log('[api/board] editor raw query result (pre-filter):', JSON.stringify(data), 'error:', error?.message ?? null)
-
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
       assets = latestPerGroup(
@@ -159,8 +153,6 @@ export async function GET(req: NextRequest) {
         })
     }
   }
-
-  console.log('[api/board] final assets after filtering:', assets.length)
 
   return NextResponse.json({ role, workspace_id: workspaceId, assets })
 }
