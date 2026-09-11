@@ -9,6 +9,7 @@ import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
+import { useSessionGuard } from '@/lib/useSessionGuard'
 import type { Project } from '@/lib/types'
 
 interface AssignedAsset {
@@ -37,6 +38,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { session, ready } = useSessionGuard()
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [search, setSearch] = useState('')
@@ -55,8 +57,10 @@ export default function DashboardPage() {
   const [myProjectsLoading, setMyProjectsLoading] = useState(false)
 
   useEffect(() => {
-    checkAuthAndLoad()
+    if (ready && session) checkAuthAndLoad()
+  }, [ready, session])
 
+  useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         router.push('/auth/login')
@@ -66,14 +70,10 @@ export default function DashboardPage() {
     })
 
     return () => listener.subscription.unsubscribe()
-  }, [])
+  }, [router])
 
   const checkAuthAndLoad = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      router.push('/auth/login')
-      return
-    }
+    if (!session) return
     setToken(session.access_token)
 
     const { data: memberships, error: membershipError } = await supabase

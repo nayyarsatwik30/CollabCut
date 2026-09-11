@@ -11,6 +11,7 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
+import { useSessionGuard } from '@/lib/useSessionGuard'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 
 type SideTab = 'notes' | 'brief'
@@ -57,6 +58,7 @@ interface Comment {
 
 export default function ReviewPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const { session, ready } = useSessionGuard()
 
   const [asset, setAsset] = useState<Asset | null>(null)
   const [loading, setLoading] = useState(true)
@@ -87,18 +89,19 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const { toast, showToast, dismissToast } = useToast()
 
   useEffect(() => {
-    loadData()
+    if (ready && session) loadData()
+  }, [ready, session, params.id])
 
+  useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) router.push('/auth/login')
     })
 
     return () => listener.subscription.unsubscribe()
-  }, [params.id])
+  }, [router])
 
   const loadData = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { router.push('/auth/login'); return }
+    if (!session) return
     setToken(session.access_token)
     setUserName(session.user.user_metadata?.name ?? session.user.email ?? 'You')
 

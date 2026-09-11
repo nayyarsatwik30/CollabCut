@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Clock, MessageSquare } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { useSessionGuard } from '@/lib/useSessionGuard'
 
 interface Highlight {
   id: string
@@ -43,17 +42,16 @@ function formatTimecode(sec: number) {
 }
 
 export default function RecentPage() {
-  const router = useRouter()
+  const { session, ready } = useSessionGuard()
   const [highlights, setHighlights] = useState<Highlight[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadHighlights()
-  }, [])
+    if (ready && session) loadHighlights()
+  }, [ready, session])
 
   const loadHighlights = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { router.push('/auth/login'); return }
+    if (!session) return
 
     const res = await fetch('/api/highlights', {
       headers: { Authorization: `Bearer ${session.access_token}` },

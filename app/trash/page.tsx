@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Trash2, RotateCcw, X, FolderKanban, Film } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { useSessionGuard } from '@/lib/useSessionGuard'
 
 interface Project {
     id: string
@@ -22,19 +21,18 @@ interface DeletedAsset {
 }
 
 export default function TrashPage() {
-    const router = useRouter()
+    const { session, ready } = useSessionGuard()
     const [projects, setProjects] = useState<Project[]>([])
     const [assets, setAssets] = useState<DeletedAsset[]>([])
     const [loading, setLoading] = useState(true)
     const [token, setToken] = useState<string | null>(null)
 
     useEffect(() => {
-        load()
-    }, [])
+        if (ready && session) load()
+    }, [ready, session])
 
     const load = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) { router.push('/auth/login'); return }
+        if (!session) return
         setToken(session.access_token)
 
         const [projectsRes, assetsRes] = await Promise.all([

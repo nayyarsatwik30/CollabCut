@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell, MessageSquare, UserPlus, Upload, CheckCircle2, Check, CheckCheck } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { supabase } from '@/lib/supabase'
+import { useSessionGuard } from '@/lib/useSessionGuard'
 
 interface Notification {
   id: string
@@ -25,17 +25,17 @@ const TYPE_ICON: Record<string, React.ElementType> = {
 
 export default function NotificationsPage() {
   const router = useRouter()
+  const { session, ready } = useSessionGuard()
   const [loading, setLoading] = useState(true)
   const [token, setToken] = useState('')
   const [notifications, setNotifications] = useState<Notification[]>([])
 
   useEffect(() => {
-    load()
-  }, [])
+    if (ready && session) load()
+  }, [ready, session])
 
   const load = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { router.push('/auth/login'); return }
+    if (!session) return
     setToken(session.access_token)
 
     const res = await fetch('/api/notifications', {

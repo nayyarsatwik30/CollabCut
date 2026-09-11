@@ -9,6 +9,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
 import { supabase } from '@/lib/supabase'
+import { useSessionGuard } from '@/lib/useSessionGuard'
 
 type Tab = 'assets' | 'members'
 
@@ -46,6 +47,7 @@ interface Asset {
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const { session, ready } = useSessionGuard()
   const [tab, setTab] = useState<Tab>('assets')
   const [project, setProject] = useState<Project | null>(null)
   const [assets, setAssets] = useState<Asset[]>([])
@@ -55,18 +57,19 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [showUploadBoard, setShowUploadBoard] = useState(false)
 
   useEffect(() => {
-    loadData()
+    if (ready && session) loadData()
+  }, [ready, session, params.id])
 
+  useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) router.push('/auth/login')
     })
 
     return () => listener.subscription.unsubscribe()
-  }, [params.id])
+  }, [router])
 
   const loadData = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { router.push('/auth/login'); return }
+    if (!session) return
     setToken(session.access_token)
 
     const projectRes = await fetch(`/api/projects/${params.id}`, {

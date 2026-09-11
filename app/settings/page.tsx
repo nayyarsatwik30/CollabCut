@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
 import { performLogout } from '@/lib/auth'
+import { useSessionGuard } from '@/lib/useSessionGuard'
 
 type Tab = 'profile' | 'plan' | 'notifications' | 'team'
 
@@ -26,6 +27,7 @@ interface Plan {
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { session, ready } = useSessionGuard()
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
   const [tab, setTab] = useState<Tab>('profile')
   const [name, setName] = useState('')
@@ -43,8 +45,8 @@ export default function SettingsPage() {
   const [workspaceError, setWorkspaceError] = useState('')
 
   useEffect(() => {
-    loadUser()
-  }, [])
+    if (ready && session) loadUser()
+  }, [ready, session])
 
   useEffect(() => {
     if (tab === 'team' && !loading && !adminWorkspace && !provisioningWorkspace) {
@@ -54,8 +56,7 @@ export default function SettingsPage() {
   }, [tab, loading])
 
   const loadUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { router.push('/auth/login'); return }
+    if (!session) return
     setName(session.user.user_metadata?.name ?? '')
     setEmail(session.user.email ?? '')
 

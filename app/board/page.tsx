@@ -11,8 +11,8 @@ import { NewContentModal } from '@/components/board/NewContentModal'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
-import { supabase } from '@/lib/supabase'
 import { performLogout } from '@/lib/auth'
+import { useSessionGuard } from '@/lib/useSessionGuard'
 
 type BoardView = 'board' | 'projects' | 'editors'
 
@@ -46,6 +46,7 @@ const RESTRICTED_TO_ADMIN = ['revision', 'approved']
 
 export default function BoardPage() {
   const router = useRouter()
+  const { session, ready } = useSessionGuard()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [token, setToken] = useState('')
@@ -70,12 +71,11 @@ export default function BoardPage() {
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
 
   useEffect(() => {
-    loadBoard()
-  }, [])
+    if (ready && session) loadBoard()
+  }, [ready, session])
 
   const loadBoard = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { router.push('/auth/login'); return }
+    if (!session) return
     setToken(session.access_token)
 
     try {
