@@ -6,6 +6,7 @@ import {
   Check, ArrowRight, Play, Upload, MessageSquare,
   Layers, CheckCircle, Zap, Users, Lock, Sparkles
 } from 'lucide-react'
+import { useRedirectIfAuthenticated } from '@/lib/useSessionGuard'
 
 /* ── Data ── */
 
@@ -42,6 +43,8 @@ const MOCK_COMMENTS = [
 /* ── Component ── */
 
 export function LandingPage() {
+  useRedirectIfAuthenticated('/board')
+
   const scrollRef = useRef<HTMLDivElement>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
