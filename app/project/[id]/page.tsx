@@ -12,7 +12,13 @@ import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
 import { supabase } from '@/lib/supabase'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 
-type Tab = 'assets' | 'members'
+type Tab = 'assets' | 'raw-footage' | 'members'
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'assets', label: 'Assets' },
+  { id: 'raw-footage', label: 'Raw Footage' },
+  { id: 'members', label: 'Members' },
+]
 
 interface Member {
   id: string
@@ -158,16 +164,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
         {/* Tabs */}
         <div className="shrink-0 bg-th-surface border-b border-th-border px-5 flex gap-0">
-          {(['assets', 'members'] as Tab[]).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
-              className="px-4 py-3 text-[13px] capitalize transition-colors border-b-2 btn-press"
+          {TABS.filter((t) => t.id !== 'raw-footage' || project?.viewer_is_admin).map(({ id, label }) => (
+            <button key={id} onClick={() => setTab(id)}
+              className="px-4 py-3 text-[13px] transition-colors border-b-2 btn-press"
               style={{
-                color: tab === t ? 'var(--th-accent)' : 'var(--th-muted)',
-                borderColor: tab === t ? 'var(--th-accent)' : 'transparent',
-                fontWeight: tab === t ? 700 : 400,
+                color: tab === id ? 'var(--th-accent)' : 'var(--th-muted)',
+                borderColor: tab === id ? 'var(--th-accent)' : 'transparent',
+                fontWeight: tab === id ? 700 : 400,
               }}>
-              {t}
-              {t === 'assets' && (
+              {label}
+              {id === 'assets' && (
                 <span className="ml-1.5 font-mono text-[10px] text-th-faint">{assets.length}</span>
               )}
             </button>
@@ -242,10 +248,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                       </div>
                     </button>
                   </div>
-                )}
-
-                {project?.viewer_is_admin && (
-                  <RawFootageArchive projectId={params.id} token={token} />
                 )}
               </section>
 
@@ -363,6 +365,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                 )}
               </section>
             </div>
+          )}
+
+          {/* Raw Footage */}
+          {tab === 'raw-footage' && project?.viewer_is_admin && (
+            <RawFootageArchive projectId={params.id} token={token} />
           )}
 
           {/* Members */}

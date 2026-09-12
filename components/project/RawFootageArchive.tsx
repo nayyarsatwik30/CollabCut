@@ -143,7 +143,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   }
 
   return (
-    <div className="mt-4 border border-th-border rounded-th-lg bg-th-surface-alt p-4">
+    <div className="border border-th-border rounded-th-lg bg-th-surface-alt p-4">
       <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
 
       <div className="flex items-center justify-between mb-3">
