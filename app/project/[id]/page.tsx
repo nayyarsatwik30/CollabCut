@@ -1,6 +1,7 @@
 'use client'
 
 import { UploadModal } from '@/components/project/UploadModal'
+import { RawFootageArchive } from '@/components/project/RawFootageArchive'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -29,6 +30,7 @@ interface Project {
   workspace_id?: string | null
   owner?: Member | null
   members?: Member[]
+  viewer_is_admin?: boolean
 }
 
 interface Asset {
@@ -240,6 +242,10 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                       </div>
                     </button>
                   </div>
+                )}
+
+                {project?.viewer_is_admin && (
+                  <RawFootageArchive projectId={params.id} token={token} />
                 )}
               </section>
 

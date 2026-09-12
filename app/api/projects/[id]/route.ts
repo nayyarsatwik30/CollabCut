@@ -4,11 +4,9 @@ import { requireAuth, hasWorkspaceRole } from '@/lib/api-auth'
 import { latestPerGroup } from '@/lib/asset-lineage'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireAuth(req)
+  if ('error' in auth) return auth.error
+  const { user } = auth
 
   const { data, error } = await supabaseAdmin
     .from('projects')
@@ -24,6 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   // never evaluates true - a project with no workspace can't rely on that,
   // it has to be excluded up front instead.
   let authorized = false
+  let viewerIsAdmin = false
 
   if (data.workspace_id) {
     const { data: membership } = await supabaseAdmin
@@ -34,7 +33,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       .eq('role', 'admin')
       .maybeSingle()
 
-    authorized = !!membership
+    viewerIsAdmin = !!membership
+    authorized = viewerIsAdmin
   }
 
   if (!authorized) {
@@ -85,6 +85,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   data.owner = ownerProfile ?? null
   data.members = members
+  data.viewer_is_admin = viewerIsAdmin
 
   return NextResponse.json({ project: data })
 }
