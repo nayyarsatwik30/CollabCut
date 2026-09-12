@@ -21,12 +21,27 @@ export async function GET(req: NextRequest) {
   const isAdmin = await hasWorkspaceRole(project.workspace_id, user.id, 'admin')
   if (!isAdmin) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
 
-  const { data, error } = await supabaseAdmin
+  const { data: rawFiles, error } = await supabaseAdmin
     .from('raw_files')
-    .select('id, file_name, file_size_bytes, content_type, created_at, uploaded_by, profiles(name, email)')
+    .select('id, file_name, file_size_bytes, content_type, created_at, uploaded_by')
     .eq('project_id', projectId)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ rawFiles: data })
+
+  // raw_files.uploaded_by references auth.users, not profiles, so there's no
+  // direct FK for PostgREST to embed through - fetch profiles separately.
+  const uploaderIds = Array.from(new Set((rawFiles ?? []).map((f) => f.uploaded_by)))
+  const { data: profileRows } = uploaderIds.length
+    ? await supabaseAdmin.from('profiles').select('id, name, email').in('id', uploaderIds)
+    : { data: [] }
+
+  const profileById = new Map((profileRows ?? []).map((p) => [p.id, p]))
+
+  const result = (rawFiles ?? []).map((f) => ({
+    ...f,
+    profiles: profileById.get(f.uploaded_by) ?? null,
+  }))
+
+  return NextResponse.json({ rawFiles: result })
 }

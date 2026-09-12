@@ -92,45 +92,20 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
 
     setState('uploading')
     try {
-      const contentType = file.type || 'application/octet-stream'
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('projectId', projectId)
 
-      const presignRes = await fetch('/api/raw-upload/presign', {
+      // No Content-Type header here - the browser sets the correct
+      // multipart boundary itself when the body is a FormData instance.
+      const res = await fetch('/api/raw-upload/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          projectId,
-          fileName: file.name,
-          contentType,
-          fileSizeBytes: file.size,
-        }),
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
       })
-      if (!presignRes.ok) {
-        const err = await presignRes.json()
-        throw new Error(err.error ?? 'Failed to get upload URL')
-      }
-      const { uploadUrl, b2Key } = await presignRes.json()
-
-      const putRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': contentType },
-        body: file,
-      })
-      if (!putRes.ok) throw new Error(`Upload to B2 failed: ${putRes.status}`)
-
-      const confirmRes = await fetch('/api/raw-upload/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          projectId,
-          fileName: file.name,
-          b2Key,
-          fileSizeBytes: file.size,
-          contentType,
-        }),
-      })
-      if (!confirmRes.ok) {
-        const err = await confirmRes.json()
-        throw new Error(err.error ?? 'Failed to record uploaded file')
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error ?? 'Upload failed')
       }
 
       setState('idle')
