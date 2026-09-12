@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Archive, UploadCloud, AlertCircle } from 'lucide-react'
+import { Archive, UploadCloud, AlertCircle, File as FileIcon, Trash2 } from 'lucide-react'
 import { MAX_RAW_FILE_BYTES } from '@/lib/raw-files'
+import { useConfirm, ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface RawFootageArchiveProps {
   projectId: string
@@ -24,7 +25,23 @@ type UploadState = 'idle' | 'uploading' | 'error'
 function formatSize(bytes: number | null) {
   if (!bytes) return '—'
   if (bytes > 1e9) return `${(bytes / 1e9).toFixed(2)} GB`
-  return `${(bytes / 1e6).toFixed(0)} MB`
+  if (bytes > 1e6) return `${(bytes / 1e6).toFixed(0)} MB`
+  return `${(bytes / 1e3).toFixed(0)} KB`
+}
+
+// Mirrors the local formatTime in app/notifications/page.tsx - no shared
+// lib/ helper for this exists yet, so following the same per-component
+// convention rather than introducing one for a single new caller.
+function formatTime(iso: string) {
+  const date = new Date(iso)
+  const diffMin = Math.round((Date.now() - date.getTime()) / 60000)
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.round(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  const diffDay = Math.round(diffHr / 24)
+  if (diffDay < 7) return `${diffDay}d ago`
+  return date.toLocaleDateString()
 }
 
 function uploaderLabel(profiles: RawFile['profiles']) {
@@ -42,6 +59,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   const [files, setFiles] = useState<RawFile[]>([])
   const [state, setState] = useState<UploadState>('idle')
   const [error, setError] = useState('')
+  const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
 
   const loadFiles = async () => {
     if (!token) return
@@ -129,8 +147,30 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     e.target.value = ''
   }
 
+  const handleDelete = async (f: RawFile) => {
+    const ok = await confirm({
+      title: 'Delete this file?',
+      message: f.file_name,
+      confirmLabel: 'Delete',
+    })
+    if (!ok || !token) return
+
+    const res = await fetch(`/api/raw-upload/${f.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) {
+      setFiles((prev) => prev.filter((row) => row.id !== f.id))
+    } else {
+      const err = await res.json()
+      setError(err.error ?? 'Failed to delete file')
+    }
+  }
+
   return (
     <div className="mt-4 border border-th-border rounded-th-lg bg-th-surface-alt p-4">
+      <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
+
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Archive size={14} className="text-th-muted" />
@@ -157,15 +197,25 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
       )}
 
       {files.length === 0 ? (
-        <p className="text-[12px] text-th-muted py-3 text-center">No raw footage archived yet.</p>
+        <div className="rounded-th-sm bg-th-surface border border-th-border py-6 text-center">
+          <p className="text-[12px] text-th-muted">No raw footage archived yet.</p>
+        </div>
       ) : (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           {files.map((f) => (
-            <div key={f.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-th-sm bg-th-surface border border-th-border">
-              <span className="text-[12px] font-medium truncate flex-1">{f.file_name}</span>
-              <span className="text-[11px] text-th-muted shrink-0">{uploaderLabel(f.profiles)}</span>
-              <span className="text-[11px] text-th-faint font-mono shrink-0">{new Date(f.created_at).toLocaleDateString()}</span>
-              <span className="text-[11px] text-th-faint font-mono shrink-0">{formatSize(f.file_size_bytes)}</span>
+            <div
+              key={f.id}
+              className="group flex items-center gap-3 px-3 py-2 rounded-th-sm bg-th-surface border border-th-border hover:bg-th-surface-hov transition-colors">
+              <FileIcon size={14} className="text-th-muted shrink-0" />
+              <span className="text-[12px] font-medium truncate flex-1" title={f.file_name}>{f.file_name}</span>
+              <span className="text-[11px] text-th-faint font-mono shrink-0 w-16 text-right">{formatSize(f.file_size_bytes)}</span>
+              <span className="text-[11px] text-th-muted shrink-0 w-28 truncate">{uploaderLabel(f.profiles)}</span>
+              <span className="text-[11px] text-th-faint font-mono shrink-0 w-16 text-right">{formatTime(f.created_at)}</span>
+              <button
+                onClick={() => handleDelete(f)}
+                className="shrink-0 p-1 rounded-th-sm text-th-muted opacity-0 group-hover:opacity-100 hover:text-th-changes transition-opacity">
+                <Trash2 size={13} />
+              </button>
             </div>
           ))}
         </div>
