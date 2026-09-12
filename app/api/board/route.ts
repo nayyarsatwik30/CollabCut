@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { latestPerGroup } from '@/lib/asset-lineage'
+import { requireAuth } from '@/lib/api-auth'
 
 interface BoardAsset {
   id: string
@@ -14,11 +15,9 @@ interface BoardAsset {
 }
 
 export async function GET(req: NextRequest) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireAuth(req)
+  if ('error' in auth) return auth.error
+  const { user } = auth
 
   const { data: memberships, error: membershipError } = await supabaseAdmin
     .from('workspace_members')

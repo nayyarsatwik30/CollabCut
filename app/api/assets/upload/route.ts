@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { video } from '@/lib/mux'
 import { syncProjectStatus } from '@/lib/project-status'
 import { notifyWorkspaceAdmins } from '@/lib/notifications'
+import { requireAuth } from '@/lib/api-auth'
 
 // Shared context every upload-triggered notification needs - the project's
 // display name/workspace (to fan a notification out to its admins) and the
@@ -21,11 +22,9 @@ async function getUploadNotificationContext(projectId: string, uploaderId: strin
 }
 
 export async function POST(req: NextRequest) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireAuth(req)
+  if ('error' in auth) return auth.error
+  const { user } = auth
 
   const { project_id, name, linked_asset_name, cut_type, fulfill_asset_id: requestedFulfillAssetId } = await req.json()
 

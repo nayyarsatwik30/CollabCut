@@ -2,15 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { latestPerGroup } from '@/lib/asset-lineage'
 import { createNotification } from '@/lib/notifications'
+import { requireAuth } from '@/lib/api-auth'
 
-async function requireAdminWorkspace(token: string) {
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-  if (authError || !user) return { error: 'Unauthorized', status: 401 as const }
-
+async function requireAdminWorkspace(userId: string) {
   const { data: membership, error: membershipError } = await supabaseAdmin
     .from('workspace_members')
     .select('workspace_id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('role', 'admin')
     .limit(1)
     .maybeSingle()
@@ -38,10 +36,10 @@ async function findAssetInWorkspace(assetId: string, workspaceId: string) {
 // per-lineage dedup GET /api/board uses for an editor's own view, just
 // parameterized by an arbitrary editor id instead of the caller's own.
 export async function GET(req: NextRequest, { params }: { params: { editorId: string } }) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authResult = await requireAuth(req)
+  if ('error' in authResult) return authResult.error
 
-  const auth = await requireAdminWorkspace(token)
+  const auth = await requireAdminWorkspace(authResult.user.id)
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const { data: profile } = await supabaseAdmin
@@ -110,10 +108,10 @@ export async function GET(req: NextRequest, { params }: { params: { editorId: st
 }
 
 export async function POST(req: NextRequest, { params }: { params: { editorId: string } }) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authResult = await requireAuth(req)
+  if ('error' in authResult) return authResult.error
 
-  const auth = await requireAdminWorkspace(token)
+  const auth = await requireAdminWorkspace(authResult.user.id)
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const { assetId } = await req.json()
@@ -173,10 +171,10 @@ export async function POST(req: NextRequest, { params }: { params: { editorId: s
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { editorId: string } }) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authResult = await requireAuth(req)
+  if ('error' in authResult) return authResult.error
 
-  const auth = await requireAdminWorkspace(token)
+  const auth = await requireAdminWorkspace(authResult.user.id)
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const { assetId } = await req.json()
