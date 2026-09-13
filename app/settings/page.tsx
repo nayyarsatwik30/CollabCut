@@ -8,6 +8,8 @@ import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
 import { performLogout } from '@/lib/auth'
 import { useSessionGuard } from '@/lib/useSessionGuard'
+import { useStorageUsage } from '@/lib/useStorageUsage'
+import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
 
 type Tab = 'profile' | 'plan' | 'notifications' | 'team'
 
@@ -28,6 +30,7 @@ interface Plan {
 export default function SettingsPage() {
   const router = useRouter()
   const { session, ready } = useSessionGuard()
+  const { usedBytes, loading: usageLoading } = useStorageUsage()
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
   const [tab, setTab] = useState<Tab>('profile')
   const [name, setName] = useState('')
@@ -232,6 +235,7 @@ export default function SettingsPage() {
                     style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)' }}>
                     Save changes
                   </button>
+                  <StorageUsageBar usedBytes={usedBytes} loading={usageLoading} variant="full" />
                 </>
               )}
 

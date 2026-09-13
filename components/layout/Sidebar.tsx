@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation'
 import { Grid3X3, Kanban, Clock, Bell, Settings, ChevronDown, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { resolveSession } from '@/lib/useSessionGuard'
+import { useStorageUsage } from '@/lib/useStorageUsage'
+import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
 
 const NAV_ITEMS = [
   { href: '/board', icon: Kanban, label: 'Board' },
@@ -22,6 +24,7 @@ export function Sidebar() {
   const [email, setEmail] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
   const [token, setToken] = useState('')
+  const { usedBytes, loading: usageLoading } = useStorageUsage()
 
   useEffect(() => {
     loadUser()
@@ -101,7 +104,8 @@ export function Sidebar() {
       </nav>
 
       {/* User profile */}
-      <div className="p-3 border-t border-th-border shrink-0">
+      <div className="p-3 border-t border-th-border shrink-0 space-y-3">
+        <StorageUsageBar usedBytes={usedBytes} loading={usageLoading} variant="compact" />
         <Link href="/settings" className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-th-sm hover:bg-th-surface-alt transition-colors text-left">
           <div
             className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-extrabold shrink-0"
