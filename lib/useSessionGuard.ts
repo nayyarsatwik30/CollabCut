@@ -9,7 +9,7 @@ import { supabase } from './supabase'
 // gospel, wait briefly and check once more before treating that as a
 // confirmed "logged out". Shared by useSessionGuard (redirects to login)
 // and useRedirectIfAuthenticated (redirects the other way) below.
-async function resolveSession(): Promise<Session | null> {
+export async function resolveSession(): Promise<Session | null> {
   const { data: { session: first } } = await supabase.auth.getSession()
   if (first) return first
 

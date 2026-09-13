@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { resolveSession } from '@/lib/useSessionGuard'
 
 // Supabase persists the session to one shared localStorage slot, so a
 // sign-in/out in one tab silently becomes the "current" session for every
@@ -33,8 +34,18 @@ export function SessionSync() {
       }
 
       if (event === 'SIGNED_OUT') {
-        knownUserId.current = null
-        router.push('/auth/login')
+        // SIGNED_OUT can also fire as a startup artifact while a stored
+        // session is still being restored/refreshed, not only on a real
+        // sign-out - confirm with the same retry-backed check
+        // useSessionGuard trusts before redirecting.
+        resolveSession().then((confirmed) => {
+          if (confirmed) {
+            knownUserId.current = confirmed.user.id
+            return
+          }
+          knownUserId.current = null
+          router.push('/auth/login')
+        })
         return
       }
 
