@@ -25,7 +25,11 @@ export async function createNotification({ userId, type, message, link, assetId 
 
 // Fans a notification out to every admin in a workspace - used for the
 // upload triggers, where "the project's admin(s)" can be more than one.
-export async function notifyWorkspaceAdmins(workspaceId: string, input: Omit<NotifyInput, 'userId'>) {
+export async function notifyWorkspaceAdmins(
+  workspaceId: string,
+  input: Omit<NotifyInput, 'userId'>,
+  excludeUserId?: string,
+) {
   const { data: admins, error } = await supabaseAdmin
     .from('workspace_members')
     .select('user_id')
@@ -37,5 +41,9 @@ export async function notifyWorkspaceAdmins(workspaceId: string, input: Omit<Not
     return
   }
 
-  await Promise.all((admins ?? []).map((a) => createNotification({ ...input, userId: a.user_id })))
+  await Promise.all(
+    (admins ?? [])
+      .filter((a) => a.user_id !== excludeUserId)
+      .map((a) => createNotification({ ...input, userId: a.user_id })),
+  )
 }

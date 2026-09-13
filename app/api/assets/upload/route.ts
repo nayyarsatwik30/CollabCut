@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
         message: `${uploaderName} uploaded v${asset.version} for ${projectName} — ready for review`,
         link: `/review/${fulfill_asset_id}`,
         assetId: fulfill_asset_id,
-      })
+      }, user.id)
     }
 
     return NextResponse.json({ asset, upload_url: upload.url, upload_id: upload.id }, { status: 201 })
@@ -223,20 +223,20 @@ export async function POST(req: NextRequest) {
           message: `${uploaderName} replied to your comment on ${projectName}`,
           link: `/review/${linkedHead.id}`,
           assetId: linkedHead.id,
-        })
+        }, user.id)
         await notifyWorkspaceAdmins(workspaceId, {
           type: 'version_ready',
           message: `Version ${nextVersion} uploaded for ${projectName} — ready to approve`,
           link: `/review/${newAssetId}`,
           assetId: newAssetId,
-        })
+        }, user.id)
       } else {
         await notifyWorkspaceAdmins(workspaceId, {
           type: 'cut_uploaded',
           message: `${uploaderName} uploaded v${nextVersion} for ${projectName} — ready for review`,
           link: `/review/${newAssetId}`,
           assetId: newAssetId,
-        })
+        }, user.id)
       }
     }
   }
