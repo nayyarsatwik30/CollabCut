@@ -74,24 +74,77 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   // thumbnail, instead of leaving newer cards stuck on the fallback icon
   // forever. Capped per distinct pending set so a permanently-failed
   // encode doesn't poll forever - progress (a new upload, one resolving)
-  // resets the cap.
-  const pollState = useRef({ pendingKey: '', attempts: 0 })
+  // resets the cap. Self-scheduling once started, via recursive
+  // setTimeout, rather than relying on the [assets] dependency to
+  // re-trigger the next tick - a poll that fails or comes back with no
+  // change wouldn't otherwise change `assets`, so the effect would never
+  // re-run and the chain would silently die instead of retrying.
+  const pollState = useRef({ pendingKey: '', attempts: 0, running: false })
+  const assetsRef = useRef(assets)
+  assetsRef.current = assets
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const pollCancelledRef = useRef(false)
+
+  useEffect(() => {
+    pollCancelledRef.current = false
+    return () => {
+      pollCancelledRef.current = true
+      clearTimeout(pollTimerRef.current)
+    }
+  }, [])
+
   useEffect(() => {
     const pendingKey = assets
       .filter((a) => a.mux_upload_id && !a.mux_playback_id)
       .map((a) => a.id)
       .sort()
       .join(',')
-    if (!pendingKey) return
+    if (!pendingKey || pollState.current.running) return
 
     if (pendingKey !== pollState.current.pendingKey) {
-      pollState.current = { pendingKey, attempts: 0 }
+      pollState.current.pendingKey = pendingKey
+      pollState.current.attempts = 0
     }
     if (pollState.current.attempts >= 15) return
 
-    pollState.current.attempts += 1
-    const timer = setTimeout(() => loadData(), 4000)
-    return () => clearTimeout(timer)
+    pollState.current.running = true
+
+    const scheduleNext = () => {
+      const currentPendingKey = assetsRef.current
+        .filter((a) => a.mux_upload_id && !a.mux_playback_id)
+        .map((a) => a.id)
+        .sort()
+        .join(',')
+
+      if (!currentPendingKey) {
+        pollState.current.running = false
+        return
+      }
+      if (currentPendingKey !== pollState.current.pendingKey) {
+        pollState.current.pendingKey = currentPendingKey
+        pollState.current.attempts = 0
+      }
+      if (pollState.current.attempts >= 15) {
+        pollState.current.running = false
+        return
+      }
+
+      pollState.current.attempts += 1
+      pollTimerRef.current = setTimeout(async () => {
+        if (pollCancelledRef.current) return
+        try {
+          await loadData()
+        } catch {
+          // Transient failure (e.g. a Supabase timeout) - swallow it and
+          // let the next poll cycle retry instead of surfacing a broken
+          // UI for one bad fetch.
+        }
+        if (pollCancelledRef.current) return
+        scheduleNext()
+      }, 8000)
+    }
+
+    scheduleNext()
   }, [assets])
 
   useEffect(() => {
