@@ -73,6 +73,16 @@ export default function PublicReviewClient({ params }: { params: { token: string
     })()
   }, [params.token])
 
+  // generateMetadata() sets the real title server-side for open links, but
+  // deliberately stays generic for password-protected ones (so a crawler
+  // or link preview never leaks the name before anyone unlocks it) - once
+  // this tab itself has unlocked, update the live browser tab title to
+  // match the heading below instead of leaving it stuck on the generic
+  // string for the rest of the session.
+  useEffect(() => {
+    if (unlocked && shareLink) document.title = `${shareLink.asset.name} — CollabCut`
+  }, [unlocked, shareLink])
+
   useEffect(() => {
     if (!unlocked || !shareLink) return
     const query = new URLSearchParams({ asset_id: shareLink.asset.id, share_token: shareLink.token })
