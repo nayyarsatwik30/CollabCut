@@ -34,7 +34,7 @@ interface PublicComment {
 
 type LoadState = 'loading' | 'not_found' | 'expired' | 'ready'
 
-export default function PublicReviewClient({ params }: { params: { token: string } }) {
+export default function PublicReviewClient({ token }: { token: string }) {
   const [state, setState] = useState<LoadState>('loading')
   const [shareLink, setShareLink] = useState<ShareLinkData | null>(null)
 
@@ -61,7 +61,7 @@ export default function PublicReviewClient({ params }: { params: { token: string
 
   useEffect(() => {
     (async () => {
-      const res = await fetch(`/api/share?token=${params.token}`)
+      const res = await fetch(`/api/share?token=${token}`)
       if (res.status === 404) { setState('not_found'); return }
       if (res.status === 410) { setState('expired'); return }
       if (!res.ok) { setState('not_found'); return }
@@ -71,7 +71,7 @@ export default function PublicReviewClient({ params }: { params: { token: string
       setState('ready')
       if (!share_link.password_protected) setUnlocked(true)
     })()
-  }, [params.token])
+  }, [token])
 
   // generateMetadata() sets the real title server-side for open links, but
   // deliberately stays generic for password-protected ones (so a crawler

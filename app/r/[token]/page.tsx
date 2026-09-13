@@ -1,11 +1,15 @@
 import type { Metadata } from 'next'
 import { getPublicShareLink } from '@/lib/share-access'
+import { extractShareToken } from '@/lib/share-slug'
 import PublicReviewClient from './PublicReviewClient'
 
 type Props = { params: { token: string } }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const result = await getPublicShareLink(params.token)
+  const token = extractShareToken(params.token)
+  if (!token) return { title: "Link not found — CollabCut" }
+
+  const result = await getPublicShareLink(token)
 
   if (result.status !== 'ok') {
     return { title: "Link not found — CollabCut" }
@@ -54,5 +58,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default function Page({ params }: Props) {
-  return <PublicReviewClient params={params} />
+  const token = extractShareToken(params.token) ?? ''
+  return <PublicReviewClient token={token} />
 }

@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { hashSharePassword } from '@/lib/share-password'
 import { requireAuth } from '@/lib/api-auth'
 import { getPublicShareLink } from '@/lib/share-access'
+import { slugifyAssetName } from '@/lib/share-slug'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
@@ -22,13 +23,15 @@ export async function POST(req: NextRequest) {
       expires_at: expires_at ?? null,
       password_hash: password ? hashSharePassword(password) : null,
     })
-    .select()
+    .select('*, assets(name)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const { password_hash, ...safeShareLink } = data
-  const url = `${process.env.NEXT_PUBLIC_APP_URL}/r/${data.token}`
+  const { password_hash, assets, ...safeShareLink } = data as any
+  const assetName = Array.isArray(assets) ? assets[0]?.name : assets?.name
+  const slug = assetName ? slugifyAssetName(assetName) : ''
+  const url = `${process.env.NEXT_PUBLIC_APP_URL}/r/${slug ? `${slug}-` : ''}${data.token}`
   return NextResponse.json({ share_link: safeShareLink, url }, { status: 201 })
 }
 
