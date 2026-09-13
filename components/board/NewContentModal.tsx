@@ -93,7 +93,7 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
             <input
               value={rawFileUrl}
               onChange={(e) => setRawFileUrl(e.target.value)}
-              placeholder="Google Drive link"
+              placeholder="Link"
               className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
             />
           </div>
