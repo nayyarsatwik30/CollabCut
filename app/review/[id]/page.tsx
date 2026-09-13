@@ -11,7 +11,7 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
-import { useSessionGuard } from '@/lib/useSessionGuard'
+import { useSessionGuard, resolveSession } from '@/lib/useSessionGuard'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 
 type SideTab = 'notes' | 'brief'
@@ -94,7 +94,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) router.push('/auth/login')
+      if (!session) {
+        resolveSession().then((confirmed) => {
+          if (!confirmed) router.push('/auth/login')
+        })
+      }
     })
 
     return () => listener.subscription.unsubscribe()

@@ -9,7 +9,7 @@ import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
-import { useSessionGuard } from '@/lib/useSessionGuard'
+import { useSessionGuard, resolveSession } from '@/lib/useSessionGuard'
 import type { Project } from '@/lib/types'
 
 interface AssignedAsset {
@@ -63,7 +63,9 @@ export default function DashboardPage() {
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
-        router.push('/auth/login')
+        resolveSession().then((confirmed) => {
+          if (!confirmed) router.push('/auth/login')
+        })
       } else {
         setToken(session.access_token)
       }

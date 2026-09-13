@@ -10,7 +10,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
 import { supabase } from '@/lib/supabase'
-import { useSessionGuard } from '@/lib/useSessionGuard'
+import { useSessionGuard, resolveSession } from '@/lib/useSessionGuard'
 
 type Tab = 'assets' | 'raw-footage' | 'members'
 
@@ -70,7 +70,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) router.push('/auth/login')
+      if (!session) {
+        resolveSession().then((confirmed) => {
+          if (!confirmed) router.push('/auth/login')
+        })
+      }
     })
 
     return () => listener.subscription.unsubscribe()
