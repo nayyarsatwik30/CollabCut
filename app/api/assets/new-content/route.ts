@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { title, raw_file_url, notes, reference, deadline } = await req.json()
+  const { title, client, raw_file_url, notes, reference, deadline } = await req.json()
   if (!title || !title.trim()) {
     return NextResponse.json({ error: 'Title required' }, { status: 400 })
   }
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     .from('projects')
     .insert({
       name: title.trim(),
-      client: '',
+      client: client?.trim() || '',
       emoji: '🎬',
       owner_id: user.id,
       workspace_id: adminMembership.workspace_id,

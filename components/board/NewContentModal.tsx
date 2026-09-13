@@ -11,6 +11,7 @@ interface NewContentModalProps {
 
 export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
   const [title, setTitle] = useState('')
+  const [client, setClient] = useState('')
   const [rawFileUrl, setRawFileUrl] = useState('')
   const [notes, setNotes] = useState('')
   const [reference, setReference] = useState('')
@@ -38,6 +39,7 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
         },
         body: JSON.stringify({
           title: title.trim(),
+          client: client.trim() || undefined,
           raw_file_url: rawFileUrl.trim() || undefined,
           notes: notes.trim() || undefined,
           reference: reference.trim() || undefined,
@@ -84,6 +86,16 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Wedding Promo — Singh & Mehta"
               autoFocus
+              className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Client</label>
+            <input
+              value={client}
+              onChange={(e) => setClient(e.target.value)}
+              placeholder="Private Client"
               className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
             />
           </div>

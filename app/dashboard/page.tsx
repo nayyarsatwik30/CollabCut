@@ -8,6 +8,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
+import { NewContentModal } from '@/components/board/NewContentModal'
 import { supabase } from '@/lib/supabase'
 import { useSessionGuard, resolveSession } from '@/lib/useSessionGuard'
 import type { Project } from '@/lib/types'
@@ -45,9 +46,6 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newClient, setNewClient] = useState('')
-  const [creating, setCreating] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [role, setRole] = useState<'admin' | 'editor' | null>(null)
   const [assignedAssets, setAssignedAssets] = useState<AssignedAsset[]>([])
@@ -164,38 +162,6 @@ export default function DashboardPage() {
     }
   }
 
-  const createProject = async () => {
-    if (!newName.trim() || !token) return
-    setCreating(true)
-    try {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: newName.trim(),
-          client: newClient.trim(),
-          emoji: '🎬',
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setProjects((prev) => [data.project, ...prev])
-        setNewName('')
-        setNewClient('')
-        setShowNew(false)
-      } else {
-        const err = await res.json()
-        console.error('Create project error:', err)
-      }
-    } catch (err) {
-      console.error('Network error:', err)
-    }
-    setCreating(false)
-  }
-
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
@@ -309,53 +275,10 @@ export default function DashboardPage() {
 
         {/* New project modal */}
         {showNew && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-th-surface border border-th-border rounded-th-lg p-6 w-full max-w-sm shadow-panel animate-slide-up">
-              <h2 className="font-bold text-[16px] mb-4">New project</h2>
-              <div className="space-y-3 mb-5">
-                <div>
-                  <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">
-                    Project name *
-                  </label>
-                  <input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Wedding Promo — Singh & Mehta"
-                    autoFocus
-                    onKeyDown={(e) => e.key === 'Enter' && createProject()}
-                    className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text outline-none focus:border-th-accent transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">
-                    Client name
-                  </label>
-                  <input
-                    value={newClient}
-                    onChange={(e) => setNewClient(e.target.value)}
-                    placeholder="Private Client"
-                    onKeyDown={(e) => e.key === 'Enter' && createProject()}
-                    className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text outline-none focus:border-th-accent transition-colors"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setShowNew(false); setNewName(''); setNewClient('') }}
-                  className="flex-1 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[13px] font-medium btn-press hover:bg-th-surface-hov transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={createProject}
-                  disabled={creating || !newName.trim()}
-                  className="flex-1 py-2.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
-                  {creating ? 'Creating…' : 'Create project'}
-                </button>
-              </div>
-            </div>
-          </div>
+          <NewContentModal
+            onClose={() => setShowNew(false)}
+            onCreated={() => { setShowNew(false); if (token) loadProjects(token) }}
+          />
         )}
 
         {/* Content */}
