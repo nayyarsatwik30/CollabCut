@@ -214,8 +214,8 @@ export default function PublicReviewClient({ token }: { token: string }) {
         <span className="text-[13px] font-semibold truncate">{asset.name}</span>
       </header>
 
-      <div className="flex flex-1 overflow-hidden min-h-0">
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="flex flex-col flex-1 overflow-hidden min-h-0 sm:flex-row">
+        <div className="w-full h-[38vh] shrink-0 flex flex-col overflow-hidden sm:w-auto sm:h-auto sm:flex-1 sm:min-w-0">
           {videoNotReady ? (
             <div className="flex-1 flex items-center justify-center bg-black">
               <p className="text-white/60 text-[13px]">This video isn't available yet.</p>
@@ -232,7 +232,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
           )}
         </div>
 
-        <aside className="w-85 shrink-0 bg-th-surface border-l border-th-border flex flex-col overflow-hidden">
+        <aside className="w-full flex-1 min-h-0 border-t border-th-border bg-th-surface flex flex-col overflow-hidden sm:w-85 sm:flex-none sm:border-t-0 sm:border-l">
           <div className="h-11 shrink-0 border-b border-th-border flex items-center gap-1.5 px-4 text-[12px] font-semibold">
             <MessageSquare size={13} className="text-th-muted" /> Comments ({comments.length})
           </div>
@@ -261,7 +261,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
             )}
           </div>
 
-          <div className="p-3.5 border-t border-th-border shrink-0 bg-th-surface space-y-2">
+          <div className="p-4 sm:p-3.5 border-t border-th-border shrink-0 bg-th-surface space-y-2">
             <input
               value={reviewerName}
               onChange={(e) => setReviewerName(e.target.value)}
