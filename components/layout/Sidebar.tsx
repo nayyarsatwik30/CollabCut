@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Grid3X3, Kanban, Clock, Bell, Settings, ChevronDown, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { resolveSession } from '@/lib/useSessionGuard'
 
 const NAV_ITEMS = [
   { href: '/board', icon: Kanban, label: 'Board' },
@@ -47,7 +47,7 @@ export function Sidebar() {
   }
 
   const loadUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
+    const session = await resolveSession()
     if (session) {
       setName(session.user.user_metadata?.name ?? session.user.email ?? 'User')
       setEmail(session.user.email ?? '')
