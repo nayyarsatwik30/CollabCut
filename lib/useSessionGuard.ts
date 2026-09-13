@@ -5,18 +5,20 @@ import { supabase } from './supabase'
 
 // Cold-start login flash: on a fresh (uncached) page load, a page's very
 // first getSession() call has been seen to come back with no session, then
-// resolve fine on an instant retry. Rather than trusting a single read as
-// gospel, wait briefly and check once more before treating that as a
-// confirmed "logged out". Shared by useSessionGuard (redirects to login)
-// and useRedirectIfAuthenticated (redirects the other way) below.
+// resolve fine on a retry. Rather than trusting a single read as gospel,
+// back off across up to 3 attempts (immediate, +300ms, +600ms) before
+// treating that as a confirmed "logged out". Shared by useSessionGuard
+// (redirects to login) and useRedirectIfAuthenticated (redirects the
+// other way) below.
 export async function resolveSession(): Promise<Session | null> {
-  const { data: { session: first } } = await supabase.auth.getSession()
-  if (first) return first
+  const delays = [300, 600]
 
-  await new Promise((resolve) => setTimeout(resolve, 300))
-
-  const { data: { session: second } } = await supabase.auth.getSession()
-  return second
+  for (let attempt = 0; ; attempt++) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) return session
+    if (attempt >= delays.length) return null
+    await new Promise((resolve) => setTimeout(resolve, delays[attempt]))
+  }
 }
 
 // For pages that require a session: callers must wait for `ready` before
