@@ -2,7 +2,7 @@
 
 import { UploadModal } from '@/components/project/UploadModal'
 import { RawFootageArchive } from '@/components/project/RawFootageArchive'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Upload, Trash2, Video, Film, CheckCircle2, Clock } from 'lucide-react'
@@ -67,6 +67,32 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (ready && session) loadData()
   }, [ready, session, params.id])
+
+  // mux_playback_id lands async (Mux processing + webhook) after the one
+  // loadData() call an upload already triggers - poll until every asset
+  // that's actually mid-upload (has mux_upload_id) picks up its
+  // thumbnail, instead of leaving newer cards stuck on the fallback icon
+  // forever. Capped per distinct pending set so a permanently-failed
+  // encode doesn't poll forever - progress (a new upload, one resolving)
+  // resets the cap.
+  const pollState = useRef({ pendingKey: '', attempts: 0 })
+  useEffect(() => {
+    const pendingKey = assets
+      .filter((a) => a.mux_upload_id && !a.mux_playback_id)
+      .map((a) => a.id)
+      .sort()
+      .join(',')
+    if (!pendingKey) return
+
+    if (pendingKey !== pollState.current.pendingKey) {
+      pollState.current = { pendingKey, attempts: 0 }
+    }
+    if (pollState.current.attempts >= 15) return
+
+    pollState.current.attempts += 1
+    const timer = setTimeout(() => loadData(), 4000)
+    return () => clearTimeout(timer)
+  }, [assets])
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
