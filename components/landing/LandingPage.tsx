@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import {
   Check, ArrowRight, Play, Upload, MessageSquare,
-  Layers, CheckCircle, Zap, Users, Lock, Sparkles
+  Layers, CheckCircle, Zap, Users, Lock, Sparkles, Menu, X
 } from 'lucide-react'
 import { useRedirectIfAuthenticated } from '@/lib/useSessionGuard'
 
@@ -48,6 +48,7 @@ export function LandingPage() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   /* ── Cursor-follow glow dot ── */
   useEffect(() => {
@@ -129,7 +130,7 @@ export function LandingPage() {
 
       {/* ═══════════════ NAV ═══════════════ */}
       <header className="sticky top-0 z-50 glass">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold"
@@ -147,13 +148,39 @@ export function LandingPage() {
             <Link href="/auth/login" className="hover:text-th-text transition-colors">Log in</Link>
           </nav>
 
-          <Link
-            href="/auth/signup"
-            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-th-full bg-gradient-cta text-white text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
-          >
-            Start free <ArrowRight size={13} />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/auth/signup"
+              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-th-full bg-gradient-cta text-white text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
+            >
+              Start free <ArrowRight size={13} />
+            </Link>
+            <button
+              type="button"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              className="md:hidden -mr-2 p-2 text-th-text"
+            >
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
+
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-th-border px-4 sm:px-6 py-4 flex flex-col gap-4 text-[14px]">
+            <a href="#how" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>How it works</a>
+            <a href="#features" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>Features</a>
+            <a href="#pricing" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
+            <Link href="/auth/login" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
+            <Link
+              href="/auth/signup"
+              onClick={() => setMobileMenuOpen(false)}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-th-full bg-gradient-cta text-white text-[13px] font-semibold btn-press"
+            >
+              Start free <ArrowRight size={13} />
+            </Link>
+          </div>
+        )}
       </header>
 
       {/* ═══════════════ HERO ═══════════════ */}
@@ -433,7 +460,7 @@ export function LandingPage() {
 
       {/* ═══════════════ FOOTER ═══════════════ */}
       <footer className="border-t border-th-border">
-        <div className="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center gap-3 sm:justify-between text-center sm:text-left">
           <div className="flex items-center gap-2.5">
             <div
               className="w-5 h-5 rounded-md flex items-center justify-center text-white text-[9px] font-bold"
