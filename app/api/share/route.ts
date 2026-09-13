@@ -30,7 +30,10 @@ export async function POST(req: NextRequest) {
 
   const { password_hash, assets, ...safeShareLink } = data as any
   const assetName = Array.isArray(assets) ? assets[0]?.name : assets?.name
-  const slug = assetName ? slugifyAssetName(assetName) : ''
+  // Password-protected links must never leak the real name via the URL
+  // itself - same reasoning as generateMetadata() suppressing the OG
+  // title/thumbnail for these links.
+  const slug = !password_hash && assetName ? slugifyAssetName(assetName) : ''
   const url = `${process.env.NEXT_PUBLIC_APP_URL}/r/${slug ? `${slug}-` : ''}${data.token}`
   return NextResponse.json({ share_link: safeShareLink, url }, { status: 201 })
 }
