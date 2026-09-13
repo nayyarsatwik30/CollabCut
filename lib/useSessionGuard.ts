@@ -42,7 +42,22 @@ export function useSessionGuard() {
       }
     })
 
-    return () => { cancelled = true }
+    // autoRefreshToken silently rotates the access_token in the background
+    // and fires TOKEN_REFRESHED - without this, every page kept holding the
+    // original session from mount and sending the now-expired token on
+    // every fetch until a full reload/re-login. SIGNED_OUT is deliberately
+    // not handled here - SessionSync already confirms it with the same
+    // retry-backed resolveSession() check before redirecting, so reacting
+    // to it here too would risk a false "logged out" flash on the same
+    // startup race that check exists to guard against.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (cancelled) return
+      if ((event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') && newSession) {
+        setSession(newSession)
+      }
+    })
+
+    return () => { cancelled = true; subscription.unsubscribe() }
   }, [router])
 
   return { session, ready }
