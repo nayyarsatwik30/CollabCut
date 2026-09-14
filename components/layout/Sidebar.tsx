@@ -68,7 +68,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="h-13 flex items-center px-5 border-b border-th-border shrink-0">
         <Link href="/board" className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-th-accent block shrink-0" />
+          <img src="/logo.svg" alt="CollabCut" className="w-6 h-6 rounded-md shrink-0" />
           <span className="text-[17px] font-extrabold tracking-tight font-display">COLLABCUT</span>
         </Link>
       </div>
