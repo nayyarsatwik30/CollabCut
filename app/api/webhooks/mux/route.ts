@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     // Only leave the "processing" state once a playback ID actually exists —
     // otherwise the review page would show a video player with no stream to
     // play, since mux_playback_id would stay null indefinitely.
-    await supabaseAdmin
+    const { data: updatedAsset } = await supabaseAdmin
       .from('assets')
       .update({
         mux_asset_id:    muxAssetId,
@@ -32,6 +32,20 @@ export async function POST(req: NextRequest) {
         duration_sec:    durationSec,
       })
       .eq('mux_upload_id', data.upload_id)
+      .select('id, project_id')
+      .single()
+
+    // First asset in this project to ever finish processing becomes the
+    // permanent project-card cover, never overwritten again (see
+    // lib/project-covers.ts). The IS NULL guard makes this a no-op once a
+    // project already has a pin, safely even under concurrent webhooks.
+    if (playbackId && updatedAsset) {
+      await supabaseAdmin
+        .from('projects')
+        .update({ cover_asset_id: updatedAsset.id, cover_playback_id: playbackId })
+        .eq('id', updatedAsset.project_id)
+        .is('cover_asset_id', null)
+    }
   }
 
   if (type === 'video.asset.errored') {
