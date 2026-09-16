@@ -81,7 +81,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
       return
     }
     if (role === 'editor' && !form.inviteCode.trim()) {
-      setError('Invite code is required to join a workspace')
+      setError('Workspace code is required to join a workspace')
       return
     }
 
@@ -140,10 +140,10 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
         <div className="w-full max-w-sm text-center">
           <h1 className="text-2xl font-extrabold mb-1">Your workspace is ready</h1>
           <p className="text-th-muted text-[13px] mb-8">
-            Share this invite code with your editors so they can join.
+            Share this workspace code with your editors so they can join.
           </p>
           <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-3">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted">Invite code</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted">Workspace code</span>
             <div className="flex items-center justify-center gap-2">
               <span className="text-2xl font-extrabold font-mono tracking-widest">{createdInviteCode}</span>
               <button
@@ -209,7 +209,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
 
           {allowWorkspaceChoice && role === 'editor' && (
             <div>
-              <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">Invite code</label>
+              <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">Workspace code</label>
               <input name="inviteCode" value={form.inviteCode} onChange={handleChange} placeholder="e.g. 4F9B2C1A"
                 className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors font-mono uppercase" />
             </div>

@@ -343,7 +343,7 @@ export default function SettingsPage() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-th-muted block text-[11px] font-mono uppercase mb-2">Invite code</span>
+                        <span className="text-th-muted block text-[11px] font-mono uppercase mb-2">Workspace code</span>
                         <div className="flex items-center gap-2">
                           <input
                             readOnly

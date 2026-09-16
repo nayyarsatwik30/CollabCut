@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   if (role === 'editor') {
     const code = (inviteCode ?? '').trim().toUpperCase()
     if (!code) {
-      return NextResponse.json({ error: 'Invite code is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Workspace code is required' }, { status: 400 })
     }
 
     const { data: workspace, error: lookupError } = await supabaseAdmin
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     if (lookupError) return NextResponse.json({ error: lookupError.message }, { status: 500 })
-    if (!workspace) return NextResponse.json({ error: 'Invalid invite code' }, { status: 400 })
+    if (!workspace) return NextResponse.json({ error: 'Invalid workspace code' }, { status: 400 })
     targetWorkspace = workspace
   }
 
