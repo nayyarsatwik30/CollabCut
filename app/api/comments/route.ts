@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { createNotification } from '@/lib/notifications'
+import { syncProjectStatus } from '@/lib/project-status'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
 import { verifyShareAccess } from '@/lib/share-access'
 
@@ -85,45 +86,50 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // Single lookup, reused below for both the pipeline_status transition and
+  // Trigger 3 (notification). Same asset/project/workspace_id shape either
+  // consumer needs.
+  const { data: assetRow } = await supabaseAdmin
+    .from('assets')
+    .select('project_id, pipeline_status, projects(name, workspace_id)')
+    .eq('id', asset_id)
+    .maybeSingle()
+  const project = assetRow?.projects
+    ? (Array.isArray(assetRow.projects) ? assetRow.projects[0] : assetRow.projects)
+    : null
+
+  const isAdminCommenter = project?.workspace_id
+    ? await hasWorkspaceRole(project.workspace_id, user.id, 'admin')
+    : false
+
+  // Auto-transition: an admin's comment on an asset in Review implies
+  // changes are needed, so move it to Revision - mirroring the manual
+  // transition in PATCH /api/assets/[id]/status. Editor comments (assigned
+  // or not) never trigger this, and it only fires out of 'review' so it
+  // can't clobber e.g. an already-approved asset.
+  if (isAdminCommenter && assetRow?.pipeline_status === 'review') {
+    await supabaseAdmin.from('assets').update({ pipeline_status: 'revision' }).eq('id', asset_id)
+    if (assetRow.project_id) await syncProjectStatus(assetRow.project_id)
+  }
+
   // Trigger 3: only when the commenter is an admin (not the assigned editor
   // commenting on their own upload), and only if someone is actually
   // assigned to notify. Best-effort - the comment itself already succeeded.
-  if (user?.id) {
-    const { data: assetRow } = await supabaseAdmin
-      .from('assets')
-      .select('projects(name, workspace_id)')
-      .eq('id', asset_id)
+  if (isAdminCommenter) {
+    const { data: assignment } = await supabaseAdmin
+      .from('asset_editors')
+      .select('editor_id')
+      .eq('asset_id', asset_id)
       .maybeSingle()
-    const project = assetRow?.projects
-      ? (Array.isArray(assetRow.projects) ? assetRow.projects[0] : assetRow.projects)
-      : null
 
-    if (project?.workspace_id) {
-      const { data: membership } = await supabaseAdmin
-        .from('workspace_members')
-        .select('id')
-        .eq('workspace_id', project.workspace_id)
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle()
-
-      if (membership) {
-        const { data: assignment } = await supabaseAdmin
-          .from('asset_editors')
-          .select('editor_id')
-          .eq('asset_id', asset_id)
-          .maybeSingle()
-
-        if (assignment?.editor_id) {
-          await createNotification({
-            userId: assignment.editor_id,
-            type: 'comment_added',
-            message: `New comment on ${project.name ?? 'Untitled project'}`,
-            link: `/review/${asset_id}`,
-            assetId: asset_id,
-          })
-        }
-      }
+    if (assignment?.editor_id) {
+      await createNotification({
+        userId: assignment.editor_id,
+        type: 'comment_added',
+        message: `New comment on ${project?.name ?? 'Untitled project'}`,
+        link: `/review/${asset_id}`,
+        assetId: asset_id,
+      })
     }
   }
 
