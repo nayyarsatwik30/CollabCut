@@ -76,7 +76,7 @@ export async function GET(req: NextRequest, { params }: { params: { editorId: st
   if (assignedGroupIds.length > 0) {
     const { data, error } = await supabaseAdmin
       .from('assets')
-      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, workspace_id, deleted_at)')
+      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, client, workspace_id, deleted_at)')
       .in('asset_group_id', assignedGroupIds)
       .is('deleted_at', null)
 
@@ -96,6 +96,7 @@ export async function GET(req: NextRequest, { params }: { params: { editorId: st
         is_complete: row.is_complete,
         project_id: row.project_id,
         project_name: project?.name ?? 'Untitled project',
+        project_client: project?.client ?? '',
         mux_upload_id: row.mux_upload_id ?? null,
       }
     })

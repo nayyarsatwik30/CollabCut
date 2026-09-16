@@ -391,7 +391,7 @@ export default function BoardPage() {
                           className="flex flex-col bg-th-surface border border-th-border rounded-th-lg p-3.5 hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
                         >
                           <p className="text-[13px] font-semibold leading-snug mb-0.5 line-clamp-2">{a.name}</p>
-                          <p className="text-[11px] text-th-muted truncate mb-2.5">{a.project_name}</p>
+                          <p className="text-[11px] text-th-muted truncate mb-2.5">{a.project_client}</p>
                           <span
                             className="w-fit text-[10px] font-medium px-2 py-0.5 rounded-th-full"
                             style={{ color: col.color, background: `color-mix(in srgb, ${col.color} 14%, transparent)` }}

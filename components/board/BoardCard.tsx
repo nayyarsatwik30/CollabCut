@@ -11,6 +11,7 @@ export interface BoardAsset {
   is_complete: boolean
   project_id: string
   project_name: string
+  project_client: string
   editor: { id: string; name: string } | null
   mux_upload_id: string | null
 }
@@ -130,7 +131,7 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
       </div>
 
       <p className="text-[13px] font-semibold leading-snug mb-0.5 line-clamp-2">{asset.name}</p>
-      <p className="text-[11px] text-th-muted truncate mb-2">{asset.project_name}</p>
+      <p className="text-[11px] text-th-muted truncate mb-2">{asset.project_client}</p>
 
       {!isPlaceholder && (
         <select

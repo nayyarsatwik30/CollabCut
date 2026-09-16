@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('asset_editors')
-    .select('assets(id, name, status, is_complete, deleted_at, mux_playback_id, projects(id, name))')
+    .select('assets(id, name, status, is_complete, deleted_at, mux_playback_id, projects(id, name, client))')
     .eq('editor_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
         mux_playback_id: asset.mux_playback_id ?? null,
         project_id: project?.id ?? null,
         project_name: project?.name ?? 'Untitled project',
+        project_client: project?.client ?? '',
       }
     })
 

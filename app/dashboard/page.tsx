@@ -21,6 +21,7 @@ interface AssignedAsset {
   mux_playback_id: string | null
   project_id: string | null
   project_name: string
+  project_client: string
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -338,7 +339,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="p-3.5 flex-1 flex flex-col justify-center gap-1.5 min-h-[56px]">
                           <p className="text-[13px] font-semibold truncate">{a.name}</p>
-                          <p className="text-[11px] text-th-muted truncate">{a.project_name}</p>
+                          <p className="text-[11px] text-th-muted truncate">{a.project_client}</p>
                           <span
                             className="self-start flex items-center gap-1.5 h-7 px-2.5 rounded-th text-[11px] font-semibold mt-0.5"
                             style={a.is_complete

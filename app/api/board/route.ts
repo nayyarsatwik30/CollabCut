@@ -10,6 +10,7 @@ interface BoardAsset {
   is_complete: boolean
   project_id: string
   project_name: string
+  project_client: string
   editor: { id: string; name: string } | null
   mux_upload_id: string | null
 }
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
   if (role === 'admin') {
     const { data, error } = await supabaseAdmin
       .from('assets')
-      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, workspace_id, deleted_at)')
+      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, client, workspace_id, deleted_at)')
       .eq('projects.workspace_id', workspaceId)
       .eq('cut_type', 'board')
       .is('deleted_at', null)
@@ -87,6 +88,7 @@ export async function GET(req: NextRequest) {
         is_complete: row.is_complete,
         project_id: row.project_id,
         project_name: project?.name ?? 'Untitled project',
+        project_client: project?.client ?? '',
         editor: editorByGroup.get(row.asset_group_id ?? row.id) ?? null,
         mux_upload_id: row.mux_upload_id ?? null,
       }
@@ -125,7 +127,7 @@ export async function GET(req: NextRequest) {
     if (assignedGroupIds.length > 0) {
       const { data, error } = await supabaseAdmin
         .from('assets')
-        .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, workspace_id, deleted_at)')
+        .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, client, workspace_id, deleted_at)')
         .in('asset_group_id', assignedGroupIds)
         .is('deleted_at', null)
 
@@ -146,6 +148,7 @@ export async function GET(req: NextRequest) {
             is_complete: row.is_complete,
             project_id: row.project_id,
             project_name: project?.name ?? 'Untitled project',
+            project_client: project?.client ?? '',
             editor: { id: user.id, name: myProfile?.name ?? user.email ?? 'You' },
             mux_upload_id: row.mux_upload_id ?? null,
           }
