@@ -117,6 +117,16 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
       return
     }
 
+    if (signInData.session) {
+      // Best-effort: evicts this account's oldest session(s) past the
+      // concurrent-session limit (self-serve accounts only). Never blocks
+      // or fails signup over this - fire and forget.
+      fetch('/api/auth/enforce-session-limit', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${signInData.session.access_token}` },
+      }).catch(() => {})
+    }
+
     if (signInData.user) {
       await supabase
         .from('profiles')

@@ -25,7 +25,7 @@ export default function LoginPage() {
     }
 
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error } = await supabase.auth.signInWithPassword({
       email:    form.email,
       password: form.password,
     })
@@ -34,6 +34,16 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
       return
+    }
+
+    if (signInData.session) {
+      // Best-effort: evicts this account's oldest session(s) past the
+      // concurrent-session limit (self-serve accounts only). Never blocks
+      // or fails login over this - fire and forget.
+      fetch('/api/auth/enforce-session-limit', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${signInData.session.access_token}` },
+      }).catch(() => {})
     }
 
     router.push('/board')
