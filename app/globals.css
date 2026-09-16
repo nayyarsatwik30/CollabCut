@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -24,9 +24,8 @@
   --th-r-sm: 10px;
   --th-r-lg: 20px;
   --th-r-full: 9999px;
-  --th-font: 'IBM Plex Sans', sans-serif;
+  --th-font: Arial, Helvetica, sans-serif;
   --th-mono: 'JetBrains Mono', monospace;
-  --th-display: 'Instrument Serif', serif;
 
   --gradient-brand: linear-gradient(135deg, #d946ef 0%, #f472b6 50%, #34d399 100%);
   --gradient-cta: linear-gradient(135deg, #d946ef 0%, #f472b6 50%, #fbbf24 100%);
@@ -66,7 +65,6 @@ h3,
 .font-bold {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-weight: 700;
-  font-style: oblique;
 }
 
 .page-scroll {
@@ -100,8 +98,7 @@ h3,
 /* ── Typography helpers ── */
 
 .font-display {
-  font-family: var(--th-display);
-  font-style: italic;
+  font-family: var(--th-font);
 }
 
 .font-mono {
@@ -447,9 +444,8 @@ h3,
   align-items: center;
   gap: 48px;
   flex-wrap: wrap;
-  font-family: var(--th-display);
+  font-family: var(--th-font);
   font-size: 18px;
-  font-style: italic;
   color: var(--th-faint);
 }
 
