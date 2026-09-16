@@ -1,19 +1,27 @@
 import { supabaseAdmin } from './supabase-admin'
 import { verifySharePassword } from './share-password'
 
+export interface PublicShareVersion {
+  id: string
+  version: number
+  name: string
+  status: string
+  created_at: string
+  size_bytes: number
+  mux_playback_id: string | null
+  mux_upload_id: string | null
+  is_complete: boolean
+}
+
 export interface PublicShareLink {
   token: string
   expires_at: string | null
   downloads_disabled: boolean
   comments_only: boolean
   password_protected: boolean
-  asset: {
-    id: string
-    name: string
-    mux_playback_id: string | null
-    mux_upload_id: string | null
-    is_complete: boolean
-  }
+  default_version_id: string
+  versions: PublicShareVersion[]
+  asset: PublicShareVersion // = versions.find(v => v.id === default_version_id); kept so generateMetadata() doesn't need to change
 }
 
 export type PublicShareLinkResult =
@@ -24,22 +32,31 @@ export type PublicShareLinkResult =
 // Single source of truth for resolving a public /r/[token] link - used by
 // both GET /api/share (the client's data fetch) and generateMetadata (the
 // server-rendered OG preview), so the two can never disagree about what's
-// safe to expose for a given token.
+// safe to expose for a given token. Resolves the whole asset_group_id
+// lineage instead of one pinned asset row, so a link automatically picks up
+// versions uploaded after it was created.
 export async function getPublicShareLink(token: string): Promise<PublicShareLinkResult> {
   const { data, error } = await supabaseAdmin
     .from('share_links')
-    .select('token, expires_at, downloads_disabled, comments_only, password_hash, assets(id, name, mux_playback_id, mux_upload_id, is_complete, deleted_at)')
+    .select('token, expires_at, downloads_disabled, comments_only, password_hash, asset_group_id')
     .eq('token', token)
     .single()
 
   if (error || !data) return { status: 'not_found' }
+  if (data.expires_at && new Date(data.expires_at) < new Date()) return { status: 'expired' }
 
-  if (data.expires_at && new Date(data.expires_at) < new Date()) {
-    return { status: 'expired' }
-  }
+  const { data: rows, error: versionsError } = await supabaseAdmin
+    .from('assets')
+    .select('id, version, name, status, created_at, size_bytes, mux_playback_id, mux_upload_id, is_complete, deleted_at')
+    .eq('asset_group_id', data.asset_group_id)
+    .order('version', { ascending: false })
 
-  const asset = Array.isArray(data.assets) ? data.assets[0] : data.assets
-  if (!asset || asset.deleted_at) return { status: 'not_found' }
+  if (versionsError || !rows) return { status: 'not_found' }
+
+  const versions = rows.filter((v) => !v.deleted_at).map(({ deleted_at, ...v }) => v)
+  if (versions.length === 0) return { status: 'not_found' } // whole lineage soft-deleted
+
+  const latest = versions[0] // already ordered desc by version
 
   return {
     status: 'ok',
@@ -49,13 +66,9 @@ export async function getPublicShareLink(token: string): Promise<PublicShareLink
       downloads_disabled: data.downloads_disabled,
       comments_only: data.comments_only,
       password_protected: !!data.password_hash,
-      asset: {
-        id: asset.id,
-        name: asset.name,
-        mux_playback_id: asset.mux_playback_id,
-        mux_upload_id: asset.mux_upload_id,
-        is_complete: asset.is_complete,
-      },
+      default_version_id: latest.id,
+      versions,
+      asset: latest,
     },
   }
 }
@@ -63,6 +76,9 @@ export async function getPublicShareLink(token: string): Promise<PublicShareLink
 // Re-verifies a share token against share_links on every call, the same
 // trust model /api/share/comments already uses for the public /r/[token]
 // page - never rely on the client having already passed the unlock gate.
+// Checks lineage membership (asset_group_id) instead of an exact asset_id
+// match, so any sibling version of the link's group is authorized - required
+// once the public page can switch versions within one link.
 export async function verifyShareAccess(
   assetId: string,
   token: string,
@@ -70,16 +86,21 @@ export async function verifyShareAccess(
 ): Promise<boolean> {
   const { data: shareLink, error } = await supabaseAdmin
     .from('share_links')
-    .select('asset_id, expires_at, password_hash, assets(deleted_at)')
+    .select('asset_group_id, expires_at, password_hash')
     .eq('token', token)
     .maybeSingle()
 
   if (error || !shareLink) return false
-  if (shareLink.asset_id !== assetId) return false
   if (shareLink.expires_at && new Date(shareLink.expires_at) < new Date()) return false
 
-  const asset = Array.isArray(shareLink.assets) ? shareLink.assets[0] : shareLink.assets
-  if (asset?.deleted_at) return false
+  const { data: version } = await supabaseAdmin
+    .from('assets')
+    .select('asset_group_id, deleted_at')
+    .eq('id', assetId)
+    .maybeSingle()
+
+  if (!version || version.deleted_at) return false
+  if (version.asset_group_id !== shareLink.asset_group_id) return false
 
   if (shareLink.password_hash) {
     if (!password || !verifySharePassword(password, shareLink.password_hash)) return false

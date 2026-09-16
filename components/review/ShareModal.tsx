@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Copy, Lock, Clock, Download, MessageSquare, Check, RefreshCw } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 
@@ -23,33 +23,49 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
 
   const [link, setLink]       = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving]   = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
   const [error, setError]     = useState('')
-  // True whenever the displayed link no longer reflects the current
-  // toggle/password/expiry state - forces an explicit Regenerate instead
-  // of ever silently showing a link that doesn't match its own settings.
-  const [stale, setStale] = useState(false)
 
-  const generateLink = async () => {
+  // Whether the server currently has a password hash saved for this link -
+  // separate from the `password` toggle, since the toggle can be on with the
+  // field left blank (meaning "keep the existing one").
+  const [serverPasswordProtected, setServerPasswordProtected] = useState(false)
+
+  // Set while hydrating toggle state from the server (on open, or right
+  // after Regenerate) so that the write triggers the hydration itself, not a
+  // spurious autosave PATCH.
+  const suppressAutosave = useRef(false)
+
+  const hydrate = (data: { url: string; expires_at: string | null; downloads_disabled: boolean; comments_only: boolean; password_protected: boolean }) => {
+    suppressAutosave.current = true
+    setLink(data.url)
+    setPassword(data.password_protected)
+    setServerPasswordProtected(data.password_protected)
+    setPasswordValue('')
+    setExpiry(!!data.expires_at)
+    setExpiryValue(data.expires_at ? toLocalInputValue(data.expires_at) : '')
+    setNoDownload(data.downloads_disabled)
+    setCommentsOnly(data.comments_only)
+    // Release after this render cycle's state updates have committed, so the
+    // autosave effect's dependency change from hydration doesn't fire a PATCH.
+    requestAnimationFrame(() => { suppressAutosave.current = false })
+  }
+
+  const ensureLink = async () => {
     setLoading(true)
     setError('')
     try {
       const res = await fetch('/api/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          asset_id: assetId,
-          downloads_disabled: noDownload,
-          comments_only: commentsOnly,
-          expires_at: expiry && expiryValue ? new Date(expiryValue).toISOString() : null,
-          password: password && passwordValue ? passwordValue : null,
-        }),
+        body: JSON.stringify({ asset_id: assetId }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error ?? 'Failed to generate link'); return }
-      setLink(data.url)
-      setStale(false)
+      if (!res.ok) { setError(data.error ?? 'Failed to load link'); return }
+      hydrate(data)
     } catch {
-      setError('Failed to generate link')
+      setError('Failed to load link')
     } finally {
       setLoading(false)
     }
@@ -57,16 +73,82 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
 
   useEffect(() => {
     if (open) {
-      if (!link && !loading) generateLink()
+      if (!link && !loading) ensureLink()
     } else {
       setLink(null)
-      setStale(false)
       setError('')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const markStale = () => { if (link || loading) setStale(true) }
+  // Auto-save: any toggle/value change debounces into a PATCH against the
+  // existing row - same token, never regenerates. Skipped while hydrating.
+  useEffect(() => {
+    if (!open || !link || suppressAutosave.current) return
+    const timeout = setTimeout(() => { saveSettings() }, 500)
+    return () => clearTimeout(timeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [password, passwordValue, expiry, expiryValue, noDownload, commentsOnly])
+
+  const saveSettings = async () => {
+    setSaving(true)
+    try {
+      const body: Record<string, unknown> = {
+        asset_id: assetId,
+        downloads_disabled: noDownload,
+        comments_only: commentsOnly,
+        expires_at: expiry && expiryValue ? new Date(expiryValue).toISOString() : null,
+      }
+      if (!password) body.password = null
+      else if (passwordValue) body.password = passwordValue
+      // else: toggle on, field blank -> omit `password` entirely, keep existing hash
+
+      const res = await fetch('/api/share', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setServerPasswordProtected(data.password_protected)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Blocked when password protection is on but we have no plaintext to carry
+  // into the new row (existing protected link, field never retyped) - we can
+  // never move a hash forward, only silently drop protection or refuse. We
+  // refuse, and ask for the password again.
+  const regenerateBlocked = password && serverPasswordProtected && !passwordValue
+
+  const handleRegenerate = async () => {
+    if (regenerateBlocked) return
+    setRegenerating(true)
+    setError('')
+    try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          asset_id: assetId,
+          regenerate: true,
+          downloads_disabled: noDownload,
+          comments_only: commentsOnly,
+          expires_at: expiry && expiryValue ? new Date(expiryValue).toISOString() : null,
+          password: password && passwordValue ? passwordValue : null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error ?? 'Failed to regenerate link'); return }
+      hydrate(data)
+    } catch {
+      setError('Failed to regenerate link')
+    } finally {
+      setRegenerating(false)
+    }
+  }
 
   const handleCopy = async () => {
     if (!link) return
@@ -83,37 +165,41 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
           Anyone with this link can view and leave notes — no COLLABCUT account required.
         </p>
 
-        {/* Link copy */}
+        {/* Link copy + regenerate */}
         <div className="flex gap-2">
           <div className="flex-1 px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted truncate">
-            {loading ? 'Generating link…' : link ?? '—'}
+            {loading ? 'Loading link…' : link ?? '—'}
           </div>
-          {stale ? (
-            <button
-              onClick={generateLink}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-th-sm text-[12px] font-semibold btn-press transition-all bg-th-accent text-th-accent-fg disabled:opacity-50"
-            >
-              <RefreshCw size={13} /> Regenerate
-            </button>
-          ) : (
-            <button
-              onClick={handleCopy}
-              disabled={loading || !link}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-th-sm text-[12px] font-semibold btn-press transition-all disabled:opacity-50"
-              style={{
-                background: copied ? 'var(--th-resolved)' : 'var(--th-accent)',
-                color: copied ? '#fff' : 'var(--th-accent-fg)',
-              }}
-            >
-              {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
-            </button>
-          )}
+          <button
+            onClick={handleCopy}
+            disabled={loading || !link}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-th-sm text-[12px] font-semibold btn-press transition-all disabled:opacity-50"
+            style={{
+              background: copied ? 'var(--th-resolved)' : 'var(--th-accent)',
+              color: copied ? '#fff' : 'var(--th-accent-fg)',
+            }}
+          >
+            {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
+          </button>
         </div>
 
-        {stale && (
+        <div className="flex items-center justify-between -mt-2">
+          <span className="text-[11px] text-th-faint">
+            {saving ? 'Saving…' : 'Settings save automatically'}
+          </span>
+          <button
+            onClick={handleRegenerate}
+            disabled={loading || regenerating || !link || regenerateBlocked}
+            title={regenerateBlocked ? 'Retype the password to include it in the new link' : undefined}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-sm text-[11px] font-semibold btn-press transition-all bg-th-surface-alt border border-th-border text-th-text hover:border-th-accent hover:text-th-accent disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={regenerating ? 'animate-spin' : undefined} /> Regenerate
+          </button>
+        </div>
+
+        {regenerateBlocked && (
           <p className="text-[11px] text-th-changes -mt-2">
-            Settings changed — regenerate to update the link.
+            Retype the password to include it in the new link.
           </p>
         )}
         {error && <p className="text-[11px] text-th-changes -mt-2">{error}</p>}
@@ -121,10 +207,10 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
         {/* Options */}
         <div className="space-y-0 border border-th-border rounded-th overflow-hidden">
           {[
-            { icon: Lock,          label: 'Password protect', checked: password,     set: (v: boolean) => { setPassword(v); markStale() } },
-            { icon: Clock,         label: 'Set expiry date',  checked: expiry,       set: (v: boolean) => { setExpiry(v); markStale() } },
-            { icon: Download,      label: 'Disable download', checked: noDownload,   set: (v: boolean) => { setNoDownload(v); markStale() } },
-            { icon: MessageSquare, label: 'Comments only',    checked: commentsOnly, set: (v: boolean) => { setCommentsOnly(v); markStale() } },
+            { icon: Lock,          label: 'Password protect', checked: password,     set: setPassword },
+            { icon: Clock,         label: 'Set expiry date',  checked: expiry,       set: setExpiry },
+            { icon: Download,      label: 'Disable download', checked: noDownload,   set: setNoDownload },
+            { icon: MessageSquare, label: 'Comments only',    checked: commentsOnly, set: setCommentsOnly },
           ].map(({ icon: Icon, label, checked, set }) => (
             <div key={label} className="border-b border-th-border last:border-b-0">
               <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-th-surface-alt transition-colors">
@@ -147,10 +233,15 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
                   <input
                     type="password"
                     value={passwordValue}
-                    onChange={(e) => { setPasswordValue(e.target.value); markStale() }}
-                    placeholder="Set a password"
+                    onChange={(e) => setPasswordValue(e.target.value)}
+                    placeholder={serverPasswordProtected ? 'Leave blank to keep current password' : 'Set a password'}
                     className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
                   />
+                  {serverPasswordProtected && !passwordValue && (
+                    <p className="text-[11px] text-th-faint mt-1.5">
+                      Password is set — leave blank to keep it, or type a new one to change it.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -159,7 +250,7 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
                   <input
                     type="datetime-local"
                     value={expiryValue}
-                    onChange={(e) => { setExpiryValue(e.target.value); markStale() }}
+                    onChange={(e) => setExpiryValue(e.target.value)}
                     className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text outline-none focus:border-th-accent transition-colors"
                   />
                 </div>
@@ -174,4 +265,12 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
       </div>
     </Modal>
   )
+}
+
+// datetime-local inputs need "YYYY-MM-DDTHH:mm" in local time, not the ISO
+// UTC string the server returns.
+function toLocalInputValue(isoString: string): string {
+  const d = new Date(isoString)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }

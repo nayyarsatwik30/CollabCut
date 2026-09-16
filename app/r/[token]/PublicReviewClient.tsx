@@ -1,16 +1,20 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Lock, MessageSquare, Send } from 'lucide-react'
+import { Lock, MessageSquare, Send, Layers, ChevronDown, Check, X } from 'lucide-react'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { Avatar } from '@/components/ui/Badge'
 import { formatTimecode } from '@/lib/utils'
 
 const NAME_STORAGE_KEY = 'dailies_reviewer_name'
 
-interface ShareLinkAsset {
+interface ShareLinkVersion {
   id: string
+  version: number
   name: string
+  status: string
+  created_at: string
+  size_bytes: number
   mux_playback_id: string | null
   mux_upload_id: string | null
   is_complete: boolean
@@ -22,7 +26,9 @@ interface ShareLinkData {
   downloads_disabled: boolean
   comments_only: boolean
   password_protected: boolean
-  asset: ShareLinkAsset
+  default_version_id: string
+  versions: ShareLinkVersion[]
+  asset: ShareLinkVersion
 }
 
 interface PublicComment {
@@ -52,6 +58,12 @@ export default function PublicReviewClient({ token }: { token: string }) {
   const [commentText, setCommentText] = useState('')
   const [posting, setPosting] = useState(false)
 
+  const [selectedVersionId, setSelectedVersionId] = useState('')
+  const [showVersions, setShowVersions] = useState(false)
+  const [showCompareModal, setShowCompareModal] = useState(false)
+  const [compareV1Id, setCompareV1Id] = useState('')
+  const [compareV2Id, setCompareV2Id] = useState('')
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(NAME_STORAGE_KEY)
@@ -68,6 +80,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
 
       const { share_link } = await res.json()
       setShareLink(share_link)
+      setSelectedVersionId(share_link.default_version_id)
       setState('ready')
       if (!share_link.password_protected) setUnlocked(true)
     })()
@@ -84,13 +97,13 @@ export default function PublicReviewClient({ token }: { token: string }) {
   }, [unlocked, shareLink])
 
   useEffect(() => {
-    if (!unlocked || !shareLink) return
-    const query = new URLSearchParams({ asset_id: shareLink.asset.id, share_token: shareLink.token })
+    if (!unlocked || !shareLink || !selectedVersionId) return
+    const query = new URLSearchParams({ asset_id: selectedVersionId, share_token: shareLink.token })
     if (shareLink.password_protected && enteredPassword) query.set('share_password', enteredPassword)
     fetch(`/api/comments?${query.toString()}`)
       .then((res) => (res.ok ? res.json() : { comments: [] }))
       .then((data) => setComments(data.comments ?? []))
-  }, [unlocked, shareLink, enteredPassword])
+  }, [unlocked, shareLink, enteredPassword, selectedVersionId])
 
   const handleUnlock = async () => {
     if (!passwordInput.trim() || !shareLink) return
@@ -117,7 +130,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
   }
 
   const handlePostComment = async () => {
-    if (!commentText.trim() || !shareLink || posting) return
+    if (!commentText.trim() || !shareLink || !selectedVersionId || posting) return
     setPosting(true)
     try {
       const res = await fetch('/api/share/comments', {
@@ -125,6 +138,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token: shareLink.token,
+          asset_id: selectedVersionId,
           time_sec: currentTime,
           text: commentText.trim(),
           author_name: reviewerName.trim() || 'Anonymous',
@@ -140,6 +154,22 @@ export default function PublicReviewClient({ token }: { token: string }) {
     } finally {
       setPosting(false)
     }
+  }
+
+  const handleSwitchVersion = (id: string) => {
+    setShowVersions(false)
+    if (!shareLink || id === selectedVersionId) return
+    setSelectedVersionId(id)
+    setCurrentTime(0)
+  }
+
+  const handleOpenCompare = () => {
+    if (!shareLink) return
+    if (shareLink.versions.length >= 2) {
+      setCompareV1Id(shareLink.versions[0].id)
+      setCompareV2Id(shareLink.versions[1].id)
+    }
+    setShowCompareModal(true)
   }
 
   if (state === 'loading') {
@@ -203,15 +233,68 @@ export default function PublicReviewClient({ token }: { token: string }) {
     )
   }
 
-  const asset = shareLink.asset
+  const versions = shareLink.versions
+  const asset = versions.find((v) => v.id === selectedVersionId) ?? shareLink.asset
   const muxSrc = asset.mux_playback_id ? `https://stream.mux.com/${asset.mux_playback_id}.m3u8` : undefined
   const videoNotReady = !asset.mux_upload_id
   const hideDownload = shareLink.downloads_disabled || shareLink.comments_only
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-th-bg">
-      <header className="h-12 shrink-0 bg-th-surface border-b border-th-border flex items-center px-4">
+      <header className="h-12 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-2 px-4">
         <span className="text-[13px] font-semibold truncate">{asset.name}</span>
+
+        {versions.length > 1 && (
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setShowVersions(!showVersions)}
+              className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
+            >
+              <Layers size={10} />
+              v{asset.version}
+              <ChevronDown size={10} />
+            </button>
+
+            {showVersions && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowVersions(false)} />
+                <div className="absolute left-0 top-full mt-1.5 z-50 bg-th-surface border border-th-border rounded-th-lg shadow-panel w-60 overflow-hidden animate-slide-up">
+                  <div className="px-4 py-2.5 border-b border-th-border font-mono text-[10px] text-th-muted uppercase tracking-wider">
+                    Version history
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {versions.map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => handleSwitchVersion(v.id)}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
+                      >
+                        <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-muted)' }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-text)' }}>
+                            v{v.version}
+                          </p>
+                          <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
+                        </div>
+                        {v.id === asset.id && <Check size={12} className="text-th-accent shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {versions.length >= 2 && (
+          <button
+            onClick={handleOpenCompare}
+            className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
+          >
+            <Layers size={10} className="text-th-accent" />
+            Compare versions
+          </button>
+        )}
       </header>
 
       <div className="flex flex-col flex-1 overflow-hidden min-h-0 sm:flex-row">
@@ -288,6 +371,79 @@ export default function PublicReviewClient({ token }: { token: string }) {
           </div>
         </aside>
       </div>
+
+      {showCompareModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
+          <div className="glass border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="px-6 py-4 border-b border-th-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers size={16} className="text-th-accent" />
+                <h2 className="font-bold text-[16px]">Compare versions</h2>
+              </div>
+              <button
+                onClick={() => setShowCompareModal(false)}
+                className="text-th-muted hover:text-th-text transition-colors p-1 rounded-th hover:bg-th-surface-alt"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-6 overflow-hidden min-h-0 bg-black/40">
+              <div className="flex flex-col h-full overflow-hidden card-elevated border border-th-border rounded-th-lg">
+                <div className="p-3 border-b border-th-border flex items-center justify-between bg-th-surface-alt">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted font-semibold">Version A</span>
+                  <select
+                    value={compareV1Id}
+                    onChange={(e) => setCompareV1Id(e.target.value)}
+                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent font-mono font-medium"
+                  >
+                    {versions.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        v{v.version} ({new Date(v.created_at).toLocaleDateString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 bg-black relative overflow-hidden">
+                  {(() => {
+                    const selV1 = versions.find((v) => v.id === compareV1Id)
+                    const v1Src = selV1?.mux_playback_id
+                      ? `https://stream.mux.com/${selV1.mux_playback_id}.m3u8`
+                      : undefined
+                    return <VideoPlayer src={v1Src} comments={[]} hideDownload={hideDownload} />
+                  })()}
+                </div>
+              </div>
+
+              <div className="flex flex-col h-full overflow-hidden card-elevated border border-th-border rounded-th-lg">
+                <div className="p-3 border-b border-th-border flex items-center justify-between bg-th-surface-alt">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted font-semibold">Version B</span>
+                  <select
+                    value={compareV2Id}
+                    onChange={(e) => setCompareV2Id(e.target.value)}
+                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent font-mono font-medium"
+                  >
+                    {versions.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        v{v.version} ({new Date(v.created_at).toLocaleDateString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 bg-black relative overflow-hidden">
+                  {(() => {
+                    const selV2 = versions.find((v) => v.id === compareV2Id)
+                    const v2Src = selV2?.mux_playback_id
+                      ? `https://stream.mux.com/${selV2.mux_playback_id}.m3u8`
+                      : undefined
+                    return <VideoPlayer src={v2Src} comments={[]} hideDownload={hideDownload} />
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

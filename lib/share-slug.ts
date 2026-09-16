@@ -10,6 +10,13 @@ export function slugifyAssetName(name: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+// Shared by every POST /api/share branch (fresh insert or reused row) so the
+// slug/password-hiding rule can't drift between them.
+export function buildShareUrl(token: string, assetName: string | null | undefined, passwordProtected: boolean): string {
+  const slug = !passwordProtected && assetName ? slugifyAssetName(assetName) : ''
+  return `${process.env.NEXT_PUBLIC_APP_URL}/r/${slug ? `${slug}-` : ''}${token}`
+}
+
 // Recovers the real lookup token from a /r/<segment> route param, whether
 // it's a bare legacy token or a new <slug>-<token> segment. The token is
 // always a fixed 24-char lowercase hex string (share_links.token's
