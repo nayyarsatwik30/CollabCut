@@ -101,11 +101,11 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
           </div>
 
           <div>
-            <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Raw file</label>
+            <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Raw Footage Link (external folder)</label>
             <input
               value={rawFileUrl}
               onChange={(e) => setRawFileUrl(e.target.value)}
-              placeholder="Link"
+              placeholder="Paste external folder link (Drive, etc.)"
               className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
             />
           </div>

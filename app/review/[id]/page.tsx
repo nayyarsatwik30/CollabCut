@@ -633,7 +633,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   <div className="px-4 py-3.5">
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <ExternalLink size={11} className="text-th-muted" />
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Raw file</span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Raw Footage Link (external folder)</span>
                     </div>
                     <a
                       href={asset.raw_file_url}
@@ -641,7 +641,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent transition-colors btn-press"
                     >
-                      <ExternalLink size={12} /> Open raw file
+                      <ExternalLink size={12} /> Open reference link
                     </a>
                   </div>
                 )}
