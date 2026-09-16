@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X, FileText, ExternalLink, StickyNote, Link2 } from 'lucide-react'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
@@ -357,12 +356,18 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       />
 
       <header className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-3 px-4 relative z-30">
-        <Link
-          href={`/project/${asset.project_id}`}
+        <button
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+              router.back()
+            } else {
+              router.push(`/project/${asset.project_id}`)
+            }
+          }}
           className="flex items-center gap-1.5 h-8 px-3 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-muted hover:text-th-text hover:bg-th-surface-hov transition-colors btn-press shrink-0"
         >
-          <ChevronLeft size={13} /> Project
-        </Link>
+          <ChevronLeft size={13} /> Back
+        </button>
 
         <div className="w-px h-5 bg-th-border shrink-0" />
 
