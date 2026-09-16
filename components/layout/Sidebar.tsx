@@ -24,7 +24,7 @@ export function Sidebar() {
   const [email, setEmail] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
   const [token, setToken] = useState('')
-  const { usedBytes, loading: usageLoading } = useStorageUsage()
+  const { usedBytes, workspacePlan, loading: usageLoading } = useStorageUsage()
 
   useEffect(() => {
     loadUser()
@@ -105,7 +105,7 @@ export function Sidebar() {
 
       {/* User profile */}
       <div className="p-3 border-t border-th-border shrink-0 space-y-3">
-        <StorageUsageBar usedBytes={usedBytes} loading={usageLoading} variant="compact" />
+        <StorageUsageBar usedBytes={usedBytes} loading={usageLoading} variant="compact" workspacePlan={workspacePlan} />
         <Link href="/settings" className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-th-sm hover:bg-th-surface-alt transition-colors text-left">
           <div
             className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-extrabold shrink-0"

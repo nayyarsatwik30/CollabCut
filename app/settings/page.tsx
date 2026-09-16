@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { performLogout } from '@/lib/auth'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { useStorageUsage } from '@/lib/useStorageUsage'
+import type { WorkspaceStoragePlan } from '@/lib/useStorageUsage'
 import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
 
 type Tab = 'profile' | 'plan' | 'notifications' | 'team'
@@ -30,7 +31,7 @@ interface Plan {
 export default function SettingsPage() {
   const router = useRouter()
   const { session, ready } = useSessionGuard()
-  const { usedBytes, loading: usageLoading } = useStorageUsage()
+  const { usedBytes, workspacePlan, loading: usageLoading } = useStorageUsage()
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
   const [tab, setTab] = useState<Tab>('profile')
   const [name, setName] = useState('')
@@ -43,7 +44,7 @@ export default function SettingsPage() {
   const [updatingPlan, setUpdatingPlan] = useState(false)
   const [modalBillingCycle, setModalBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
 
-  const [adminWorkspace, setAdminWorkspace] = useState<{ id: string; name: string; invite_code: string } | null>(null)
+  const [adminWorkspace, setAdminWorkspace] = useState<{ id: string; name: string; invite_code: string; workspacePlan: WorkspaceStoragePlan | null } | null>(null)
   const [provisioningWorkspace, setProvisioningWorkspace] = useState(false)
   const [workspaceError, setWorkspaceError] = useState('')
 
@@ -88,7 +89,7 @@ export default function SettingsPage() {
     // Find a workspace where the user is an admin, so we can offer invites
     const { data: membership } = await supabase
       .from('workspace_members')
-      .select('workspace_id, workspaces(name, invite_code)')
+      .select('workspace_id, workspaces(name, invite_code, workspace_plan_id, workspace_plans(id, name, storage_gb, max_admins, max_editors))')
       .eq('user_id', session.user.id)
       .eq('role', 'admin')
       .limit(1)
@@ -96,10 +97,13 @@ export default function SettingsPage() {
 
     if (membership) {
       const workspace = Array.isArray(membership.workspaces) ? membership.workspaces[0] : membership.workspaces
+      const planRaw = workspace?.workspace_plans
+      const workspacePlan = (Array.isArray(planRaw) ? planRaw[0] : planRaw) ?? null
       setAdminWorkspace({
         id: membership.workspace_id,
         name: workspace?.name ?? 'Workspace',
         invite_code: workspace?.invite_code ?? '',
+        workspacePlan,
       })
     }
 
@@ -235,7 +239,7 @@ export default function SettingsPage() {
                     style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)' }}>
                     Save changes
                   </button>
-                  <StorageUsageBar usedBytes={usedBytes} loading={usageLoading} variant="full" />
+                  <StorageUsageBar usedBytes={usedBytes} loading={usageLoading} variant="full" workspacePlan={workspacePlan} />
                 </>
               )}
 
@@ -243,64 +247,105 @@ export default function SettingsPage() {
                 <>
                   <div>
                     <h2 className="text-[16px] font-bold mb-1">Plan & billing</h2>
-                    <p className="text-[13px] text-th-muted">Manage your subscription plan and storage limit.</p>
+                    <p className="text-[13px] text-th-muted">
+                      {adminWorkspace?.workspacePlan
+                        ? 'Your agency workspace plan and limits.'
+                        : 'Manage your subscription plan and storage limit.'}
+                    </p>
                   </div>
 
-                  {(() => {
-                    const currentPlan = plans.find((p) => p.id === userPlanId) || plans[0]
-                    const storageText = currentPlan
-                      ? currentPlan.storage_gb >= 1000
-                        ? `${currentPlan.storage_gb / 1000} TB`
-                        : `${currentPlan.storage_gb} GB`
-                      : '200 GB'
+                  {adminWorkspace?.workspacePlan ? (
+                    (() => {
+                      const tier = adminWorkspace.workspacePlan
+                      const storageText = tier.storage_gb >= 1000 ? `${tier.storage_gb / 1000} TB` : `${tier.storage_gb} GB`
 
-                    return (
-                      <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-4">
-                        <div className="flex items-center justify-between">
+                      return (
+                        <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-4">
                           <div>
                             <span className="font-mono text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent/30 text-th-accent font-semibold">
-                              Current Plan
+                              Agency Workspace Plan
                             </span>
-                            <h3 className="text-xl font-bold mt-2">{currentPlan?.name ?? 'Basic'}</h3>
+                            <h3 className="text-xl font-bold mt-2">{tier.name}</h3>
                           </div>
-                          <button
-                            onClick={() => setIsModalOpen(true)}
-                            className="px-4 py-2 rounded-th text-[13px] font-semibold bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov transition-colors btn-press"
-                          >
-                            Change plan
-                          </button>
-                        </div>
 
-                        <div className="pt-3 border-t border-th-border grid grid-cols-2 gap-4 text-[13px]">
-                          <div>
-                            <span className="text-th-muted block text-[11px] font-mono uppercase">Price</span>
-                            <span className="font-bold text-base">
-                              ₹{currentPlan?.price_monthly ?? 0}
-                              <span className="text-[12px] font-normal text-th-muted">/month</span>
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-th-muted block text-[11px] font-mono uppercase">Storage</span>
-                            <span className="font-bold text-base">{storageText}</span>
-                          </div>
-                        </div>
-
-                        {currentPlan?.features && (
-                          <div className="pt-3 border-t border-th-border">
-                            <span className="text-th-muted block text-[11px] font-mono uppercase mb-2">Included Features</span>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {currentPlan.features.map((feat, i) => (
-                                <div key={i} className="flex items-center gap-2 text-[12px]">
-                                  <Check size={14} className="text-th-accent shrink-0" />
-                                  <span>{feat}</span>
-                                </div>
-                              ))}
+                          <div className="pt-3 border-t border-th-border grid grid-cols-2 gap-4 text-[13px]">
+                            <div>
+                              <span className="text-th-muted block text-[11px] font-mono uppercase">Price</span>
+                              <span className="font-bold text-base">Custom — contact us</span>
+                            </div>
+                            <div>
+                              <span className="text-th-muted block text-[11px] font-mono uppercase">Storage</span>
+                              <span className="font-bold text-base">{storageText}</span>
+                            </div>
+                            <div>
+                              <span className="text-th-muted block text-[11px] font-mono uppercase">Admins</span>
+                              <span className="font-bold text-base">Up to {tier.max_admins}</span>
+                            </div>
+                            <div>
+                              <span className="text-th-muted block text-[11px] font-mono uppercase">Editors</span>
+                              <span className="font-bold text-base">Up to {tier.max_editors}</span>
                             </div>
                           </div>
-                        )}
-                      </div>
-                    )
-                  })()}
+                        </div>
+                      )
+                    })()
+                  ) : (
+                    (() => {
+                      const currentPlan = plans.find((p) => p.id === userPlanId) || plans[0]
+                      const storageText = currentPlan
+                        ? currentPlan.storage_gb >= 1000
+                          ? `${currentPlan.storage_gb / 1000} TB`
+                          : `${currentPlan.storage_gb} GB`
+                        : '200 GB'
+
+                      return (
+                        <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-mono text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent/30 text-th-accent font-semibold">
+                                Current Plan
+                              </span>
+                              <h3 className="text-xl font-bold mt-2">{currentPlan?.name ?? 'Basic'}</h3>
+                            </div>
+                            <button
+                              onClick={() => setIsModalOpen(true)}
+                              className="px-4 py-2 rounded-th text-[13px] font-semibold bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov transition-colors btn-press"
+                            >
+                              Change plan
+                            </button>
+                          </div>
+
+                          <div className="pt-3 border-t border-th-border grid grid-cols-2 gap-4 text-[13px]">
+                            <div>
+                              <span className="text-th-muted block text-[11px] font-mono uppercase">Price</span>
+                              <span className="font-bold text-base">
+                                ₹{currentPlan?.price_monthly ?? 0}
+                                <span className="text-[12px] font-normal text-th-muted">/month</span>
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-th-muted block text-[11px] font-mono uppercase">Storage</span>
+                              <span className="font-bold text-base">{storageText}</span>
+                            </div>
+                          </div>
+
+                          {currentPlan?.features && (
+                            <div className="pt-3 border-t border-th-border">
+                              <span className="text-th-muted block text-[11px] font-mono uppercase mb-2">Included Features</span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {currentPlan.features.map((feat, i) => (
+                                  <div key={i} className="flex items-center gap-2 text-[12px]">
+                                    <Check size={14} className="text-th-accent shrink-0" />
+                                    <span>{feat}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()
+                  )}
                 </>
               )}
 
