@@ -206,6 +206,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
   const asset = shareLink.asset
   const muxSrc = asset.mux_playback_id ? `https://stream.mux.com/${asset.mux_playback_id}.m3u8` : undefined
   const videoNotReady = !asset.mux_upload_id
+  const hideDownload = shareLink.downloads_disabled || shareLink.comments_only
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-th-bg">
@@ -226,7 +227,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               comments={comments.map((c) => ({ id: c.id, timeSec: c.time_sec, status: 'open', text: c.text, resolved: false })) as any}
               onTimeUpdate={setCurrentTime}
               approved={asset.is_complete}
-              hideDownload
+              hideDownload={hideDownload}
             />
           )}
         </div>
