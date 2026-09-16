@@ -17,7 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { data: asset } = await supabaseAdmin
     .from('assets')
-    .select('projects(workspace_id)')
+    .select('projects!assets_project_id_fkey(workspace_id)')
     .eq('id', comment.asset_id)
     .single()
 
@@ -69,7 +69,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (!authorized) {
     const { data: asset } = await supabaseAdmin
       .from('assets')
-      .select('projects(workspace_id)')
+      .select('projects!assets_project_id_fkey(workspace_id)')
       .eq('id', comment.asset_id)
       .single()
 

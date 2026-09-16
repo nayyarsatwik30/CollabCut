@@ -11,7 +11,7 @@ import { verifyShareAccess } from '@/lib/share-access'
 async function canAccessAsset(userId: string, assetId: string): Promise<boolean> {
   const { data: assetMeta } = await supabaseAdmin
     .from('assets')
-    .select('projects(workspace_id)')
+    .select('projects!assets_project_id_fkey(workspace_id)')
     .eq('id', assetId)
     .maybeSingle()
 
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
   // consumer needs.
   const { data: assetRow } = await supabaseAdmin
     .from('assets')
-    .select('project_id, pipeline_status, projects(name, workspace_id)')
+    .select('project_id, pipeline_status, projects!assets_project_id_fkey(name, workspace_id)')
     .eq('id', asset_id)
     .maybeSingle()
   const project = assetRow?.projects

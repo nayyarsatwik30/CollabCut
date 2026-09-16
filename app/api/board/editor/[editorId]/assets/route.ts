@@ -22,7 +22,7 @@ async function requireAdminWorkspace(userId: string) {
 async function findAssetInWorkspace(assetId: string, workspaceId: string) {
   const { data, error } = await supabaseAdmin
     .from('assets')
-    .select('id, asset_group_id, projects!inner(workspace_id)')
+    .select('id, asset_group_id, projects!assets_project_id_fkey!inner(workspace_id)')
     .eq('id', assetId)
     .eq('projects.workspace_id', workspaceId)
     .maybeSingle()
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest, { params }: { params: { editorId: st
   // groups for latestPerGroup to pick the true latest from.
   const { data: assignedRows, error: assignedError } = await supabaseAdmin
     .from('asset_editors')
-    .select('assets!inner(asset_group_id, cut_type, deleted_at, projects!inner(workspace_id, deleted_at))')
+    .select('assets!inner(asset_group_id, cut_type, deleted_at, projects!assets_project_id_fkey!inner(workspace_id, deleted_at))')
     .eq('editor_id', params.editorId)
     .eq('assets.cut_type', 'board')
 
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest, { params }: { params: { editorId: st
   if (assignedGroupIds.length > 0) {
     const { data, error } = await supabaseAdmin
       .from('assets')
-      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!inner(id, name, client, workspace_id, deleted_at)')
+      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!assets_project_id_fkey!inner(id, name, client, workspace_id, deleted_at)')
       .in('asset_group_id', assignedGroupIds)
       .is('deleted_at', null)
 
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest, { params }: { params: { editorId: s
   if (!alreadyAssignedToLineage) {
     const { data: assetRow } = await supabaseAdmin
       .from('assets')
-      .select('project_id, projects(name)')
+      .select('project_id, projects!assets_project_id_fkey(name)')
       .eq('id', assetId)
       .maybeSingle()
 

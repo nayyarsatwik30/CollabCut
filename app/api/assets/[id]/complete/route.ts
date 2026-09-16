@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // here, regardless of asset_editors assignment.
   const { data: asset } = await supabaseAdmin
     .from('assets')
-    .select('project_id, projects(workspace_id)')
+    .select('project_id, projects!assets_project_id_fkey(workspace_id)')
     .eq('id', params.id)
     .single()
 

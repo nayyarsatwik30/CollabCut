@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { data: asset } = await supabaseAdmin
     .from('assets')
-    .select('project_id, projects(workspace_id)')
+    .select('project_id, projects!assets_project_id_fkey(workspace_id)')
     .eq('id', params.id)
     .single()
 

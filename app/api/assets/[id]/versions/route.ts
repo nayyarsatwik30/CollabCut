@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const { data: current, error: currentError } = await supabaseAdmin
     .from('assets')
-    .select('project_id, name, asset_group_id, projects(workspace_id)')
+    .select('project_id, name, asset_group_id, projects!assets_project_id_fkey(workspace_id)')
     .eq('id', params.id)
     .single()
 

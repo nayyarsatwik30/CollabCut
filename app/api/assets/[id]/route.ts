@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   // run them concurrently instead of paying for both round trips in series.
   const [auth, assetMetaResult] = await Promise.all([
     requireAuth(req),
-    supabaseAdmin.from('assets').select('projects(workspace_id)').eq('id', params.id).single(),
+    supabaseAdmin.from('assets').select('projects!assets_project_id_fkey(workspace_id)').eq('id', params.id).single(),
   ])
   if ('error' in auth) return auth.error
   const { user } = auth

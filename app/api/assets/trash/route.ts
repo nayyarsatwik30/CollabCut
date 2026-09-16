@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   if (adminWorkspaceIds.length > 0) {
     const { data, error } = await supabaseAdmin
       .from('assets')
-      .select('id, name, project_id, deleted_at, projects!inner(name, workspace_id)')
+      .select('id, name, project_id, deleted_at, projects!assets_project_id_fkey!inner(name, workspace_id)')
       .not('deleted_at', 'is', null)
       .in('projects.workspace_id', adminWorkspaceIds)
 
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
   if (assignedAssetIds.length > 0) {
     const { data, error } = await supabaseAdmin
       .from('assets')
-      .select('id, name, project_id, deleted_at, projects(name, workspace_id)')
+      .select('id, name, project_id, deleted_at, projects!assets_project_id_fkey(name, workspace_id)')
       .not('deleted_at', 'is', null)
       .in('id', assignedAssetIds)
 
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
 async function authorizeAsset(assetId: string, userId: string) {
   const { data: asset } = await supabaseAdmin
     .from('assets')
-    .select('projects(workspace_id)')
+    .select('projects!assets_project_id_fkey(workspace_id)')
     .eq('id', assetId)
     .single()
 

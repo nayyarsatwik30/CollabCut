@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const { data, error } = await supabaseAdmin
     .from('projects')
-    .select('*, assets(id, name, version, asset_group_id, duration_sec, size_bytes, status, mux_playback_id, mux_upload_id, is_complete, cut_type)')
+    .select('*, assets!assets_project_id_fkey(id, name, version, asset_group_id, duration_sec, size_bytes, status, mux_playback_id, mux_upload_id, is_complete, cut_type)')
     .eq('id', params.id)
     .is('assets.deleted_at', null)
     .single()
