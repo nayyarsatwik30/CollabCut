@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     if (existing) {
       return NextResponse.json({
-        url: buildShareUrl(existing.token, assetRow.name, !!existing.password_hash),
+        url: buildShareUrl(existing.token, assetRow.name),
         expires_at: existing.expires_at,
         downloads_disabled: existing.downloads_disabled,
         comments_only: existing.comments_only,
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({
-    url: buildShareUrl(data.token, assetRow.name, !!data.password_hash),
+    url: buildShareUrl(data.token, assetRow.name),
     expires_at: data.expires_at,
     downloads_disabled: data.downloads_disabled,
     comments_only: data.comments_only,

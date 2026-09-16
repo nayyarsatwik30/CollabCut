@@ -11,9 +11,9 @@ export function slugifyAssetName(name: string): string {
 }
 
 // Shared by every POST /api/share branch (fresh insert or reused row) so the
-// slug/password-hiding rule can't drift between them.
-export function buildShareUrl(token: string, assetName: string | null | undefined, passwordProtected: boolean): string {
-  const slug = !passwordProtected && assetName ? slugifyAssetName(assetName) : ''
+// slug rule can't drift between them.
+export function buildShareUrl(token: string, assetName: string | null | undefined): string {
+  const slug = assetName ? slugifyAssetName(assetName) : ''
   return `${process.env.NEXT_PUBLIC_APP_URL}/r/${slug ? `${slug}-` : ''}${token}`
 }
 
