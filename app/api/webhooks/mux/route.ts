@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       .from('assets')
       .update({
         mux_asset_id:    muxAssetId,
-        ...(playbackId ? { mux_playback_id: playbackId, status: 'in_review' } : {}),
+        ...(playbackId ? { mux_playback_id: playbackId, status: 'in_review', mux_ready_at: new Date().toISOString() } : {}),
         duration_sec:    durationSec,
       })
       .eq('mux_upload_id', data.upload_id)
