@@ -132,7 +132,7 @@ export function LandingPage() {
       <header className="sticky top-0 z-50 glass">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.svg" alt="CollabCut" className="w-7 h-7 rounded-lg" />
+            <img src="/logo.png" alt="CollabCut" className="w-7 h-7 rounded-lg" />
             <span className="text-[16px] font-bold tracking-tight">CollabCut</span>
           </div>
 
@@ -457,7 +457,7 @@ export function LandingPage() {
       <footer className="border-t border-th-border">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center gap-3 sm:justify-between text-center sm:text-left">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.svg" alt="CollabCut" className="w-5 h-5 rounded-md" />
+            <img src="/logo.png" alt="CollabCut" className="w-5 h-5 rounded-md" />
             <span className="text-[13px] font-bold">CollabCut</span>
           </div>
           <p className="font-mono text-[11px] text-th-faint">Built for the loop between a cut and a lock.</p>
