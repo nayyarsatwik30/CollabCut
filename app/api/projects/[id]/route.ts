@@ -55,19 +55,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     data.assets = latestPerGroup(data.assets)
   }
 
-  const { data: ownerProfile } = await supabaseAdmin
-    .from('profiles')
-    .select('id, name, email, avatar_color')
-    .eq('id', data.owner_id)
-    .maybeSingle()
-
-  // Members = editors actually assigned to an asset in this project, per
-  // asset_editors - there's no separate project-membership table for this.
-  const { data: editorRows } = await supabaseAdmin
-    .from('asset_editors')
-    .select('editor_id, profiles(id, name, email, avatar_color), assets!inner(project_id, deleted_at)')
-    .eq('assets.project_id', params.id)
-    .is('assets.deleted_at', null)
+  const [{ data: ownerProfile }, { data: editorRows }] = await Promise.all([
+    supabaseAdmin
+      .from('profiles')
+      .select('id, name, email, avatar_color')
+      .eq('id', data.owner_id)
+      .maybeSingle(),
+    // Members = editors actually assigned to an asset in this project, per
+    // asset_editors - there's no separate project-membership table for this.
+    supabaseAdmin
+      .from('asset_editors')
+      .select('editor_id, profiles(id, name, email, avatar_color), assets!inner(project_id, deleted_at)')
+      .eq('assets.project_id', params.id)
+      .is('assets.deleted_at', null),
+  ])
 
   const seenEditors = new Set<string>()
   const members = []

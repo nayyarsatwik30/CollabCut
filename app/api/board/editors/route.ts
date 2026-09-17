@@ -26,22 +26,31 @@ export async function GET(req: NextRequest) {
 
   if (editorsError) return NextResponse.json({ error: editorsError.message }, { status: 500 })
 
-  const editors = await Promise.all(
-    (editorRows ?? []).map(async (row) => {
-      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
-      const { count } = await supabaseAdmin
-        .from('asset_editors')
-        .select('id', { count: 'exact', head: true })
-        .eq('editor_id', row.user_id)
+  const editorIds = (editorRows ?? []).map((row) => row.user_id)
 
-      return {
-        id: row.user_id,
-        name: profile?.name ?? 'Unknown',
-        email: profile?.email ?? '',
-        assetCount: count ?? 0,
-      }
-    })
-  )
+  const assetCountByEditor = new Map<string, number>()
+  if (editorIds.length > 0) {
+    const { data: assignmentRows, error: assignmentError } = await supabaseAdmin
+      .from('asset_editors')
+      .select('editor_id')
+      .in('editor_id', editorIds)
+
+    if (assignmentError) return NextResponse.json({ error: assignmentError.message }, { status: 500 })
+
+    for (const row of assignmentRows ?? []) {
+      assetCountByEditor.set(row.editor_id, (assetCountByEditor.get(row.editor_id) ?? 0) + 1)
+    }
+  }
+
+  const editors = (editorRows ?? []).map((row) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+    return {
+      id: row.user_id,
+      name: profile?.name ?? 'Unknown',
+      email: profile?.email ?? '',
+      assetCount: assetCountByEditor.get(row.user_id) ?? 0,
+    }
+  })
 
   return NextResponse.json({ workspace_id: membership.workspace_id, editors })
 }
