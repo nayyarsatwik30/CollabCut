@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { verifyShareAccess } from '@/lib/share-access'
 
 // Public, unauthenticated - the /r/[token] page has no user JWT to send.
@@ -18,19 +18,12 @@ export async function POST(req: NextRequest) {
   const authorized = await verifyShareAccess(asset_id, token, password ?? null)
   if (!authorized) return NextResponse.json({ error: 'Invalid link' }, { status: 404 })
 
-  const { data, error: insertError } = await supabaseAdmin
-    .from('comments')
-    .insert({
-      asset_id,
-      time_sec,
-      text,
-      status: 'open',
-      author_id: null,
-      author_name: author_name?.trim() || 'Anonymous',
-    })
-    .select()
-    .single()
+  const result = await migrationDb.query(
+    `INSERT INTO comments (asset_id, time_sec, text, status, author_id, author_name)
+     VALUES ($1, $2, $3, 'open', NULL, $4)
+     RETURNING *`,
+    [asset_id, time_sec, text, author_name?.trim() || 'Anonymous']
+  )
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
-  return NextResponse.json({ comment: data }, { status: 201 })
+  return NextResponse.json({ comment: result.rows[0] }, { status: 201 })
 }

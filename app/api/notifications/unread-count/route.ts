@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
 
 // Lightweight endpoint for the sidebar badge - avoids fetching every
@@ -9,12 +9,10 @@ export async function GET(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { count, error } = await supabaseAdmin
-    .from('notifications')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('read', false)
+  const result = await migrationDb.query(
+    `SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND read = false`,
+    [user.id]
+  )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ count: count ?? 0 })
+  return NextResponse.json({ count: Number(result.rows[0].count) })
 }

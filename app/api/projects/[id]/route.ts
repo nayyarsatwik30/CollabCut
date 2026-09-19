@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole } from '@/lib/api-auth'
 import { latestPerGroup } from '@/lib/asset-lineage'
 
@@ -8,83 +8,72 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data, error } = await supabaseAdmin
-    .from('projects')
-    .select('*, assets!assets_project_id_fkey(id, name, version, asset_group_id, duration_sec, size_bytes, status, mux_playback_id, mux_upload_id, is_complete, cut_type)')
-    .eq('id', params.id)
-    .is('assets.deleted_at', null)
-    .single()
+  const projectResult = await migrationDb.query(`SELECT * FROM projects WHERE id = $1`, [params.id])
+  const data = projectResult.rows[0]
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!data) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
-  // .eq('workspace_id', null) compiles to `workspace_id = null`, which SQL
-  // never evaluates true - a project with no workspace can't rely on that,
-  // it has to be excluded up front instead.
+  // A project with no workspace can't rely on the admin-membership check
+  // below, it has to be excluded up front instead.
   let authorized = false
   let viewerIsAdmin = false
 
   if (data.workspace_id) {
-    const { data: membership } = await supabaseAdmin
-      .from('workspace_members')
-      .select('id')
-      .eq('workspace_id', data.workspace_id)
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle()
-
-    viewerIsAdmin = !!membership
+    viewerIsAdmin = await hasWorkspaceRole(data.workspace_id, user.id, 'admin')
     authorized = viewerIsAdmin
   }
 
   if (!authorized) {
-    const { data: assignment } = await supabaseAdmin
-      .from('asset_editors')
-      .select('id, assets!inner(project_id)')
-      .eq('editor_id', user.id)
-      .eq('assets.project_id', params.id)
-      .limit(1)
-      .maybeSingle()
-
-    authorized = !!assignment
+    const assignmentResult = await migrationDb.query(
+      `SELECT ae.id FROM asset_editors ae
+       JOIN assets a ON a.id = ae.asset_id
+       WHERE ae.editor_id = $1 AND a.project_id = $2
+       LIMIT 1`,
+      [user.id, params.id]
+    )
+    authorized = assignmentResult.rows.length > 0
   }
 
   if (!authorized) return NextResponse.json({ error: 'Not authorized to view this project' }, { status: 403 })
 
-  if (data?.assets) {
-    data.assets = latestPerGroup(data.assets)
-  }
+  const assetsResult = await migrationDb.query(
+    `SELECT id, name, version, asset_group_id, duration_sec, size_bytes, status, mux_playback_id, mux_upload_id, is_complete, cut_type
+     FROM assets WHERE project_id = $1 AND deleted_at IS NULL`,
+    [params.id]
+  )
+  data.assets = latestPerGroup(assetsResult.rows)
 
-  const [{ data: ownerProfile }, { data: editorRows }] = await Promise.all([
-    supabaseAdmin
-      .from('profiles')
-      .select('id, name, email, avatar_color')
-      .eq('id', data.owner_id)
-      .maybeSingle(),
+  const [ownerResult, editorRowsResult] = await Promise.all([
+    migrationDb.query(
+      `SELECT id, name, email, avatar_color FROM profiles WHERE id = $1`,
+      [data.owner_id]
+    ),
     // Members = editors actually assigned to an asset in this project, per
     // asset_editors - there's no separate project-membership table for this.
-    supabaseAdmin
-      .from('asset_editors')
-      .select('editor_id, profiles(id, name, email, avatar_color), assets!inner(project_id, deleted_at)')
-      .eq('assets.project_id', params.id)
-      .is('assets.deleted_at', null),
+    migrationDb.query(
+      `SELECT ae.editor_id, p.name, p.email, p.avatar_color
+       FROM asset_editors ae
+       JOIN assets a ON a.id = ae.asset_id
+       JOIN profiles p ON p.id = ae.editor_id
+       WHERE a.project_id = $1 AND a.deleted_at IS NULL`,
+      [params.id]
+    ),
   ])
 
   const seenEditors = new Set<string>()
   const members = []
-  for (const row of editorRows ?? []) {
+  for (const row of editorRowsResult.rows) {
     if (seenEditors.has(row.editor_id)) continue
     seenEditors.add(row.editor_id)
-    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
     members.push({
       id: row.editor_id,
-      name: profile?.name ?? 'Unknown',
-      email: profile?.email ?? '',
-      avatar_color: profile?.avatar_color ?? '#4CAF7D',
+      name: row.name ?? 'Unknown',
+      email: row.email ?? '',
+      avatar_color: row.avatar_color ?? '#4CAF7D',
     })
   }
 
-  data.owner = ownerProfile ?? null
+  data.owner = ownerResult.rows[0] ?? null
   data.members = members
   data.viewer_is_admin = viewerIsAdmin
 
@@ -96,11 +85,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data: project } = await supabaseAdmin
-    .from('projects')
-    .select('workspace_id')
-    .eq('id', params.id)
-    .single()
+  const projectResult = await migrationDb.query(
+    `SELECT workspace_id FROM projects WHERE id = $1`,
+    [params.id]
+  )
+  const project = projectResult.rows[0]
 
   if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
@@ -120,15 +109,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('projects')
-    .update(updates)
-    .eq('id', params.id)
-    .select()
-    .single()
+  const fields = Object.keys(updates)
+  const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ')
+  const values = fields.map((field) => updates[field])
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ project: data })
+  const result = await migrationDb.query(
+    `UPDATE projects SET ${setClause} WHERE id = $${fields.length + 1} RETURNING *`,
+    [...values, params.id]
+  )
+
+  return NextResponse.json({ project: result.rows[0] })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
@@ -136,11 +126,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data: project } = await supabaseAdmin
-    .from('projects')
-    .select('workspace_id')
-    .eq('id', params.id)
-    .single()
+  const projectResult = await migrationDb.query(
+    `SELECT workspace_id FROM projects WHERE id = $1`,
+    [params.id]
+  )
+  const project = projectResult.rows[0]
 
   if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
@@ -150,11 +140,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   if (!authorized) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
 
-  const { error } = await supabaseAdmin
-    .from('projects')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('id', params.id)
+  await migrationDb.query(`UPDATE projects SET deleted_at = now() WHERE id = $1`, [params.id])
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

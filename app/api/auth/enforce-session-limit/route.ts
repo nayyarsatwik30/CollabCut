@@ -1,21 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireAuth } from '@/lib/api-auth'
 
-const MAX_SESSIONS = 2
-
-// Called once, right after a fresh sign-in - never on token refresh. No-ops
-// for agency workspace members; enforce_session_limit itself checks
-// workspaces.workspace_plan_id.
+// Called once, right after a fresh sign-in - never on token refresh.
+//
+// KNOWN GAP (post-migration follow-up, not yet implemented): under Supabase,
+// this called the enforce_session_limit() RPC, which deleted the oldest rows
+// out of auth.sessions (GoTrue's server-side session table) past
+// MAX_SESSIONS for self-serve accounts, immediately invalidating those
+// devices' refresh tokens. NextAuth here uses `session: { strategy: 'jwt' }`
+// (see lib/authOptions.ts) - there is no server-side session table under
+// CloudClusters, no adapter, and the signed JWT lives entirely in the
+// client's cookie. There is nothing to count and nothing to delete, so
+// concurrent-session eviction is NOT enforced right now: a self-serve
+// account can hold more than MAX_SESSIONS live sessions simultaneously.
+//
+// Implementing this for real needs a design decision, not a mechanical
+// port - e.g. adding a real `sessions` table keyed by a session id embedded
+// in the JWT and checked on every request (requireAuth would need a DB
+// round-trip per call, which the JWT strategy was chosen to avoid), or
+// switching next-auth to `session: { strategy: 'database' }` with a
+// CloudClusters-backed Adapter so next-auth owns eviction itself. Left as a
+// no-op instead of silently pretending either of those exists.
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if ('error' in auth) return auth.error
 
-  const { error } = await supabaseAdmin.rpc('enforce_session_limit', {
-    p_user_id: auth.user.id,
-    p_max_sessions: MAX_SESSIONS,
-  })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

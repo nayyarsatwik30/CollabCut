@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { hashSharePassword } from '@/lib/share-password'
 import { requireAuth } from '@/lib/api-auth'
 import { getPublicShareLink } from '@/lib/share-access'
@@ -18,25 +18,24 @@ export async function POST(req: NextRequest) {
   const { asset_id, downloads_disabled, comments_only, expires_at, password, regenerate } = await req.json()
   if (!asset_id) return NextResponse.json({ error: 'asset_id required' }, { status: 400 })
 
-  const { data: assetRow, error: assetError } = await supabaseAdmin
-    .from('assets')
-    .select('asset_group_id, name')
-    .eq('id', asset_id)
-    .single()
-  if (assetError || !assetRow) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+  const assetResult = await migrationDb.query(
+    `SELECT asset_group_id, name FROM assets WHERE id = $1`,
+    [asset_id]
+  )
+  const assetRow = assetResult.rows[0]
+  if (!assetRow) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
   const groupId = assetRow.asset_group_id ?? asset_id
 
-  const nowIso = new Date().toISOString()
-
   if (!regenerate) {
-    const { data: existing } = await supabaseAdmin
-      .from('share_links')
-      .select('token, expires_at, downloads_disabled, comments_only, password_hash')
-      .eq('asset_group_id', groupId)
-      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    const existingResult = await migrationDb.query(
+      `SELECT token, expires_at, downloads_disabled, comments_only, password_hash
+       FROM share_links
+       WHERE asset_group_id = $1 AND (expires_at IS NULL OR expires_at > now())
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [groupId]
+    )
+    const existing = existingResult.rows[0]
 
     if (existing) {
       return NextResponse.json({
@@ -50,28 +49,28 @@ export async function POST(req: NextRequest) {
   } else {
     // Regenerate: soft-invalidate whatever's currently active for this group
     // instead of leaving an ever-growing set of live tokens per asset.
-    await supabaseAdmin
-      .from('share_links')
-      .update({ expires_at: nowIso })
-      .eq('asset_group_id', groupId)
-      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+    await migrationDb.query(
+      `UPDATE share_links SET expires_at = now()
+       WHERE asset_group_id = $1 AND (expires_at IS NULL OR expires_at > now())`,
+      [groupId]
+    )
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('share_links')
-    .insert({
+  const insertResult = await migrationDb.query(
+    `INSERT INTO share_links (asset_id, asset_group_id, created_by, downloads_disabled, comments_only, expires_at, password_hash)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING token, expires_at, downloads_disabled, comments_only, password_hash`,
+    [
       asset_id,
-      asset_group_id: groupId,
-      created_by: user.id,
-      downloads_disabled: downloads_disabled ?? false,
-      comments_only: comments_only ?? false,
-      expires_at: expires_at ?? null,
-      password_hash: password ? hashSharePassword(password) : null,
-    })
-    .select('token, expires_at, downloads_disabled, comments_only, password_hash')
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      groupId,
+      user.id,
+      downloads_disabled ?? false,
+      comments_only ?? false,
+      expires_at ?? null,
+      password ? hashSharePassword(password) : null,
+    ]
+  )
+  const data = insertResult.rows[0]
 
   return NextResponse.json({
     url: buildShareUrl(data.token, assetRow.name),
@@ -93,23 +92,22 @@ export async function PATCH(req: NextRequest) {
   const { asset_id, downloads_disabled, comments_only, expires_at, password } = await req.json()
   if (!asset_id) return NextResponse.json({ error: 'asset_id required' }, { status: 400 })
 
-  const { data: assetRow, error: assetError } = await supabaseAdmin
-    .from('assets')
-    .select('asset_group_id')
-    .eq('id', asset_id)
-    .single()
-  if (assetError || !assetRow) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+  const assetResult = await migrationDb.query(
+    `SELECT asset_group_id FROM assets WHERE id = $1`,
+    [asset_id]
+  )
+  const assetRow = assetResult.rows[0]
+  if (!assetRow) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
   const groupId = assetRow.asset_group_id ?? asset_id
 
-  const nowIso = new Date().toISOString()
-  const { data: existing } = await supabaseAdmin
-    .from('share_links')
-    .select('id')
-    .eq('asset_group_id', groupId)
-    .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const existingResult = await migrationDb.query(
+    `SELECT id FROM share_links
+     WHERE asset_group_id = $1 AND (expires_at IS NULL OR expires_at > now())
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [groupId]
+  )
+  const existing = existingResult.rows[0]
 
   if (!existing) return NextResponse.json({ error: 'No active share link to update' }, { status: 404 })
 
@@ -124,15 +122,16 @@ export async function PATCH(req: NextRequest) {
   if (password === null) update.password_hash = null
   else if (typeof password === 'string' && password) update.password_hash = hashSharePassword(password)
 
-  const { data, error } = await supabaseAdmin
-    .from('share_links')
-    .update(update)
-    .eq('id', existing.id)
-    .select('password_hash')
-    .single()
+  const fields = Object.keys(update)
+  const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ')
+  const values = fields.map((field) => update[field])
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ password_protected: !!data.password_hash })
+  const result = await migrationDb.query(
+    `UPDATE share_links SET ${setClause} WHERE id = $${fields.length + 1} RETURNING password_hash`,
+    [...values, existing.id]
+  )
+
+  return NextResponse.json({ password_protected: !!result.rows[0].password_hash })
 }
 
 // Public route (no auth) - never hand the password hash to the client, and

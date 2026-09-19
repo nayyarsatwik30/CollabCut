@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireAuth } from '@/lib/api-auth'
+import { migrationDb } from '@/lib/migrationDb'
 
 // Sums size_bytes across every asset (Custom Cut + Board Cut - cut_type
 // isn't filtered, so both count) plus file_size_bytes across every raw
@@ -17,61 +17,51 @@ export async function GET(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data: memberships } = await supabaseAdmin
-    .from('workspace_members')
-    .select('workspace_id, workspaces(id, name, workspace_plan_id, workspace_plans(id, name, storage_gb, max_admins, max_editors))')
-    .eq('user_id', user.id)
-
-  const agencyMembership = (memberships ?? []).find((m) => {
-    const workspace = Array.isArray(m.workspaces) ? m.workspaces[0] : m.workspaces
-    return !!workspace?.workspace_plan_id
-  })
+  const agencyResult = await migrationDb.query(
+    `SELECT wm.workspace_id, wp.id AS plan_id, wp.name AS plan_name, wp.storage_gb, wp.max_admins, wp.max_editors
+     FROM workspace_members wm
+     JOIN workspaces w ON w.id = wm.workspace_id
+     JOIN workspace_plans wp ON wp.id = w.workspace_plan_id
+     WHERE wm.user_id = $1
+     LIMIT 1`,
+    [user.id]
+  )
+  const agencyMembership = agencyResult.rows[0]
 
   if (agencyMembership) {
-    const workspace = Array.isArray(agencyMembership.workspaces) ? agencyMembership.workspaces[0] : agencyMembership.workspaces
-    const planRaw = workspace?.workspace_plans
-    const plan = Array.isArray(planRaw) ? planRaw[0] : planRaw
+    const projectsResult = await migrationDb.query(
+      `SELECT id FROM projects WHERE workspace_id = $1`,
+      [agencyMembership.workspace_id]
+    )
+    const projectIds = projectsResult.rows.map((p) => p.id)
 
-    const { data: projects, error: projectsError } = await supabaseAdmin
-      .from('projects')
-      .select('id')
-      .eq('workspace_id', agencyMembership.workspace_id)
+    const [assetsResult, rawFilesResult] = await Promise.all([
+      migrationDb.query(`SELECT COALESCE(SUM(size_bytes), 0) AS total FROM assets WHERE project_id = ANY($1)`, [projectIds]),
+      migrationDb.query(`SELECT COALESCE(SUM(file_size_bytes), 0) AS total FROM raw_files WHERE project_id = ANY($1)`, [projectIds]),
+    ])
 
-    if (projectsError) return NextResponse.json({ error: projectsError.message }, { status: 500 })
-
-    const projectIds = (projects ?? []).map((p) => p.id)
-
-    const [assetsResult, rawFilesResult] = projectIds.length
-      ? await Promise.all([
-          supabaseAdmin.from('assets').select('size_bytes').in('project_id', projectIds),
-          supabaseAdmin.from('raw_files').select('file_size_bytes').in('project_id', projectIds),
-        ])
-      : [{ data: [] as { size_bytes: number | null }[], error: null }, { data: [] as { file_size_bytes: number | null }[], error: null }] as const
-
-    if (assetsResult.error) return NextResponse.json({ error: assetsResult.error.message }, { status: 500 })
-    if (rawFilesResult.error) return NextResponse.json({ error: rawFilesResult.error.message }, { status: 500 })
-
-    const assetsTotal = (assetsResult.data ?? []).reduce((sum, a) => sum + (a.size_bytes ?? 0), 0)
-    const rawFilesTotal = (rawFilesResult.data ?? []).reduce((sum, f) => sum + (f.file_size_bytes ?? 0), 0)
+    const assetsTotal = Number(assetsResult.rows[0].total)
+    const rawFilesTotal = Number(rawFilesResult.rows[0].total)
 
     return NextResponse.json({
       used_bytes: assetsTotal + rawFilesTotal,
-      workspace_plan: plan
-        ? { id: plan.id, name: plan.name, storage_gb: plan.storage_gb, max_admins: plan.max_admins, max_editors: plan.max_editors }
-        : null,
+      workspace_plan: {
+        id: agencyMembership.plan_id,
+        name: agencyMembership.plan_name,
+        storage_gb: agencyMembership.storage_gb,
+        max_admins: agencyMembership.max_admins,
+        max_editors: agencyMembership.max_editors,
+      },
     })
   }
 
   const [assetsResult, rawFilesResult] = await Promise.all([
-    supabaseAdmin.from('assets').select('size_bytes').eq('uploaded_by', user.id),
-    supabaseAdmin.from('raw_files').select('file_size_bytes').eq('uploaded_by', user.id),
+    migrationDb.query(`SELECT COALESCE(SUM(size_bytes), 0) AS total FROM assets WHERE uploaded_by = $1`, [user.id]),
+    migrationDb.query(`SELECT COALESCE(SUM(file_size_bytes), 0) AS total FROM raw_files WHERE uploaded_by = $1`, [user.id]),
   ])
 
-  if (assetsResult.error) return NextResponse.json({ error: assetsResult.error.message }, { status: 500 })
-  if (rawFilesResult.error) return NextResponse.json({ error: rawFilesResult.error.message }, { status: 500 })
-
-  const assetsTotal = (assetsResult.data ?? []).reduce((sum, a) => sum + (a.size_bytes ?? 0), 0)
-  const rawFilesTotal = (rawFilesResult.data ?? []).reduce((sum, f) => sum + (f.file_size_bytes ?? 0), 0)
+  const assetsTotal = Number(assetsResult.rows[0].total)
+  const rawFilesTotal = Number(rawFilesResult.rows[0].total)
 
   return NextResponse.json({ used_bytes: assetsTotal + rawFilesTotal, workspace_plan: null })
 }

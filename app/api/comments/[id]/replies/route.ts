@@ -1,26 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/authOptions'
+import { migrationDb } from '@/lib/migrationDb'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  const { data: { user } } = token
-    ? await supabaseAdmin.auth.getUser(token)
-    : { data: { user: null } }
+  const session = await getServerSession(authOptions)
+  const sessionUser = session?.user as { id?: string } | undefined
+  const userId = sessionUser?.id ?? null
 
   const { text, author_name } = await req.json()
   if (!text) return NextResponse.json({ error: 'text required' }, { status: 400 })
 
-  const { data, error } = await supabaseAdmin
-    .from('replies')
-    .insert({
-      comment_id: params.id,
-      text,
-      author_id: user?.id ?? null,
-      author_name: author_name ?? 'Anonymous',
-    })
-    .select()
-    .single()
+  const result = await migrationDb.query(
+    `INSERT INTO replies (comment_id, text, author_id, author_name) VALUES ($1, $2, $3, $4) RETURNING *`,
+    [params.id, text, userId, author_name ?? 'Anonymous']
+  )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ reply: data }, { status: 201 })
+  return NextResponse.json({ reply: result.rows[0] }, { status: 201 })
 }

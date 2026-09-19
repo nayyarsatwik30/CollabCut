@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest) {
@@ -7,15 +7,12 @@ export async function GET(req: NextRequest) {
     if ('error' in auth) return auth.error
     const { user } = auth
 
-    const { data, error } = await supabaseAdmin
-        .from('projects')
-        .select('*')
-        .eq('owner_id', user.id)
-        .not('deleted_at', 'is', null)
-        .order('deleted_at', { ascending: false })
+    const result = await migrationDb.query(
+        `SELECT * FROM projects WHERE owner_id = $1 AND deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
+        [user.id]
+    )
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ projects: data ?? [] })
+    return NextResponse.json({ projects: result.rows })
 }
 
 export async function POST(req: NextRequest) {
@@ -27,23 +24,19 @@ export async function POST(req: NextRequest) {
     const { project_id } = await req.json()
     if (!project_id) return NextResponse.json({ error: 'project_id required' }, { status: 400 })
 
-    const { data: project } = await supabaseAdmin
-        .from('projects')
-        .select('owner_id')
-        .eq('id', project_id)
-        .single()
+    const projectResult = await migrationDb.query(
+        `SELECT owner_id FROM projects WHERE id = $1`,
+        [project_id]
+    )
+    const project = projectResult.rows[0]
 
     if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     if (project.owner_id !== user.id) {
         return NextResponse.json({ error: 'Not authorized to restore this project' }, { status: 403 })
     }
 
-    const { error } = await supabaseAdmin
-        .from('projects')
-        .update({ deleted_at: null })
-        .eq('id', project_id)
+    await migrationDb.query(`UPDATE projects SET deleted_at = NULL WHERE id = $1`, [project_id])
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ success: true })
 }
 
@@ -57,22 +50,18 @@ export async function DELETE(req: NextRequest) {
     const project_id = searchParams.get('project_id')
     if (!project_id) return NextResponse.json({ error: 'project_id required' }, { status: 400 })
 
-    const { data: project } = await supabaseAdmin
-        .from('projects')
-        .select('owner_id')
-        .eq('id', project_id)
-        .single()
+    const projectResult = await migrationDb.query(
+        `SELECT owner_id FROM projects WHERE id = $1`,
+        [project_id]
+    )
+    const project = projectResult.rows[0]
 
     if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     if (project.owner_id !== user.id) {
         return NextResponse.json({ error: 'Not authorized to delete this project' }, { status: 403 })
     }
 
-    const { error } = await supabaseAdmin
-        .from('projects')
-        .delete()
-        .eq('id', project_id)
+    await migrationDb.query(`DELETE FROM projects WHERE id = $1`, [project_id])
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ success: true })
 }

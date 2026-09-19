@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireAuth } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
 
 // Read-only admin-workspace-with-plan lookup for settings.tsx's initial
 // load (the Team tab's provisioning POST below is a separate, get-or-create
-// concern). migrationDb rather than supabaseAdmin like POST below - this
-// handler is new, so it targets CloudClusters directly instead of adding to
-// what still needs converting in the pending 30-routes pass.
+// concern).
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req)
   if ('error' in auth) return auth.error
@@ -45,44 +42,37 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data: existing, error: existingError } = await supabaseAdmin
-    .from('workspace_members')
-    .select('workspace_id, workspaces(name, invite_code)')
-    .eq('user_id', user.id)
-    .eq('role', 'admin')
-    .limit(1)
-    .maybeSingle()
-
-  if (existingError) return NextResponse.json({ error: existingError.message }, { status: 500 })
+  const existingResult = await migrationDb.query(
+    `SELECT wm.workspace_id, w.name, w.invite_code
+     FROM workspace_members wm
+     JOIN workspaces w ON w.id = wm.workspace_id
+     WHERE wm.user_id = $1 AND wm.role = 'admin'
+     LIMIT 1`,
+    [user.id]
+  )
+  const existing = existingResult.rows[0]
 
   if (existing) {
-    const workspace = Array.isArray(existing.workspaces) ? existing.workspaces[0] : existing.workspaces
     return NextResponse.json({
-      workspace: { id: existing.workspace_id, name: workspace?.name ?? 'Workspace', invite_code: workspace?.invite_code ?? '' },
+      workspace: { id: existing.workspace_id, name: existing.name ?? 'Workspace', invite_code: existing.invite_code ?? '' },
     })
   }
 
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('name')
-    .eq('id', user.id)
-    .single()
+  const profileResult = await migrationDb.query(`SELECT name FROM profiles WHERE id = $1`, [user.id])
+  const profile = profileResult.rows[0]
 
   const workspaceName = profile?.name ? `${profile.name}'s Workspace` : 'My Workspace'
 
-  const { data: workspace, error: workspaceError } = await supabaseAdmin
-    .from('workspaces')
-    .insert({ name: workspaceName, owner_id: user.id })
-    .select()
-    .single()
+  const workspaceResult = await migrationDb.query(
+    `INSERT INTO workspaces (name, owner_id) VALUES ($1, $2) RETURNING *`,
+    [workspaceName, user.id]
+  )
+  const workspace = workspaceResult.rows[0]
 
-  if (workspaceError) return NextResponse.json({ error: workspaceError.message }, { status: 500 })
-
-  const { error: memberError } = await supabaseAdmin
-    .from('workspace_members')
-    .insert({ workspace_id: workspace.id, user_id: user.id, role: 'admin' })
-
-  if (memberError) return NextResponse.json({ error: memberError.message }, { status: 500 })
+  await migrationDb.query(
+    `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'admin')`,
+    [workspace.id, user.id]
+  )
 
   return NextResponse.json(
     { workspace: { id: workspace.id, name: workspace.name, invite_code: workspace.invite_code } },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { createNotification } from '@/lib/notifications'
 import { syncProjectStatus } from '@/lib/project-status'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
@@ -9,15 +9,13 @@ import { verifyShareAccess } from '@/lib/share-access'
 // an editor on it - the same admin-or-assigned-editor gate every other
 // asset-scoped route in the app uses.
 async function canAccessAsset(userId: string, assetId: string): Promise<boolean> {
-  const { data: assetMeta } = await supabaseAdmin
-    .from('assets')
-    .select('projects!assets_project_id_fkey(workspace_id)')
-    .eq('id', assetId)
-    .maybeSingle()
-
-  const workspaceId = assetMeta?.projects
-    ? (Array.isArray(assetMeta.projects) ? assetMeta.projects[0]?.workspace_id : (assetMeta.projects as any).workspace_id)
-    : null
+  const assetResult = await migrationDb.query(
+    `SELECT p.workspace_id FROM assets a
+     JOIN projects p ON p.id = a.project_id
+     WHERE a.id = $1`,
+    [assetId]
+  )
+  const workspaceId = assetResult.rows[0]?.workspace_id ?? null
 
   const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, userId, 'admin') : false
   return isAdmin || await isAssignedEditor(assetId, userId)
@@ -44,14 +42,25 @@ export async function GET(req: NextRequest) {
 
   if (!authorized) return NextResponse.json({ error: 'Not authorized to view these comments' }, { status: 403 })
 
-  const { data, error } = await supabaseAdmin
-    .from('comments')
-    .select('*, replies(*)')
-    .eq('asset_id', asset_id)
-    .order('time_sec', { ascending: true })
+  const commentsResult = await migrationDb.query(
+    `SELECT * FROM comments WHERE asset_id = $1 ORDER BY time_sec ASC`,
+    [asset_id]
+  )
+  const comments = commentsResult.rows
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ comments: data })
+  const repliesResult = await migrationDb.query(
+    `SELECT * FROM replies WHERE comment_id = ANY($1::uuid[]) ORDER BY created_at ASC`,
+    [comments.map((c) => c.id)]
+  )
+  const repliesByComment = new Map<string, unknown[]>()
+  for (const reply of repliesResult.rows) {
+    if (!repliesByComment.has(reply.comment_id)) repliesByComment.set(reply.comment_id, [])
+    repliesByComment.get(reply.comment_id)!.push(reply)
+  }
+
+  return NextResponse.json({
+    comments: comments.map((c) => ({ ...c, replies: repliesByComment.get(c.id) ?? [] })),
+  })
 }
 
 // No share-token path here - the public page posts comments through the
@@ -71,32 +80,24 @@ export async function POST(req: NextRequest) {
   const authorized = await canAccessAsset(user.id, asset_id)
   if (!authorized) return NextResponse.json({ error: 'Not authorized to comment on this asset' }, { status: 403 })
 
-  const { data, error } = await supabaseAdmin
-    .from('comments')
-    .insert({
-      asset_id,
-      time_sec,
-      text,
-      status: status ?? 'open',
-      author_id: user.id,
-      author_name: author_name ?? 'Anonymous',
-    })
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const insertResult = await migrationDb.query(
+    `INSERT INTO comments (asset_id, time_sec, text, status, author_id, author_name)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [asset_id, time_sec, text, status ?? 'open', user.id, author_name ?? 'Anonymous']
+  )
+  const data = insertResult.rows[0]
 
   // Single lookup, reused below for both the pipeline_status transition and
   // Trigger 3 (notification). Same asset/project/workspace_id shape either
   // consumer needs.
-  const { data: assetRow } = await supabaseAdmin
-    .from('assets')
-    .select('project_id, pipeline_status, projects!assets_project_id_fkey(name, workspace_id)')
-    .eq('id', asset_id)
-    .maybeSingle()
-  const project = assetRow?.projects
-    ? (Array.isArray(assetRow.projects) ? assetRow.projects[0] : assetRow.projects)
-    : null
+  const assetRowResult = await migrationDb.query(
+    `SELECT a.project_id, a.pipeline_status, p.name AS project_name, p.workspace_id
+     FROM assets a JOIN projects p ON p.id = a.project_id
+     WHERE a.id = $1`,
+    [asset_id]
+  )
+  const assetRow = assetRowResult.rows[0] ?? null
+  const project = assetRow ? { name: assetRow.project_name, workspace_id: assetRow.workspace_id } : null
 
   const isAdminCommenter = project?.workspace_id
     ? await hasWorkspaceRole(project.workspace_id, user.id, 'admin')
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest) {
   // or not) never trigger this, and it only fires out of 'review' so it
   // can't clobber e.g. an already-approved asset.
   if (isAdminCommenter && assetRow?.pipeline_status === 'review') {
-    await supabaseAdmin.from('assets').update({ pipeline_status: 'revision' }).eq('id', asset_id)
+    await migrationDb.query(`UPDATE assets SET pipeline_status = 'revision' WHERE id = $1`, [asset_id])
     if (assetRow.project_id) await syncProjectStatus(assetRow.project_id)
   }
 
@@ -116,11 +117,11 @@ export async function POST(req: NextRequest) {
   // commenting on their own upload), and only if someone is actually
   // assigned to notify. Best-effort - the comment itself already succeeded.
   if (isAdminCommenter) {
-    const { data: assignment } = await supabaseAdmin
-      .from('asset_editors')
-      .select('editor_id')
-      .eq('asset_id', asset_id)
-      .maybeSingle()
+    const assignmentResult = await migrationDb.query(
+      `SELECT editor_id FROM asset_editors WHERE asset_id = $1 LIMIT 1`,
+      [asset_id]
+    )
+    const assignment = assignmentResult.rows[0] ?? null
 
     if (assignment?.editor_id) {
       await createNotification({

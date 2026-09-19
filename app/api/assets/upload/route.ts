@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { video } from '@/lib/mux'
 import { syncProjectStatus } from '@/lib/project-status'
 import { notifyWorkspaceAdmins } from '@/lib/notifications'
@@ -10,10 +10,12 @@ import { requireAuth } from '@/lib/api-auth'
 // display name/workspace (to fan a notification out to its admins) and the
 // uploader's display name (for the message text).
 async function getUploadNotificationContext(projectId: string, uploaderId: string) {
-  const [{ data: projectRow }, { data: uploaderProfile }] = await Promise.all([
-    supabaseAdmin.from('projects').select('name, workspace_id').eq('id', projectId).maybeSingle(),
-    supabaseAdmin.from('profiles').select('name, email').eq('id', uploaderId).maybeSingle(),
+  const [projectResult, uploaderResult] = await Promise.all([
+    migrationDb.query(`SELECT name, workspace_id FROM projects WHERE id = $1`, [projectId]),
+    migrationDb.query(`SELECT name, email FROM profiles WHERE id = $1`, [uploaderId]),
   ])
+  const projectRow = projectResult.rows[0]
+  const uploaderProfile = uploaderResult.rows[0]
   return {
     projectName: projectRow?.name ?? 'Untitled project',
     workspaceId: (projectRow?.workspace_id as string | null) ?? null,
@@ -37,29 +39,26 @@ export async function POST(req: NextRequest) {
   // using the placeholder's own upload button, regardless of which button
   // was actually clicked.
   if (!fulfill_asset_id && !linked_asset_name && project_id && (cut_type ?? 'board') === 'board') {
-    const { data: pending } = await supabaseAdmin
-      .from('assets')
-      .select('id')
-      .eq('project_id', project_id)
-      .eq('cut_type', 'board')
-      .is('mux_upload_id', null)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: true })
-      .limit(1)
-    fulfill_asset_id = pending?.[0]?.id
+    const pendingResult = await migrationDb.query(
+      `SELECT id FROM assets
+       WHERE project_id = $1 AND cut_type = 'board' AND mux_upload_id IS NULL AND deleted_at IS NULL
+       ORDER BY created_at ASC LIMIT 1`,
+      [project_id]
+    )
+    fulfill_asset_id = pendingResult.rows[0]?.id
   }
 
   // Fulfilling a New Content placeholder: attach the file to the EXISTING
   // asset row in place (same id/version/group), rather than creating a new
   // one - the placeholder just goes from "no file" to "has a file."
   if (fulfill_asset_id) {
-    const { data: target, error: targetError } = await supabaseAdmin
-      .from('assets')
-      .select('id, project_id, mux_upload_id')
-      .eq('id', fulfill_asset_id)
-      .single()
+    const targetResult = await migrationDb.query(
+      `SELECT id, project_id, mux_upload_id FROM assets WHERE id = $1`,
+      [fulfill_asset_id]
+    )
+    const target = targetResult.rows[0]
 
-    if (targetError || !target) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    if (!target) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     if (target.mux_upload_id) return NextResponse.json({ error: 'This asset already has a file' }, { status: 400 })
 
     const upload = await video.uploads.create({
@@ -71,18 +70,11 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    const { data: asset, error } = await supabaseAdmin
-      .from('assets')
-      .update({
-        status: 'processing',
-        pipeline_status: 'review',
-        mux_upload_id: upload.id,
-      })
-      .eq('id', fulfill_asset_id)
-      .select()
-      .single()
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const updateResult = await migrationDb.query(
+      `UPDATE assets SET status = 'processing', pipeline_status = 'review', mux_upload_id = $1 WHERE id = $2 RETURNING *`,
+      [upload.id, fulfill_asset_id]
+    )
+    const asset = updateResult.rows[0]
 
     await syncProjectStatus(target.project_id)
 
@@ -120,41 +112,34 @@ export async function POST(req: NextRequest) {
   let linkedHead: { id: string; version: number; asset_group_id: string | null; cut_type: string } | null = null
 
   if (linked_asset_name) {
-    const { data: existing } = await supabaseAdmin
-      .from('assets')
-      .select('id, version, asset_group_id, cut_type')
-      .eq('project_id', project_id)
-      .eq('name', linked_asset_name)
-      .order('version', { ascending: false })
-      .limit(1)
-    linkedHead = existing?.[0] ?? null
+    const existingResult = await migrationDb.query(
+      `SELECT id, version, asset_group_id, cut_type FROM assets
+       WHERE project_id = $1 AND name = $2 ORDER BY version DESC LIMIT 1`,
+      [project_id, linked_asset_name]
+    )
+    linkedHead = existingResult.rows[0] ?? null
 
     // A lineage's v1 (its earliest version) must have a real file before any
     // new version can stack on top of it - otherwise the placeholder never
     // gets fulfilled and is left orphaned underneath a "v2".
     if (linkedHead) {
-      const { data: origin } = await supabaseAdmin
-        .from('assets')
-        .select('mux_upload_id')
-        .eq('asset_group_id', linkedHead.asset_group_id)
-        .order('version', { ascending: true })
-        .limit(1)
-        .single()
+      const originResult = await migrationDb.query(
+        `SELECT mux_upload_id FROM assets WHERE asset_group_id = $1 ORDER BY version ASC LIMIT 1`,
+        [linkedHead.asset_group_id]
+      )
+      const origin = originResult.rows[0]
 
       if (origin && !origin.mux_upload_id) {
         return NextResponse.json({ error: 'Fulfill v1 before uploading a new version' }, { status: 400 })
       }
     }
   } else if ((cut_type ?? 'board') === 'board') {
-    const { data: existing } = await supabaseAdmin
-      .from('assets')
-      .select('id, version, asset_group_id, cut_type')
-      .eq('project_id', project_id)
-      .eq('name', name)
-      .eq('cut_type', 'board')
-      .order('version', { ascending: false })
-      .limit(1)
-    linkedHead = existing?.[0] ?? null
+    const existingResult = await migrationDb.query(
+      `SELECT id, version, asset_group_id, cut_type FROM assets
+       WHERE project_id = $1 AND name = $2 AND cut_type = 'board' ORDER BY version DESC LIMIT 1`,
+      [project_id, name]
+    )
+    linkedHead = existingResult.rows[0] ?? null
   }
 
   // A version upload always inherits its lineage's real cut_type - never
@@ -178,24 +163,23 @@ export async function POST(req: NextRequest) {
   // own id, generated up front so it can self-reference in one insert).
   const newAssetId = randomUUID()
 
-  const { data: asset, error } = await supabaseAdmin
-    .from('assets')
-    .insert({
-      id: newAssetId,
+  const insertResult = await migrationDb.query(
+    `INSERT INTO assets (id, project_id, uploaded_by, name, version, status, pipeline_status, cut_type, mux_upload_id, asset_group_id)
+     VALUES ($1,$2,$3,$4,$5,'processing',$6,$7,$8,$9)
+     RETURNING *`,
+    [
+      newAssetId,
       project_id,
-      uploaded_by: user.id,
+      user.id,
       name,
-      version: nextVersion,
-      status: 'processing',
-      pipeline_status: linkedHead ? 'review' : 'idea',
-      cut_type: cutType,
-      mux_upload_id: upload.id,
-      asset_group_id: linkedHead ? linkedHead.asset_group_id : newAssetId,
-    })
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      nextVersion,
+      linkedHead ? 'review' : 'idea',
+      cutType,
+      upload.id,
+      linkedHead ? linkedHead.asset_group_id : newAssetId,
+    ]
+  )
+  const asset = insertResult.rows[0]
 
   // A new version reopens the pipeline (e.g. re-cutting an already-approved
   // asset), so the project's aggregate status can no longer be "approved".
@@ -210,11 +194,11 @@ export async function POST(req: NextRequest) {
     if (workspaceId) {
       let hasPriorComment = false
       if (linkedHead) {
-        const { count } = await supabaseAdmin
-          .from('comments')
-          .select('id', { count: 'exact', head: true })
-          .eq('asset_id', linkedHead.id)
-        hasPriorComment = (count ?? 0) > 0
+        const commentCountResult = await migrationDb.query(
+          `SELECT COUNT(*) FROM comments WHERE asset_id = $1`,
+          [linkedHead.id]
+        )
+        hasPriorComment = Number(commentCountResult.rows[0].count) > 0
       }
 
       if (linkedHead && hasPriorComment) {
