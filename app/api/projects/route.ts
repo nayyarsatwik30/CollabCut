@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const projects = await attachCoverPlaybackIds(supabaseAdmin, data ?? [])
+  const projects = await attachCoverPlaybackIds(data ?? [])
   return NextResponse.json({ projects })
 }
 

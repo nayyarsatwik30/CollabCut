@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 
 interface NotifyInput {
   userId: string
@@ -13,14 +13,14 @@ interface NotifyInput {
 // comment still succeeds even if this errors), so failures are logged, not
 // thrown.
 export async function createNotification({ userId, type, message, link, assetId }: NotifyInput) {
-  const { error } = await supabaseAdmin.from('notifications').insert({
-    user_id: userId,
-    type,
-    message,
-    link: link ?? null,
-    asset_id: assetId ?? null,
-  })
-  if (error) console.error(`[notifications] failed to create "${type}" for user ${userId}:`, error.message)
+  try {
+    await migrationDb.query(
+      `INSERT INTO notifications (user_id, type, message, link, asset_id) VALUES ($1, $2, $3, $4, $5)`,
+      [userId, type, message, link ?? null, assetId ?? null]
+    )
+  } catch (err) {
+    console.error(`[notifications] failed to create "${type}" for user ${userId}:`, (err as Error).message)
+  }
 }
 
 // Fans a notification out to every admin in a workspace - used for the
@@ -30,19 +30,20 @@ export async function notifyWorkspaceAdmins(
   input: Omit<NotifyInput, 'userId'>,
   excludeUserId?: string,
 ) {
-  const { data: admins, error } = await supabaseAdmin
-    .from('workspace_members')
-    .select('user_id')
-    .eq('workspace_id', workspaceId)
-    .eq('role', 'admin')
-
-  if (error) {
-    console.error(`[notifications] failed to look up admins for workspace ${workspaceId}:`, error.message)
+  let admins: { user_id: string }[]
+  try {
+    const result = await migrationDb.query(
+      `SELECT user_id FROM workspace_members WHERE workspace_id = $1 AND role = 'admin'`,
+      [workspaceId]
+    )
+    admins = result.rows
+  } catch (err) {
+    console.error(`[notifications] failed to look up admins for workspace ${workspaceId}:`, (err as Error).message)
     return
   }
 
   await Promise.all(
-    (admins ?? [])
+    admins
       .filter((a) => a.user_id !== excludeUserId)
       .map((a) => createNotification({ ...input, userId: a.user_id })),
   )
