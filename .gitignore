@@ -5,3 +5,6 @@ build
 .vercel
 .next
 .env.local
+.env.migration
+tsconfig.tsbuildinfo
+supabase/.temp

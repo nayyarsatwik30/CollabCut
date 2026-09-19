@@ -4,10 +4,9 @@ import { requireAuth } from '@/lib/api-auth'
 
 const MAX_SESSIONS = 2
 
-// Called once, right after a fresh sign-in - never on token refresh or
-// cross-tab session sync (see SessionSync, which deliberately doesn't call
-// this). No-ops for agency workspace members; enforce_session_limit itself
-// checks workspaces.workspace_plan_id.
+// Called once, right after a fresh sign-in - never on token refresh. No-ops
+// for agency workspace members; enforce_session_limit itself checks
+// workspaces.workspace_plan_id.
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if ('error' in auth) return auth.error

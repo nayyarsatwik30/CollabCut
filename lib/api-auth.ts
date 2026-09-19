@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { User } from '@supabase/supabase-js'
-import { supabaseAdmin } from './supabase-admin'
+import { getServerSession } from 'next-auth'
+import { authOptions } from './authOptions'
+import { migrationDb } from './migrationDb'
 
-export type AuthResult = { user: User } | { error: NextResponse }
+export type AuthUser = { id: string; email: string }
+export type AuthResult = { user: AuthUser } | { error: NextResponse }
 
-// Extracts the Bearer token, verifies it against Supabase, and returns the
-// authenticated user - or a ready-to-return 401. Mirrors the token-check
-// used correctly in assets/[id]/status and assets/[id]/complete.
+// Verifies the caller's NextAuth session (JWT, cookie-based) and returns the
+// authenticated user - or a ready-to-return 401. `req` is accepted for call-site
+// compatibility but unused: getServerSession reads the session from
+// next/headers under the hood.
 export async function requireAuth(req: NextRequest): Promise<AuthResult> {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  const session = await getServerSession(authOptions)
+  const sessionUser = session?.user as { id?: string; email?: string | null } | undefined
+  if (!sessionUser?.id) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
 
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
-  if (error || !user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-
-  return { user }
+  return { user: { id: sessionUser.id, email: sessionUser.email ?? '' } }
 }
 
 // True if `userId` holds `role` in `workspaceId` - the workspace_members
@@ -24,14 +25,11 @@ export async function hasWorkspaceRole(
   userId: string,
   role: 'admin' | 'editor',
 ): Promise<boolean> {
-  const { data } = await supabaseAdmin
-    .from('workspace_members')
-    .select('id')
-    .eq('workspace_id', workspaceId)
-    .eq('user_id', userId)
-    .eq('role', role)
-    .maybeSingle()
-  return !!data
+  const result = await migrationDb.query(
+    `SELECT id FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 AND role = $3 LIMIT 1`,
+    [workspaceId, userId, role]
+  )
+  return result.rows.length > 0
 }
 
 // True if `userId` is assigned as an editor anywhere in `assetId`'s lineage.
@@ -44,24 +42,23 @@ export async function hasWorkspaceRole(
 // POST handler in /api/board/editor/[editorId]/assets uses to check for an
 // existing lineage assignment.
 export async function isAssignedEditor(assetId: string, userId: string): Promise<boolean> {
-  const { data: asset } = await supabaseAdmin
-    .from('assets')
-    .select('asset_group_id')
-    .eq('id', assetId)
-    .maybeSingle()
-
+  const assetResult = await migrationDb.query(
+    `SELECT asset_group_id FROM assets WHERE id = $1`,
+    [assetId]
+  )
+  const asset = assetResult.rows[0]
   if (!asset) return false
   const targetGroupId = asset.asset_group_id ?? assetId
 
-  const { data: assignment } = await supabaseAdmin
-    .from('asset_editors')
-    .select('id, assets!inner(asset_group_id)')
-    .eq('editor_id', userId)
-    .eq('assets.asset_group_id', targetGroupId)
-    .limit(1)
-    .maybeSingle()
-
-  return !!assignment
+  const assignmentResult = await migrationDb.query(
+    `SELECT ae.id
+     FROM asset_editors ae
+     JOIN assets a ON a.id = ae.asset_id
+     WHERE ae.editor_id = $1 AND a.asset_group_id = $2
+     LIMIT 1`,
+    [userId, targetGroupId]
+  )
+  return assignmentResult.rows.length > 0
 }
 
 // Authenticates the request, then requires `role` in `workspaceId` outright,

@@ -9,8 +9,7 @@ import { ShareModal } from '@/components/review/ShareModal'
 import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
 import { Toast, useToast } from '@/components/ui/Toast'
-import { supabase } from '@/lib/supabase'
-import { useSessionGuard, resolveSession } from '@/lib/useSessionGuard'
+import { useSessionGuard } from '@/lib/useSessionGuard'
 import { muxDownloadUrl, buildDownloadFilename } from '@/lib/utils'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 
@@ -92,18 +91,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     if (ready && session) loadData()
   }, [ready, session, params.id])
 
-  useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        resolveSession().then((confirmed) => {
-          if (!confirmed) router.push('/auth/login')
-        })
-      }
-    })
-
-    return () => listener.subscription.unsubscribe()
-  }, [router])
-
   const loadData = async () => {
     if (!session) return
     setToken(session.access_token)
@@ -111,11 +98,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
     // Same workspace_members role lookup used on the dashboard/board admin-only
     // gates - Approve Cut is an admin-only action, not an editor one.
-    const { data: memberships } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('user_id', session.user.id)
-    const roles = (memberships ?? []).map((m) => m.role)
+    const roleRes = await fetch('/api/me/role')
+    const roles: string[] = roleRes.ok ? (await roleRes.json()).roles ?? [] : []
     setRole(roles.includes('admin') ? 'admin' : roles.includes('editor') ? 'editor' : null)
 
     const assetRes = await fetch(`/api/assets/${params.id}`, {

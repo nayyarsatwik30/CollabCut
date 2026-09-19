@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { SessionSync } from '@/components/layout/SessionSync'
+import { AuthProvider } from '@/components/layout/AuthProvider'
 
 export const metadata: Metadata = {
   title: 'CollabCut — Frame-accurate video review',
@@ -15,8 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <SessionSync />
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   )

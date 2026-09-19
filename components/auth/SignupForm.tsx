@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight, Check, Copy } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { signIn } from 'next-auth/react'
 
 const PERKS = [
   '14-day free trial, no card needed',
@@ -106,33 +106,28 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
       return
     }
 
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    const signInResult = await signIn('credentials', {
       email: form.email,
       password: form.password,
+      redirect: false,
     })
 
-    if (signInError) {
-      setError(signInError.message)
+    if (signInResult?.error) {
+      setError('Failed to sign in')
       setLoading(false)
       return
     }
 
-    if (signInData.session) {
-      // Best-effort: evicts this account's oldest session(s) past the
-      // concurrent-session limit (self-serve accounts only). Never blocks
-      // or fails signup over this - fire and forget.
-      fetch('/api/auth/enforce-session-limit', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${signInData.session.access_token}` },
-      }).catch(() => {})
-    }
+    // Best-effort: evicts this account's oldest session(s) past the
+    // concurrent-session limit (self-serve accounts only). Never blocks
+    // or fails signup over this - fire and forget.
+    fetch('/api/auth/enforce-session-limit', { method: 'POST' }).catch(() => {})
 
-    if (signInData.user) {
-      await supabase
-        .from('profiles')
-        .update({ plan_id: planId, billing_cycle: billingCycle })
-        .eq('id', signInData.user.id)
-    }
+    await fetch('/api/me/plan', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_id: planId, billing_cycle: billingCycle }),
+    })
 
     setLoading(false)
 

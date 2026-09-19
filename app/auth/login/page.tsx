@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { signIn } from 'next-auth/react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -25,26 +25,23 @@ export default function LoginPage() {
     }
 
     setLoading(true)
-    const { data: signInData, error } = await supabase.auth.signInWithPassword({
-      email:    form.email,
+    const result = await signIn('credentials', {
+      email: form.email,
       password: form.password,
+      redirect: false,
     })
 
-    if (error) {
-      setError(error.message)
+    if (result?.error) {
+      setError('Invalid email or password')
       setLoading(false)
       return
     }
 
-    if (signInData.session) {
-      // Best-effort: evicts this account's oldest session(s) past the
-      // concurrent-session limit (self-serve accounts only). Never blocks
-      // or fails login over this - fire and forget.
-      fetch('/api/auth/enforce-session-limit', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${signInData.session.access_token}` },
-      }).catch(() => {})
-    }
+    // Best-effort: evicts this account's oldest session(s) past the
+    // concurrent-session limit (self-serve accounts only). Never blocks
+    // or fails login over this - fire and forget. requireAuth reads the
+    // session cookie directly, so no bearer token is needed here.
+    fetch('/api/auth/enforce-session-limit', { method: 'POST' }).catch(() => {})
 
     router.push('/board')
   }

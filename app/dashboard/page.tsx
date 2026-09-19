@@ -9,8 +9,8 @@ import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { NewContentModal } from '@/components/board/NewContentModal'
-import { supabase } from '@/lib/supabase'
-import { useSessionGuard, resolveSession } from '@/lib/useSessionGuard'
+import { useSessionGuard } from '@/lib/useSessionGuard'
+import { performLogout } from '@/lib/auth'
 import type { Project } from '@/lib/types'
 
 interface AssignedAsset {
@@ -59,30 +59,17 @@ export default function DashboardPage() {
     if (ready && session) checkAuthAndLoad()
   }, [ready, session])
 
-  useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        resolveSession().then((confirmed) => {
-          if (!confirmed) router.push('/auth/login')
-        })
-      } else {
-        setToken(session.access_token)
-      }
-    })
-
-    return () => listener.subscription.unsubscribe()
-  }, [router])
-
   const checkAuthAndLoad = async () => {
     if (!session) return
     setToken(session.access_token)
 
-    const { data: memberships, error: membershipError } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('user_id', session.user.id)
-
-    if (membershipError) {
+    let roles: string[]
+    try {
+      const res = await fetch('/api/me/role')
+      if (!res.ok) throw new Error('role fetch failed')
+      const data = await res.json()
+      roles = data.roles ?? []
+    } catch {
       // Never redirect off a failed role check - show an error instead of
       // silently rendering the wrong view.
       setAuthError('Failed to verify your workspace role. Please refresh and try again.')
@@ -90,7 +77,6 @@ export default function DashboardPage() {
       return
     }
 
-    const roles = (memberships ?? []).map((m) => m.role)
     const currentRole = roles.includes('admin') ? 'admin' : roles.includes('editor') ? 'editor' : null
     setRole(currentRole)
 
@@ -164,8 +150,7 @@ export default function DashboardPage() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
+    await performLogout(router)
   }
 
   const filtered = projects.filter((p) =>
