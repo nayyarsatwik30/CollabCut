@@ -1,5 +1,5 @@
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth-migration/[...nextauth]/route'
+import { authOptions } from '@/lib/authOptions'
 import { migrationDb } from '@/lib/migrationDb'
 
 export async function getSessionUserId(): Promise<string | null> {
