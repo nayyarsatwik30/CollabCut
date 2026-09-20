@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Grid3X3, Kanban, Clock, Bell, Settings, ChevronDown, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { resolveSession } from '@/lib/useSessionGuard'
 import { useStorageUsage } from '@/lib/useStorageUsage'
 import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
 
@@ -20,42 +20,32 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  const { data: session, status } = useSession()
   const [unreadCount, setUnreadCount] = useState(0)
-  const [token, setToken] = useState('')
   const { usedBytes, workspacePlan, loading: usageLoading } = useStorageUsage()
 
+  const name = session?.user?.name ?? session?.user?.email ?? ''
+  const email = session?.user?.email ?? ''
+
   useEffect(() => {
-    loadUser()
-  }, [])
+    if (status === 'authenticated') fetchUnreadCount()
+  }, [status])
 
   // The notifications page dispatches this after marking one or all
   // notifications read, so the badge here (a separate mounted instance of
   // this component) reflects it without a full page reload.
   useEffect(() => {
-    const handler = () => { if (token) fetchUnreadCount(token) }
+    if (status !== 'authenticated') return
+    const handler = () => fetchUnreadCount()
     window.addEventListener('notifications:updated', handler)
     return () => window.removeEventListener('notifications:updated', handler)
-  }, [token])
+  }, [status])
 
-  const fetchUnreadCount = async (accessToken: string) => {
-    const res = await fetch('/api/notifications/unread-count', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+  const fetchUnreadCount = async () => {
+    const res = await fetch('/api/notifications/unread-count')
     if (res.ok) {
       const data = await res.json()
       setUnreadCount(data.count ?? 0)
-    }
-  }
-
-  const loadUser = async () => {
-    const session = await resolveSession()
-    if (session) {
-      setName(session.user.user_metadata?.name ?? session.user.email ?? 'User')
-      setEmail(session.user.email ?? '')
-      setToken(session.access_token)
-      await fetchUnreadCount(session.access_token)
     }
   }
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, getSession } from 'next-auth/react'
 
@@ -25,9 +25,14 @@ function toGuardSession(
   }
 }
 
-// Standalone session read for call sites outside a React render (Sidebar's
-// mount effect, useStorageUsage, the project page's account-switch check) -
-// hits NextAuth's /api/auth/session under the hood.
+// Standalone session read for call sites outside a React render (the
+// project page's account-switch check, fired from a Supabase auth-state
+// listener, not a mount effect) - hits NextAuth's /api/auth/session under
+// the hood with no caching. Don't call this from inside a component that's
+// already under AuthProvider's SessionProvider - use useSession() there
+// instead so you read the shared cached session rather than firing a new
+// network request (Sidebar and useStorageUsage used to make this mistake -
+// each mounted instance triggered its own /api/auth/session fetch).
 export async function resolveSession(): Promise<GuardSession | null> {
   const session = await getSession()
   return toGuardSession(session)
@@ -40,15 +45,30 @@ export async function resolveSession(): Promise<GuardSession | null> {
 export function useSessionGuard() {
   const router = useRouter()
   const { data, status } = useSession()
+  const userId = (data?.user as { id?: string } | undefined)?.id
+  const userEmail = data?.user?.email
+  const userName = data?.user?.name
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login')
   }, [status, router])
 
-  return {
-    session: status === 'authenticated' ? toGuardSession(data) : null,
-    ready: status === 'authenticated',
-  }
+  // toGuardSession builds a brand new object every call. Without memoizing
+  // it here, every page that does useEffect(..., [ready, session]) (dashboard,
+  // review, board, settings) would see a new `session` reference on every
+  // single re-render of that page - not just on actual sign-in/sign-out -
+  // and re-run its effect every time. On the board page in particular this
+  // reloads the whole board (setLoading(true), full BoardSkeleton swap) on
+  // every unrelated state update, which can also feed back into itself via
+  // setAssets triggering another re-render. Keying the memo on the primitive
+  // fields that actually determine the output keeps the reference stable
+  // across renders where the underlying session hasn't actually changed.
+  const session = useMemo(
+    () => (status === 'authenticated' ? toGuardSession(data) : null),
+    [status, userId, userEmail, userName]
+  )
+
+  return { session, ready: status === 'authenticated' }
 }
 
 // The mirror image, for pages that should skip straight past their own
