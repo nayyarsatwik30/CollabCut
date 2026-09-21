@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { X, Plus } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { useSession } from 'next-auth/react'
 
 interface NewContentModalProps {
   onClose: () => void
@@ -10,6 +10,7 @@ interface NewContentModalProps {
 }
 
 export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
+  const { data: session, status } = useSession()
   const [title, setTitle] = useState('')
   const [client, setClient] = useState('')
   const [rawFileUrl, setRawFileUrl] = useState('')
@@ -28,14 +29,12 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
 
     setSubmitting(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setError('Not logged in'); setSubmitting(false); return }
+      if (status !== 'authenticated' || !session) { setError('Not logged in'); setSubmitting(false); return }
 
       const res = await fetch('/api/assets/new-content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           title: title.trim(),

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { X, Upload, CheckCircle, AlertCircle } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { useSession } from 'next-auth/react'
 
 interface UploadModalProps {
   projectId: string
@@ -16,6 +16,7 @@ interface UploadModalProps {
 type UploadState = 'idle' | 'requesting' | 'uploading' | 'processing' | 'done' | 'error'
 
 export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutType = 'board', fulfillAssetId }: UploadModalProps) {
+  const { data: session, status } = useSession()
   const fileRef = useRef<HTMLInputElement>(null)
   const [state, setState] = useState<UploadState>('idle')
   const [progress, setProgress] = useState(0)
@@ -37,16 +38,13 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
     setError('')
 
     try {
-      // Get auth token
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setError('Not logged in'); setState('error'); return }
+      if (status !== 'authenticated' || !session) { setError('Not logged in'); setState('error'); return }
 
       // Request Mux upload URL from our API
       const res = await fetch('/api/assets/upload', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           project_id: projectId,
@@ -70,7 +68,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
       await uploadToMux(file, upload_url)
 
       setState('processing')
-      await waitUntilReady(asset.id, session.access_token)
+      await waitUntilReady(asset.id)
       if (cancelledRef.current) return
 
       setState('done')
@@ -90,13 +88,11 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
   const POLL_INTERVAL_MS = 3000
   const POLL_TIMEOUT_MS = 10 * 60 * 1000
 
-  const waitUntilReady = async (assetId: string, token: string): Promise<void> => {
+  const waitUntilReady = async (assetId: string): Promise<void> => {
     const deadline = Date.now() + POLL_TIMEOUT_MS
     while (Date.now() < deadline) {
       if (cancelledRef.current) return
-      const res = await fetch(`/api/assets/${assetId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(`/api/assets/${assetId}`)
       if (res.ok) {
         const { asset } = await res.json()
         if (asset.mux_playback_id) return
