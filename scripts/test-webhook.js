@@ -31,7 +31,7 @@ const body = JSON.stringify({
 const timestamp = Math.floor(Date.now() / 1000)
 const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex')
 
-fetch('http://localhost:3000/api/auth-migration/webhooks/mux', {
+fetch('http://localhost:3000/api/webhooks/mux', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
