@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
-import { video } from '@/lib/mux'
+import { video, getCorsOrigin } from '@/lib/mux'
 import { syncProjectStatus } from '@/lib/project-status'
 import { notifyWorkspaceAdmins } from '@/lib/notifications'
 import { requireAuth } from '@/lib/api-auth'
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     if (target.mux_upload_id) return NextResponse.json({ error: 'This asset already has a file' }, { status: 400 })
 
     const upload = await video.uploads.create({
-      cors_origin: process.env.NEXT_PUBLIC_APP_URL!,
+      cors_origin: getCorsOrigin(req),
       new_asset_settings: {
         playback_policy: ['public'],
         mp4_support: 'capped-1080p',
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
   const nextVersion = linkedHead ? linkedHead.version + 1 : 1
 
   const upload = await video.uploads.create({
-    cors_origin: process.env.NEXT_PUBLIC_APP_URL!,
+    cors_origin: getCorsOrigin(req),
     new_asset_settings: {
       playback_policy: ['public'],
       mp4_support: 'capped-1080p',

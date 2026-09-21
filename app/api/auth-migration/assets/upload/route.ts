@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
-import { video } from '@/lib/mux'
+import { video, getCorsOrigin } from '@/lib/mux'
 import { getSessionUserId } from '@/lib/migrationAuth'
 
 export async function POST(req: Request) {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   }
 
   const upload = await video.uploads.create({
-    cors_origin: process.env.NEXT_PUBLIC_APP_URL!,
+    cors_origin: getCorsOrigin(req),
     new_asset_settings: {
       playback_policy: ['public'],
       mp4_support: 'capped-1080p',
