@@ -196,7 +196,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   }
 
   const handleAddComment = useCallback(async (text: string, status: CommentStatus) => {
-    if (!token || !asset) return
+    if (!asset) return false
     const res = await fetch('/api/comments', {
       method: 'POST',
       headers: {
@@ -215,7 +215,9 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       const data = await res.json()
       setComments((prev) => [...prev, { ...data.comment, replies: [] }].sort((a, b) => a.time_sec - b.time_sec))
       showToast('Note added', 'success')
+      return true
     }
+    return false
   }, [currentTime, asset, token, userName, showToast])
 
   const handleResolve = useCallback(async (id: string) => {
