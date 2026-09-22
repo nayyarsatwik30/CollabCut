@@ -8,3 +8,4 @@ build
 .env.migration
 tsconfig.tsbuildinfo
 supabase/.temp
+backups/
