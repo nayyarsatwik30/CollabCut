@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './supabase-admin'
+import { migrationDb } from './migrationDb'
 import { verifySharePassword } from './share-password'
 
 export interface PublicShareVersion {
@@ -36,22 +36,22 @@ export type PublicShareLinkResult =
 // lineage instead of one pinned asset row, so a link automatically picks up
 // versions uploaded after it was created.
 export async function getPublicShareLink(token: string): Promise<PublicShareLinkResult> {
-  const { data, error } = await supabaseAdmin
-    .from('share_links')
-    .select('token, expires_at, downloads_disabled, comments_only, password_hash, asset_group_id')
-    .eq('token', token)
-    .single()
+  const linkResult = await migrationDb.query(
+    `SELECT token, expires_at, downloads_disabled, comments_only, password_hash, asset_group_id
+     FROM share_links WHERE token = $1`,
+    [token]
+  )
+  const data = linkResult.rows[0]
 
-  if (error || !data) return { status: 'not_found' }
+  if (!data) return { status: 'not_found' }
   if (data.expires_at && new Date(data.expires_at) < new Date()) return { status: 'expired' }
 
-  const { data: rows, error: versionsError } = await supabaseAdmin
-    .from('assets')
-    .select('id, version, name, status, created_at, size_bytes, mux_playback_id, mux_upload_id, is_complete, deleted_at')
-    .eq('asset_group_id', data.asset_group_id)
-    .order('version', { ascending: false })
-
-  if (versionsError || !rows) return { status: 'not_found' }
+  const versionsResult = await migrationDb.query(
+    `SELECT id, version, name, status, created_at, size_bytes, mux_playback_id, mux_upload_id, is_complete, deleted_at
+     FROM assets WHERE asset_group_id = $1 ORDER BY version DESC`,
+    [data.asset_group_id]
+  )
+  const rows = versionsResult.rows
 
   const versions = rows.filter((v) => !v.deleted_at).map(({ deleted_at, ...v }) => v)
   if (versions.length === 0) return { status: 'not_found' } // whole lineage soft-deleted
@@ -84,20 +84,20 @@ export async function verifyShareAccess(
   token: string,
   password: string | null,
 ): Promise<boolean> {
-  const { data: shareLink, error } = await supabaseAdmin
-    .from('share_links')
-    .select('asset_group_id, expires_at, password_hash')
-    .eq('token', token)
-    .maybeSingle()
+  const shareLinkResult = await migrationDb.query(
+    `SELECT asset_group_id, expires_at, password_hash FROM share_links WHERE token = $1`,
+    [token]
+  )
+  const shareLink = shareLinkResult.rows[0]
 
-  if (error || !shareLink) return false
+  if (!shareLink) return false
   if (shareLink.expires_at && new Date(shareLink.expires_at) < new Date()) return false
 
-  const { data: version } = await supabaseAdmin
-    .from('assets')
-    .select('asset_group_id, deleted_at')
-    .eq('id', assetId)
-    .maybeSingle()
+  const versionResult = await migrationDb.query(
+    `SELECT asset_group_id, deleted_at FROM assets WHERE id = $1`,
+    [assetId]
+  )
+  const version = versionResult.rows[0]
 
   if (!version || version.deleted_at) return false
   if (version.asset_group_id !== shareLink.asset_group_id) return false

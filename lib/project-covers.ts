@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { migrationDb } from '@/lib/migrationDb'
 
 // A project's cover is pinned to the first asset (any cut_type) that ever
 // finished Mux processing in it - the pin is set once, in the Mux webhook
@@ -11,7 +11,6 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export async function attachCoverPlaybackIds<
   T extends { id: string; cover_asset_id?: string | null }
 >(
-  supabaseAdmin: SupabaseClient,
   projects: T[],
 ): Promise<(T & { cover_playback_id: string | null })[]> {
   const pinnedIds = projects
@@ -23,12 +22,12 @@ export async function attachCoverPlaybackIds<
   // currently on these projects in one query.
   const validPinned: Record<string, string> = {}
   if (pinnedIds.length > 0) {
-    const { data: pinnedAssets } = await supabaseAdmin
-      .from('assets')
-      .select('id, mux_playback_id, deleted_at')
-      .in('id', pinnedIds)
+    const pinnedAssets = await migrationDb.query(
+      `SELECT id, mux_playback_id, deleted_at FROM assets WHERE id = ANY($1)`,
+      [pinnedIds]
+    )
 
-    for (const a of pinnedAssets ?? []) {
+    for (const a of pinnedAssets.rows) {
       if (!a.deleted_at && a.mux_playback_id) validPinned[a.id] = a.mux_playback_id
     }
   }
@@ -38,15 +37,14 @@ export async function attachCoverPlaybackIds<
 
   const earliestByProject: Record<string, { id: string; mux_playback_id: string }> = {}
   if (needsPin.length > 0) {
-    const { data: candidates } = await supabaseAdmin
-      .from('assets')
-      .select('id, project_id, mux_playback_id, created_at')
-      .in('project_id', needsPin.map((p) => p.id))
-      .is('deleted_at', null)
-      .not('mux_playback_id', 'is', null)
-      .order('created_at', { ascending: true })
+    const candidates = await migrationDb.query(
+      `SELECT id, project_id, mux_playback_id, created_at FROM assets
+       WHERE project_id = ANY($1) AND deleted_at IS NULL AND mux_playback_id IS NOT NULL
+       ORDER BY created_at ASC`,
+      [needsPin.map((p) => p.id)]
+    )
 
-    for (const a of candidates ?? []) {
+    for (const a of candidates.rows) {
       if (!earliestByProject[a.project_id]) {
         earliestByProject[a.project_id] = { id: a.id, mux_playback_id: a.mux_playback_id }
       }
@@ -60,13 +58,15 @@ export async function attachCoverPlaybackIds<
       needsPin.map((p) => {
         const pin = earliestByProject[p.id]
         if (!pin) return null
-        const query = supabaseAdmin
-          .from('projects')
-          .update({ cover_asset_id: pin.id, cover_playback_id: pin.mux_playback_id })
-          .eq('id', p.id)
         return p.cover_asset_id
-          ? query.eq('cover_asset_id', p.cover_asset_id)
-          : query.is('cover_asset_id', null)
+          ? migrationDb.query(
+              `UPDATE projects SET cover_asset_id = $1, cover_playback_id = $2 WHERE id = $3 AND cover_asset_id = $4`,
+              [pin.id, pin.mux_playback_id, p.id, p.cover_asset_id]
+            )
+          : migrationDb.query(
+              `UPDATE projects SET cover_asset_id = $1, cover_playback_id = $2 WHERE id = $3 AND cover_asset_id IS NULL`,
+              [pin.id, pin.mux_playback_id, p.id]
+            )
       })
     )
   }

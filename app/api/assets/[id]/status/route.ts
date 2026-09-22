@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { syncProjectStatus } from '@/lib/project-status'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
 
@@ -18,15 +18,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'Invalid pipeline_status' }, { status: 400 })
   }
 
-  const { data: asset } = await supabaseAdmin
-    .from('assets')
-    .select('project_id, projects!assets_project_id_fkey(workspace_id)')
-    .eq('id', params.id)
-    .single()
+  const assetResult = await migrationDb.query(
+    `SELECT a.project_id, p.workspace_id FROM assets a LEFT JOIN projects p ON p.id = a.project_id WHERE a.id = $1`,
+    [params.id]
+  )
+  const asset = assetResult.rows[0]
 
-  const workspaceId = asset?.projects
-    ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
-    : null
+  const workspaceId = asset?.workspace_id ?? null
 
   const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, user.id, 'admin') : false
 
@@ -39,19 +37,25 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const isApproved = pipeline_status === 'approved'
 
-  const { data, error } = await supabaseAdmin
-    .from('assets')
-    .update({
+  const updateResult = await migrationDb.query(
+    `UPDATE assets SET
+       pipeline_status = $1,
+       is_complete = $2,
+       marked_complete_by = $3,
+       marked_complete_at = $4
+     WHERE id = $5
+     RETURNING *`,
+    [
       pipeline_status,
-      is_complete: isApproved,
-      marked_complete_by: isApproved ? user.id : null,
-      marked_complete_at: isApproved ? new Date().toISOString() : null,
-    })
-    .eq('id', params.id)
-    .select()
-    .single()
+      isApproved,
+      isApproved ? user.id : null,
+      isApproved ? new Date().toISOString() : null,
+      params.id,
+    ]
+  )
+  const data = updateResult.rows[0]
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (data.project_id) await syncProjectStatus(data.project_id)
   return NextResponse.json({ asset: data })
 }

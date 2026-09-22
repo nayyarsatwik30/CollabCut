@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -7,28 +7,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if ('error' in auth) return auth.error
     const { user } = auth
 
-    const { data: asset } = await supabaseAdmin
-        .from('assets')
-        .select('projects!assets_project_id_fkey(workspace_id)')
-        .eq('id', params.id)
-        .single()
+    const assetResult = await migrationDb.query(
+        `SELECT p.workspace_id FROM assets a LEFT JOIN projects p ON p.id = a.project_id WHERE a.id = $1`,
+        [params.id]
+    )
+    const asset = assetResult.rows[0]
 
     if (!asset) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const workspaceId = asset.projects
-        ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
-        : null
+    const workspaceId = asset.workspace_id ?? null
 
     const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, user.id, 'admin') : false
     const authorized = isAdmin || await isAssignedEditor(params.id, user.id)
 
     if (!authorized) return NextResponse.json({ error: 'Not authorized to delete this asset' }, { status: 403 })
 
-    const { error } = await supabaseAdmin
-        .from('assets')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', params.id)
+    await migrationDb.query(`UPDATE assets SET deleted_at = $1 WHERE id = $2`, [new Date().toISOString(), params.id])
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ success: true })
 }

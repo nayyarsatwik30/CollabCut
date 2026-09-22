@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Check, X, LogOut, Copy } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
-import { supabase } from '@/lib/supabase'
+import { useSession } from 'next-auth/react'
 import { performLogout } from '@/lib/auth'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { useStorageUsage } from '@/lib/useStorageUsage'
@@ -31,6 +31,7 @@ interface Plan {
 export default function SettingsPage() {
   const router = useRouter()
   const { session, ready } = useSessionGuard()
+  const { update: updateSession } = useSession()
   const { usedBytes, workspacePlan, loading: usageLoading } = useStorageUsage()
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
   const [tab, setTab] = useState<Tab>('profile')
@@ -65,14 +66,12 @@ export default function SettingsPage() {
     setEmail(session.user.email ?? '')
 
     // Fetch user's plan_id from profiles table
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('plan_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (profile?.plan_id) {
-      setUserPlanId(profile.plan_id)
+    const profileRes = await fetch('/api/me/profile')
+    if (profileRes.ok) {
+      const profile = await profileRes.json()
+      if (profile?.plan_id) {
+        setUserPlanId(profile.plan_id)
+      }
     }
 
     // Fetch all plans from /api/plans
@@ -87,43 +86,22 @@ export default function SettingsPage() {
     }
 
     // Find a workspace where the user is an admin, so we can offer invites
-    const { data: membership } = await supabase
-      .from('workspace_members')
-      .select('workspace_id, workspaces(name, invite_code, workspace_plan_id, workspace_plans(id, name, storage_gb, max_admins, max_editors))')
-      .eq('user_id', session.user.id)
-      .eq('role', 'admin')
-      .limit(1)
-      .maybeSingle()
-
-    if (membership) {
-      const workspace = Array.isArray(membership.workspaces) ? membership.workspaces[0] : membership.workspaces
-      const planRaw = workspace?.workspace_plans
-      const workspacePlan = (Array.isArray(planRaw) ? planRaw[0] : planRaw) ?? null
-      setAdminWorkspace({
-        id: membership.workspace_id,
-        name: workspace?.name ?? 'Workspace',
-        invite_code: workspace?.invite_code ?? '',
-        workspacePlan,
-      })
+    const workspaceRes = await fetch('/api/workspaces')
+    if (workspaceRes.ok) {
+      const { workspace } = await workspaceRes.json()
+      if (workspace) setAdminWorkspace(workspace)
     }
 
     setLoading(false)
   }
 
   const ensureWorkspace = async () => {
+    if (!session) return
     setProvisioningWorkspace(true)
     setWorkspaceError('')
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      setProvisioningWorkspace(false)
-      return
-    }
 
     try {
-      const res = await fetch('/api/workspaces', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
+      const res = await fetch('/api/workspaces', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
         setWorkspaceError(data.error ?? 'Failed to set up your workspace')
@@ -137,7 +115,17 @@ export default function SettingsPage() {
   }
 
   const saveChanges = async () => {
-    await supabase.auth.updateUser({ data: { name } })
+    const res = await fetch('/api/me/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    if (res.ok) {
+      // Refreshes the JWT session so every mounted component reading
+      // session.user.name (Sidebar, review page) picks up the new name -
+      // see the trigger === 'update' branch in authOptions.ts's jwt callback.
+      await updateSession({ name })
+    }
   }
 
   const handleLogout = async () => {
@@ -151,18 +139,18 @@ export default function SettingsPage() {
 
   const handleSelectPlan = async (newPlanId: string) => {
     setUpdatingPlan(true)
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.user?.id) {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ plan_id: newPlanId })
-        .eq('id', session.user.id)
+    if (session) {
+      const res = await fetch('/api/me/plan', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_id: newPlanId }),
+      })
 
-      if (!error) {
+      if (res.ok) {
         setUserPlanId(newPlanId)
         setIsModalOpen(false)
       } else {
-        console.error('Failed to update plan:', error)
+        console.error('Failed to update plan:', await res.json().catch(() => null))
       }
     }
     setUpdatingPlan(false)

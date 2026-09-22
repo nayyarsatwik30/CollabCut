@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -7,23 +7,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data: comment } = await supabaseAdmin
-    .from('comments')
-    .select('asset_id')
-    .eq('id', params.id)
-    .single()
+  const commentResult = await migrationDb.query(
+    `SELECT asset_id FROM comments WHERE id = $1`,
+    [params.id]
+  )
+  const comment = commentResult.rows[0]
 
   if (!comment) return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
 
-  const { data: asset } = await supabaseAdmin
-    .from('assets')
-    .select('projects!assets_project_id_fkey(workspace_id)')
-    .eq('id', comment.asset_id)
-    .single()
-
-  const workspaceId = asset?.projects
-    ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
-    : null
+  const assetResult = await migrationDb.query(
+    `SELECT p.workspace_id FROM assets a
+     JOIN projects p ON p.id = a.project_id
+     WHERE a.id = $1`,
+    [comment.asset_id]
+  )
+  const workspaceId = assetResult.rows[0]?.workspace_id ?? null
 
   const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, user.id, 'admin') : false
   const authorized = isAdmin || await isAssignedEditor(comment.asset_id, user.id)
@@ -40,15 +38,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('comments')
-    .update(updates)
-    .eq('id', params.id)
-    .select()
-    .single()
+  const setClauses = Object.keys(updates).map((field, i) => `${field} = $${i + 2}`)
+  const result = await migrationDb.query(
+    `UPDATE comments SET ${setClauses.join(', ')} WHERE id = $1 RETURNING *`,
+    [params.id, ...Object.values(updates)]
+  )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ comment: data })
+  return NextResponse.json({ comment: result.rows[0] })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
@@ -56,37 +52,31 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data: comment } = await supabaseAdmin
-    .from('comments')
-    .select('author_id, asset_id')
-    .eq('id', params.id)
-    .single()
+  const commentResult = await migrationDb.query(
+    `SELECT author_id, asset_id FROM comments WHERE id = $1`,
+    [params.id]
+  )
+  const comment = commentResult.rows[0]
 
   if (!comment) return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
 
   let authorized = comment.author_id === user.id
 
   if (!authorized) {
-    const { data: asset } = await supabaseAdmin
-      .from('assets')
-      .select('projects!assets_project_id_fkey(workspace_id)')
-      .eq('id', comment.asset_id)
-      .single()
-
-    const workspaceId = asset?.projects
-      ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
-      : null
+    const assetResult = await migrationDb.query(
+      `SELECT p.workspace_id FROM assets a
+       JOIN projects p ON p.id = a.project_id
+       WHERE a.id = $1`,
+      [comment.asset_id]
+    )
+    const workspaceId = assetResult.rows[0]?.workspace_id ?? null
 
     authorized = workspaceId ? await hasWorkspaceRole(workspaceId, user.id, 'admin') : false
   }
 
   if (!authorized) return NextResponse.json({ error: 'Not authorized to delete this comment' }, { status: 403 })
 
-  const { error } = await supabaseAdmin
-    .from('comments')
-    .delete()
-    .eq('id', params.id)
+  await migrationDb.query(`DELETE FROM comments WHERE id = $1`, [params.id])
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

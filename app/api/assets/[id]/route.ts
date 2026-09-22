@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -8,30 +8,28 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   // run them concurrently instead of paying for both round trips in series.
   const [auth, assetMetaResult] = await Promise.all([
     requireAuth(req),
-    supabaseAdmin.from('assets').select('projects!assets_project_id_fkey(workspace_id)').eq('id', params.id).single(),
+    migrationDb.query(
+      `SELECT p.workspace_id FROM assets a LEFT JOIN projects p ON p.id = a.project_id WHERE a.id = $1`,
+      [params.id]
+    ),
   ])
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data: assetMeta } = assetMetaResult
+  const assetMeta = assetMetaResult.rows[0]
   if (!assetMeta) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const workspaceId = assetMeta.projects
-    ? (Array.isArray(assetMeta.projects) ? assetMeta.projects[0]?.workspace_id : (assetMeta.projects as any).workspace_id)
-    : null
+  const workspaceId = assetMeta.workspace_id ?? null
 
   const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, user.id, 'admin') : false
   const authorized = isAdmin || await isAssignedEditor(params.id, user.id)
 
   if (!authorized) return NextResponse.json({ error: 'Not authorized to view this asset' }, { status: 403 })
 
-  const { data, error } = await supabaseAdmin
-    .from('assets')
-    .select('*')
-    .eq('id', params.id)
-    .single()
+  const dataResult = await migrationDb.query(`SELECT * FROM assets WHERE id = $1`, [params.id])
+  const data = dataResult.rows[0]
 
-  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   // Content Brief (raw_file_url/notes/reference/deadline) is only ever set on
   // the original New Content placeholder row, not on later versions - it's a
@@ -40,13 +38,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   // version-history endpoint uses) regardless of which version is being
   // viewed here.
   if (data.asset_group_id) {
-    const { data: origin } = await supabaseAdmin
-      .from('assets')
-      .select('raw_file_url, notes, reference, deadline')
-      .eq('asset_group_id', data.asset_group_id)
-      .order('version', { ascending: true })
-      .limit(1)
-      .single()
+    const originResult = await migrationDb.query(
+      `SELECT raw_file_url, notes, reference, deadline FROM assets
+       WHERE asset_group_id = $1 ORDER BY version ASC LIMIT 1`,
+      [data.asset_group_id]
+    )
+    const origin = originResult.rows[0]
 
     if (origin) {
       data.raw_file_url = origin.raw_file_url

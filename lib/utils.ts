@@ -65,3 +65,14 @@ export function clamp(value: number, min: number, max: number): number {
 export function mockShareToken(): string {
   return Math.random().toString(36).slice(2, 10)
 }
+
+/** Mux static-rendition MP4 URL for a playback ID (capped-1080p, enabled on every asset via mp4_support) */
+export function muxDownloadUrl(playbackId: string): string {
+  return `https://stream.mux.com/${playbackId}/capped-1080p.mp4`
+}
+
+/** Filename for a downloaded cut - the asset's name (any existing extension stripped) plus its version */
+export function buildDownloadFilename(name: string, version: number): string {
+  const base = name.replace(/\.[^./\\]+$/, '')
+  return `${base} v${version}.mp4`
+}

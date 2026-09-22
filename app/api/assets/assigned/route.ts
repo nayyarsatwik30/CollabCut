@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest) {
@@ -7,29 +7,26 @@ export async function GET(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data, error } = await supabaseAdmin
-    .from('asset_editors')
-    .select('assets(id, name, status, is_complete, deleted_at, mux_playback_id, projects!assets_project_id_fkey(id, name, client))')
-    .eq('editor_id', user.id)
+  const { rows } = await migrationDb.query(
+    `SELECT a.id, a.name, a.status, a.is_complete, a.mux_playback_id,
+            p.id AS project_id, p.name AS project_name, p.client AS project_client
+     FROM asset_editors ae
+     JOIN assets a ON a.id = ae.asset_id
+     LEFT JOIN projects p ON p.id = a.project_id
+     WHERE ae.editor_id = $1 AND a.deleted_at IS NULL`,
+    [user.id]
+  )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  const assets = (data ?? [])
-    .map((row: any) => (Array.isArray(row.assets) ? row.assets[0] : row.assets))
-    .filter((asset: any) => asset && !asset.deleted_at)
-    .map((asset: any) => {
-      const project = Array.isArray(asset.projects) ? asset.projects[0] : asset.projects
-      return {
-        id: asset.id,
-        name: asset.name,
-        status: asset.status,
-        is_complete: asset.is_complete,
-        mux_playback_id: asset.mux_playback_id ?? null,
-        project_id: project?.id ?? null,
-        project_name: project?.name ?? 'Untitled project',
-        project_client: project?.client ?? '',
-      }
-    })
+  const assets = rows.map((asset: any) => ({
+    id: asset.id,
+    name: asset.name,
+    status: asset.status,
+    is_complete: asset.is_complete,
+    mux_playback_id: asset.mux_playback_id ?? null,
+    project_id: asset.project_id ?? null,
+    project_name: asset.project_name ?? 'Untitled project',
+    project_client: asset.project_client ?? '',
+  }))
 
   return NextResponse.json({ assets })
 }

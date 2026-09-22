@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Lock, MessageSquare, Send, Layers, ChevronDown, Check, X } from 'lucide-react'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { Avatar } from '@/components/ui/Badge'
-import { formatTimecode } from '@/lib/utils'
+import { formatTimecode, muxDownloadUrl, buildDownloadFilename } from '@/lib/utils'
 
 const NAME_STORAGE_KEY = 'dailies_reviewer_name'
 
@@ -238,6 +238,8 @@ export default function PublicReviewClient({ token }: { token: string }) {
   const muxSrc = asset.mux_playback_id ? `https://stream.mux.com/${asset.mux_playback_id}.m3u8` : undefined
   const videoNotReady = !asset.mux_upload_id
   const hideDownload = shareLink.downloads_disabled || shareLink.comments_only
+  const downloadUrl = asset.mux_playback_id ? muxDownloadUrl(asset.mux_playback_id) : undefined
+  const downloadName = buildDownloadFilename(asset.name, asset.version)
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-th-bg">
@@ -311,6 +313,8 @@ export default function PublicReviewClient({ token }: { token: string }) {
               onTimeUpdate={setCurrentTime}
               approved={asset.is_complete}
               hideDownload={hideDownload}
+              downloadUrl={downloadUrl}
+              downloadFilename={downloadName}
             />
           )}
         </div>
@@ -410,7 +414,15 @@ export default function PublicReviewClient({ token }: { token: string }) {
                     const v1Src = selV1?.mux_playback_id
                       ? `https://stream.mux.com/${selV1.mux_playback_id}.m3u8`
                       : undefined
-                    return <VideoPlayer src={v1Src} comments={[]} hideDownload={hideDownload} />
+                    return (
+                      <VideoPlayer
+                        src={v1Src}
+                        comments={[]}
+                        hideDownload={hideDownload}
+                        downloadUrl={selV1?.mux_playback_id ? muxDownloadUrl(selV1.mux_playback_id) : undefined}
+                        downloadFilename={selV1 ? buildDownloadFilename(selV1.name, selV1.version) : undefined}
+                      />
+                    )
                   })()}
                 </div>
               </div>
@@ -436,7 +448,15 @@ export default function PublicReviewClient({ token }: { token: string }) {
                     const v2Src = selV2?.mux_playback_id
                       ? `https://stream.mux.com/${selV2.mux_playback_id}.m3u8`
                       : undefined
-                    return <VideoPlayer src={v2Src} comments={[]} hideDownload={hideDownload} />
+                    return (
+                      <VideoPlayer
+                        src={v2Src}
+                        comments={[]}
+                        hideDownload={hideDownload}
+                        downloadUrl={selV2?.mux_playback_id ? muxDownloadUrl(selV2.mux_playback_id) : undefined}
+                        downloadFilename={selV2 ? buildDownloadFilename(selV2.name, selV2.version) : undefined}
+                      />
+                    )
                   })()}
                 </div>
               </div>

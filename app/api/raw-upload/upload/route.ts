@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
-import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireAuth, hasWorkspaceRole } from '@/lib/api-auth'
+import { migrationDb } from '@/lib/migrationDb'
 import { b2, B2_BUCKET } from '@/lib/b2'
 import { MAX_RAW_FILE_BYTES } from '@/lib/raw-files'
 
@@ -29,11 +29,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'File exceeds the 750MB archival limit' }, { status: 400 })
   }
 
-  const { data: project } = await supabaseAdmin
-    .from('projects')
-    .select('workspace_id')
-    .eq('id', projectId)
-    .maybeSingle()
+  const projectResult = await migrationDb.query(
+    `SELECT workspace_id FROM projects WHERE id = $1`,
+    [projectId]
+  )
+  const project = projectResult.rows[0]
 
   if (!project?.workspace_id) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
@@ -51,19 +51,12 @@ export async function POST(req: NextRequest) {
     ContentType: contentType,
   }))
 
-  const { data, error } = await supabaseAdmin
-    .from('raw_files')
-    .insert({
-      project_id: projectId,
-      uploaded_by: user.id,
-      file_name: file.name,
-      b2_key: b2Key,
-      file_size_bytes: file.size,
-      content_type: contentType,
-    })
-    .select()
-    .single()
+  const insertResult = await migrationDb.query(
+    `INSERT INTO raw_files (project_id, uploaded_by, file_name, b2_key, file_size_bytes, content_type)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING *`,
+    [projectId, user.id, file.name, b2Key, file.size, contentType]
+  )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ rawFile: data }, { status: 201 })
+  return NextResponse.json({ rawFile: insertResult.rows[0] }, { status: 201 })
 }

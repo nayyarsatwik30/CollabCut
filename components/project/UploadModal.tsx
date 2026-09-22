@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Upload, CheckCircle, AlertCircle } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { useSession } from 'next-auth/react'
 
 interface UploadModalProps {
   projectId: string
@@ -16,12 +16,16 @@ interface UploadModalProps {
 type UploadState = 'idle' | 'requesting' | 'uploading' | 'processing' | 'done' | 'error'
 
 export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutType = 'board', fulfillAssetId }: UploadModalProps) {
+  const { data: session, status } = useSession()
   const fileRef = useRef<HTMLInputElement>(null)
   const [state, setState] = useState<UploadState>('idle')
   const [progress, setProgress] = useState(0)
   const [fileName, setFileName] = useState('')
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const cancelledRef = useRef(false)
+
+  useEffect(() => () => { cancelledRef.current = true }, [])
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith('video/')) {
@@ -34,16 +38,13 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
     setError('')
 
     try {
-      // Get auth token
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setError('Not logged in'); setState('error'); return }
+      if (status !== 'authenticated' || !session) { setError('Not logged in'); setState('error'); return }
 
       // Request Mux upload URL from our API
       const res = await fetch('/api/assets/upload', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           project_id: projectId,
@@ -60,22 +61,45 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
         throw new Error(err.error ?? 'Failed to get upload URL')
       }
 
-      const { upload_url } = await res.json()
+      const { upload_url, asset } = await res.json()
 
       // Upload directly to Mux
       setState('uploading')
       await uploadToMux(file, upload_url)
 
       setState('processing')
-      setTimeout(() => {
-        setState('done')
-        onUploaded()
-      }, 2000)
+      await waitUntilReady(asset.id)
+      if (cancelledRef.current) return
+
+      setState('done')
+      onUploaded()
 
     } catch (err: any) {
+      if (cancelledRef.current) return
       setError(err.message ?? 'Upload failed')
       setState('error')
     }
+  }
+
+  // Mux transcodes asynchronously after the transfer finishes - poll until
+  // mux_playback_id is actually set instead of assuming completion. Capped
+  // so an unusually slow or stuck asset surfaces as an error rather than
+  // spinning forever.
+  const POLL_INTERVAL_MS = 3000
+  const POLL_TIMEOUT_MS = 10 * 60 * 1000
+
+  const waitUntilReady = async (assetId: string): Promise<void> => {
+    const deadline = Date.now() + POLL_TIMEOUT_MS
+    while (Date.now() < deadline) {
+      if (cancelledRef.current) return
+      const res = await fetch(`/api/assets/${assetId}`)
+      if (res.ok) {
+        const { asset } = await res.json()
+        if (asset.mux_playback_id) return
+      }
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+    }
+    throw new Error('Mux is taking longer than expected to process this video')
   }
 
   const uploadToMux = (file: File, url: string): Promise<void> => {
@@ -193,7 +217,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
             <div className="py-8 text-center">
               <div className="w-8 h-8 rounded-full border-2 border-th-accent border-t-transparent animate-spin mx-auto mb-4" />
               <p className="font-semibold mb-1">Upload complete</p>
-              <p className="text-[12px] text-th-muted">Mux is processing your video…</p>
+              <p className="text-[12px] text-th-muted">Mux is processing your video — usually 1–2 minutes…</p>
             </div>
           )}
 
@@ -203,7 +227,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
               <CheckCircle size={36} className="mx-auto mb-3" style={{ color: 'var(--th-resolved)' }} />
               <p className="font-semibold mb-1">Video uploaded!</p>
               <p className="text-[12px] text-th-muted mb-5">
-                It will be ready to review in 1–2 minutes while Mux transcodes it.
+                Your video has finished processing and is ready to review.
               </p>
               <button onClick={onClose}
                 className="px-6 py-2.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press">

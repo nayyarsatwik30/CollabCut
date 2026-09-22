@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest) {
@@ -15,53 +15,45 @@ export async function POST(req: NextRequest) {
 
   // Same workspace_members lookup used in GET /api/board and POST /api/projects,
   // narrowed to strictly 'admin' since creating New Content is admin-only.
-  const { data: memberships } = await supabaseAdmin
-    .from('workspace_members')
-    .select('workspace_id, role')
-    .eq('user_id', user.id)
+  const membershipsResult = await migrationDb.query(
+    `SELECT workspace_id, role FROM workspace_members WHERE user_id = $1`,
+    [user.id]
+  )
 
-  const adminMembership = (memberships ?? []).find((m) => m.role === 'admin')
+  const adminMembership = membershipsResult.rows.find((m) => m.role === 'admin')
   if (!adminMembership) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
   }
 
   // New Content always creates a brand new project - Title becomes the
   // project name - and a placeholder asset inside it with no file yet.
-  const { data: project, error: projectError } = await supabaseAdmin
-    .from('projects')
-    .insert({
-      name: title.trim(),
-      client: client?.trim() || '',
-      emoji: '🎬',
-      owner_id: user.id,
-      workspace_id: adminMembership.workspace_id,
-    })
-    .select()
-    .single()
-
-  if (projectError) return NextResponse.json({ error: projectError.message }, { status: 500 })
+  const projectResult = await migrationDb.query(
+    `INSERT INTO projects (name, client, emoji, owner_id, workspace_id)
+     VALUES ($1,$2,$3,$4,$5)
+     RETURNING *`,
+    [title.trim(), client?.trim() || '', '🎬', user.id, adminMembership.workspace_id]
+  )
+  const project = projectResult.rows[0]
 
   const newAssetId = randomUUID()
 
-  const { data: asset, error: assetError } = await supabaseAdmin
-    .from('assets')
-    .insert({
-      id: newAssetId,
-      project_id: project.id,
-      uploaded_by: user.id,
-      name: title.trim(),
-      cut_type: 'board',
-      pipeline_status: 'idea',
-      raw_file_url: raw_file_url || null,
-      notes: notes || null,
-      reference: reference || null,
-      deadline: deadline || null,
-      asset_group_id: newAssetId,
-    })
-    .select()
-    .single()
-
-  if (assetError) return NextResponse.json({ error: assetError.message }, { status: 500 })
+  const assetResult = await migrationDb.query(
+    `INSERT INTO assets (id, project_id, uploaded_by, name, cut_type, pipeline_status, raw_file_url, notes, reference, deadline, asset_group_id)
+     VALUES ($1,$2,$3,$4,'board','idea',$5,$6,$7,$8,$9)
+     RETURNING *`,
+    [
+      newAssetId,
+      project.id,
+      user.id,
+      title.trim(),
+      raw_file_url || null,
+      notes || null,
+      reference || null,
+      deadline || null,
+      newAssetId,
+    ]
+  )
+  const asset = assetResult.rows[0]
 
   return NextResponse.json({ project, asset }, { status: 201 })
 }

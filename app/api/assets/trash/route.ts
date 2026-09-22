@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest) {
@@ -7,58 +7,52 @@ export async function GET(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data: adminMemberships } = await supabaseAdmin
-    .from('workspace_members')
-    .select('workspace_id')
-    .eq('user_id', user.id)
-    .eq('role', 'admin')
+  const { rows: adminMemberships } = await migrationDb.query(
+    `SELECT workspace_id FROM workspace_members WHERE user_id = $1 AND role = 'admin'`,
+    [user.id]
+  )
+  const adminWorkspaceIds = adminMemberships.map((m) => m.workspace_id)
 
-  const adminWorkspaceIds = (adminMemberships ?? []).map((m) => m.workspace_id)
-
-  const { data: assignedRows } = await supabaseAdmin
-    .from('asset_editors')
-    .select('asset_id')
-    .eq('editor_id', user.id)
-
-  const assignedAssetIds = (assignedRows ?? []).map((r) => r.asset_id)
+  const { rows: assignedRows } = await migrationDb.query(
+    `SELECT asset_id FROM asset_editors WHERE editor_id = $1`,
+    [user.id]
+  )
+  const assignedAssetIds = assignedRows.map((r) => r.asset_id)
 
   // Merge two scopes - workspace-admin and assigned-editor - the same OR
   // that /api/assets/[id]/delete checks per-asset, applied in bulk here.
   const results = new Map<string, any>()
 
   if (adminWorkspaceIds.length > 0) {
-    const { data, error } = await supabaseAdmin
-      .from('assets')
-      .select('id, name, project_id, deleted_at, projects!assets_project_id_fkey!inner(name, workspace_id)')
-      .not('deleted_at', 'is', null)
-      .in('projects.workspace_id', adminWorkspaceIds)
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    for (const row of data ?? []) results.set(row.id, row)
+    const { rows } = await migrationDb.query(
+      `SELECT a.id, a.name, a.project_id, a.deleted_at, p.name AS project_name
+       FROM assets a
+       JOIN projects p ON p.id = a.project_id
+       WHERE a.deleted_at IS NOT NULL AND p.workspace_id = ANY($1::uuid[])`,
+      [adminWorkspaceIds]
+    )
+    for (const row of rows) results.set(row.id, row)
   }
 
   if (assignedAssetIds.length > 0) {
-    const { data, error } = await supabaseAdmin
-      .from('assets')
-      .select('id, name, project_id, deleted_at, projects!assets_project_id_fkey(name, workspace_id)')
-      .not('deleted_at', 'is', null)
-      .in('id', assignedAssetIds)
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    for (const row of data ?? []) results.set(row.id, row)
+    const { rows } = await migrationDb.query(
+      `SELECT a.id, a.name, a.project_id, a.deleted_at, p.name AS project_name
+       FROM assets a
+       LEFT JOIN projects p ON p.id = a.project_id
+       WHERE a.deleted_at IS NOT NULL AND a.id = ANY($1::uuid[])`,
+      [assignedAssetIds]
+    )
+    for (const row of rows) results.set(row.id, row)
   }
 
   const assets = Array.from(results.values())
-    .map((row) => {
-      const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
-      return {
-        id: row.id,
-        name: row.name,
-        project_id: row.project_id,
-        project_name: project?.name ?? 'Untitled project',
-        deleted_at: row.deleted_at,
-      }
-    })
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      project_id: row.project_id,
+      project_name: row.project_name ?? 'Untitled project',
+      deleted_at: row.deleted_at,
+    }))
     .sort((a, b) => new Date(b.deleted_at).getTime() - new Date(a.deleted_at).getTime())
 
   return NextResponse.json({ assets })
@@ -68,17 +62,17 @@ export async function GET(req: NextRequest) {
 // assigned editor - so anyone who could delete an asset can also restore
 // or permanently delete it from the Recycle Bin.
 async function authorizeAsset(assetId: string, userId: string) {
-  const { data: asset } = await supabaseAdmin
-    .from('assets')
-    .select('projects!assets_project_id_fkey(workspace_id)')
-    .eq('id', assetId)
-    .single()
-
+  const { rows } = await migrationDb.query(
+    `SELECT p.workspace_id
+     FROM assets a
+     LEFT JOIN projects p ON p.id = a.project_id
+     WHERE a.id = $1`,
+    [assetId]
+  )
+  const asset = rows[0]
   if (!asset) return { ok: false as const, status: 404, message: 'Asset not found' }
 
-  const workspaceId = asset.projects
-    ? (Array.isArray(asset.projects) ? asset.projects[0]?.workspace_id : (asset.projects as any).workspace_id)
-    : null
+  const workspaceId = asset.workspace_id ?? null
 
   const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, userId, 'admin') : false
   const authorized = isAdmin || await isAssignedEditor(assetId, userId)
@@ -99,12 +93,7 @@ export async function POST(req: NextRequest) {
   const check = await authorizeAsset(asset_id, user.id)
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status })
 
-  const { error } = await supabaseAdmin
-    .from('assets')
-    .update({ deleted_at: null })
-    .eq('id', asset_id)
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await migrationDb.query(`UPDATE assets SET deleted_at = NULL WHERE id = $1`, [asset_id])
   return NextResponse.json({ success: true })
 }
 
@@ -121,11 +110,10 @@ export async function DELETE(req: NextRequest) {
   const check = await authorizeAsset(asset_id, user.id)
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status })
 
-  const { error } = await supabaseAdmin
-    .from('assets')
-    .delete()
-    .eq('id', asset_id)
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    await migrationDb.query(`DELETE FROM assets WHERE id = $1`, [asset_id])
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 })
+  }
   return NextResponse.json({ success: true })
 }

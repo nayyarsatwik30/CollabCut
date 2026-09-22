@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -9,14 +9,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { read } = await req.json()
 
-  const { data, error } = await supabaseAdmin
-    .from('notifications')
-    .update({ read: read ?? true })
-    .eq('id', params.id)
-    .eq('user_id', user.id)
-    .select()
-    .single()
+  const result = await migrationDb.query(
+    `UPDATE notifications SET read = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
+    [read ?? true, params.id, user.id]
+  )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ notification: data })
+  const notification = result.rows[0]
+  if (!notification) return NextResponse.json({ error: 'Notification not found' }, { status: 404 })
+
+  return NextResponse.json({ notification })
 }

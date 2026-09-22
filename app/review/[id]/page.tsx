@@ -9,8 +9,8 @@ import { ShareModal } from '@/components/review/ShareModal'
 import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
 import { Toast, useToast } from '@/components/ui/Toast'
-import { supabase } from '@/lib/supabase'
-import { useSessionGuard, resolveSession } from '@/lib/useSessionGuard'
+import { useSessionGuard } from '@/lib/useSessionGuard'
+import { muxDownloadUrl, buildDownloadFilename } from '@/lib/utils'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 
 type SideTab = 'notes' | 'brief'
@@ -91,18 +91,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     if (ready && session) loadData()
   }, [ready, session, params.id])
 
-  useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        resolveSession().then((confirmed) => {
-          if (!confirmed) router.push('/auth/login')
-        })
-      }
-    })
-
-    return () => listener.subscription.unsubscribe()
-  }, [router])
-
   const loadData = async () => {
     if (!session) return
     setToken(session.access_token)
@@ -110,11 +98,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
     // Same workspace_members role lookup used on the dashboard/board admin-only
     // gates - Approve Cut is an admin-only action, not an editor one.
-    const { data: memberships } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('user_id', session.user.id)
-    const roles = (memberships ?? []).map((m) => m.role)
+    const roleRes = await fetch('/api/me/role')
+    const roles: string[] = roleRes.ok ? (await roleRes.json()).roles ?? [] : []
     setRole(roles.includes('admin') ? 'admin' : roles.includes('editor') ? 'editor' : null)
 
     const assetRes = await fetch(`/api/assets/${params.id}`, {
@@ -211,7 +196,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   }
 
   const handleAddComment = useCallback(async (text: string, status: CommentStatus) => {
-    if (!token || !asset) return
+    if (!asset) return false
     const res = await fetch('/api/comments', {
       method: 'POST',
       headers: {
@@ -230,7 +215,9 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       const data = await res.json()
       setComments((prev) => [...prev, { ...data.comment, replies: [] }].sort((a, b) => a.time_sec - b.time_sec))
       showToast('Note added', 'success')
+      return true
     }
+    return false
   }, [currentTime, asset, token, userName, showToast])
 
   const handleResolve = useCallback(async (id: string) => {
@@ -318,6 +305,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const muxSrc = asset?.mux_playback_id
     ? `https://stream.mux.com/${asset.mux_playback_id}.m3u8`
     : undefined
+  const downloadUrl = asset?.mux_playback_id ? muxDownloadUrl(asset.mux_playback_id) : undefined
+  const downloadName = asset ? buildDownloadFilename(asset.name, asset.version) : undefined
 
   const unfulfilled = !!asset && !asset.mux_upload_id
   const awaitingStream = !!asset && (asset.status === 'processing' || !asset.mux_playback_id)
@@ -544,6 +533,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               onTimeUpdate={setCurrentTime}
               onDurationChange={setDuration}
               approved={!!asset.is_complete}
+              downloadUrl={downloadUrl}
+              downloadFilename={downloadName}
             />
           )}
         </div>
@@ -756,7 +747,14 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       ? `https://stream.mux.com/${selV1.mux_playback_id}.m3u8`
                       : undefined
 
-                    return <VideoPlayer src={v1Src} comments={[]} />
+                    return (
+                      <VideoPlayer
+                        src={v1Src}
+                        comments={[]}
+                        downloadUrl={selV1?.mux_playback_id ? muxDownloadUrl(selV1.mux_playback_id) : undefined}
+                        downloadFilename={selV1 ? buildDownloadFilename(selV1.name, selV1.version) : undefined}
+                      />
+                    )
                   })()}
                 </div>
               </div>
@@ -783,7 +781,14 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       ? `https://stream.mux.com/${selV2.mux_playback_id}.m3u8`
                       : undefined
 
-                    return <VideoPlayer src={v2Src} comments={[]} />
+                    return (
+                      <VideoPlayer
+                        src={v2Src}
+                        comments={[]}
+                        downloadUrl={selV2?.mux_playback_id ? muxDownloadUrl(selV2.mux_playback_id) : undefined}
+                        downloadFilename={selV2 ? buildDownloadFilename(selV2.name, selV2.version) : undefined}
+                      />
+                    )
                   })()}
                 </div>
               </div>

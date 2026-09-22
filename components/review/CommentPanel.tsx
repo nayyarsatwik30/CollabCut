@@ -12,7 +12,7 @@ interface CommentPanelProps {
   comments: Comment[]
   currentTime: number
   onSeek: (time: number) => void
-  onAdd: (text: string, status: CommentStatus) => void
+  onAdd: (text: string, status: CommentStatus) => Promise<boolean>
   onResolve: (id: string) => void
   onDelete: (id: string) => void
   onReply: (id: string, text: string) => void
@@ -40,10 +40,10 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
     ? comments
     : comments.filter((c) => c.status === filter)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!draftText.trim()) return
-    onAdd(draftText.trim(), draftStatus)
-    setDraftText('')
+    const ok = await onAdd(draftText.trim(), draftStatus)
+    if (ok) setDraftText('')
   }
 
   return (

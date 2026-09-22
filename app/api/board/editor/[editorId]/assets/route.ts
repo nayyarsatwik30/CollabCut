@@ -1,34 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { latestPerGroup } from '@/lib/asset-lineage'
 import { createNotification } from '@/lib/notifications'
 import { requireAuth } from '@/lib/api-auth'
 
 async function requireAdminWorkspace(userId: string) {
-  const { data: membership, error: membershipError } = await supabaseAdmin
-    .from('workspace_members')
-    .select('workspace_id')
-    .eq('user_id', userId)
-    .eq('role', 'admin')
-    .limit(1)
-    .maybeSingle()
-
-  if (membershipError) return { error: membershipError.message, status: 500 as const }
+  const { rows } = await migrationDb.query(
+    `SELECT workspace_id FROM workspace_members WHERE user_id = $1 AND role = 'admin' LIMIT 1`,
+    [userId]
+  )
+  const membership = rows[0]
   if (!membership) return { error: 'Admin access required', status: 403 as const }
 
   return { workspaceId: membership.workspace_id as string }
 }
 
 async function findAssetInWorkspace(assetId: string, workspaceId: string) {
-  const { data, error } = await supabaseAdmin
-    .from('assets')
-    .select('id, asset_group_id, projects!assets_project_id_fkey!inner(workspace_id)')
-    .eq('id', assetId)
-    .eq('projects.workspace_id', workspaceId)
-    .maybeSingle()
-
-  if (error || !data) return null
-  return data
+  const { rows } = await migrationDb.query(
+    `SELECT a.id, a.asset_group_id
+     FROM assets a
+     JOIN projects p ON p.id = a.project_id
+     WHERE a.id = $1 AND p.workspace_id = $2`,
+    [assetId, workspaceId]
+  )
+  return rows[0] ?? null
 }
 
 // Admin-only lookup of one editor's assigned Board Cut assets, scoped to the
@@ -42,64 +37,49 @@ export async function GET(req: NextRequest, { params }: { params: { editorId: st
   const auth = await requireAdminWorkspace(authResult.user.id)
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('name, email')
-    .eq('id', params.editorId)
-    .maybeSingle()
+  const { rows: profileRows } = await migrationDb.query(
+    `SELECT name, email FROM profiles WHERE id = $1`,
+    [params.editorId]
+  )
+  const profile = profileRows[0]
 
   // Same lineage-expansion fix as GET /api/board's editor branch: asset_editors
   // pins to one specific version's row, so resolve the assigned
   // asset_group_id(s) first (auth check), then pull every version in those
   // groups for latestPerGroup to pick the true latest from.
-  const { data: assignedRows, error: assignedError } = await supabaseAdmin
-    .from('asset_editors')
-    .select('assets!inner(asset_group_id, cut_type, deleted_at, projects!assets_project_id_fkey!inner(workspace_id, deleted_at))')
-    .eq('editor_id', params.editorId)
-    .eq('assets.cut_type', 'board')
+  const { rows: assignedRows } = await migrationDb.query(
+    `SELECT a.asset_group_id
+     FROM asset_editors ae
+     JOIN assets a ON a.id = ae.asset_id
+     JOIN projects p ON p.id = a.project_id
+     WHERE ae.editor_id = $1 AND a.cut_type = 'board' AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.workspace_id = $2`,
+    [params.editorId, auth.workspaceId]
+  )
 
-  if (assignedError) return NextResponse.json({ error: assignedError.message }, { status: 500 })
-
-  const assignedGroupIds = Array.from(new Set(
-    (assignedRows ?? [])
-      .map((row: any) => (Array.isArray(row.assets) ? row.assets[0] : row.assets))
-      .filter((asset: any) => {
-        if (!asset || asset.deleted_at) return false
-        const project = Array.isArray(asset.projects) ? asset.projects[0] : asset.projects
-        return project && !project.deleted_at && project.workspace_id === auth.workspaceId
-      })
-      .map((asset: any) => asset.asset_group_id)
-  ))
+  const assignedGroupIds = Array.from(new Set(assignedRows.map((row: any) => row.asset_group_id)))
 
   let assets: any[] = []
 
   if (assignedGroupIds.length > 0) {
-    const { data, error } = await supabaseAdmin
-      .from('assets')
-      .select('id, name, version, asset_group_id, pipeline_status, is_complete, project_id, mux_upload_id, projects!assets_project_id_fkey!inner(id, name, client, workspace_id, deleted_at)')
-      .in('asset_group_id', assignedGroupIds)
-      .is('deleted_at', null)
+    const { rows: assetRows } = await migrationDb.query(
+      `SELECT a.id, a.name, a.version, a.asset_group_id, a.pipeline_status, a.is_complete, a.project_id, a.mux_upload_id,
+              p.name AS project_name, p.client AS project_client
+       FROM assets a
+       JOIN projects p ON p.id = a.project_id
+       WHERE a.asset_group_id = ANY($1::uuid[]) AND a.deleted_at IS NULL AND p.deleted_at IS NULL`,
+      [assignedGroupIds]
+    )
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    assets = latestPerGroup(
-      (data ?? []).filter((row: any) => {
-        const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
-        return project && !project.deleted_at
-      })
-    ).map((row: any) => {
-      const project = Array.isArray(row.projects) ? row.projects[0] : row.projects
-      return {
-        id: row.id,
-        name: row.name,
-        pipeline_status: row.pipeline_status ?? 'idea',
-        is_complete: row.is_complete,
-        project_id: row.project_id,
-        project_name: project?.name ?? 'Untitled project',
-        project_client: project?.client ?? '',
-        mux_upload_id: row.mux_upload_id ?? null,
-      }
-    })
+    assets = latestPerGroup(assetRows).map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      pipeline_status: row.pipeline_status ?? 'idea',
+      is_complete: row.is_complete,
+      project_id: row.project_id,
+      project_name: row.project_name ?? 'Untitled project',
+      project_client: row.project_client ?? '',
+      mux_upload_id: row.mux_upload_id ?? null,
+    }))
   }
 
   return NextResponse.json({
@@ -128,21 +108,29 @@ export async function POST(req: NextRequest, { params }: { params: { editorId: s
   // that before writing, so re-pointing the assignment at a new version
   // doesn't read as a brand new assignment below.
   const groupId = asset.asset_group_id ?? asset.id
-  const { data: existingInLineage } = await supabaseAdmin
-    .from('asset_editors')
-    .select('id, assets!inner(asset_group_id)')
-    .eq('editor_id', params.editorId)
-    .eq('assets.asset_group_id', groupId)
-    .limit(1)
-    .maybeSingle()
+  const { rows: existingInLineageRows } = await migrationDb.query(
+    `SELECT ae.id
+     FROM asset_editors ae
+     JOIN assets a ON a.id = ae.asset_id
+     WHERE ae.editor_id = $1 AND a.asset_group_id = $2
+     LIMIT 1`,
+    [params.editorId, groupId]
+  )
 
-  const alreadyAssignedToLineage = !!existingInLineage
+  const alreadyAssignedToLineage = existingInLineageRows.length > 0
 
-  const { error } = await supabaseAdmin
-    .from('asset_editors')
-    .upsert({ asset_id: assetId, editor_id: params.editorId }, { onConflict: 'asset_id,editor_id' })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // No unique constraint exists on (asset_id, editor_id) in CloudClusters
+  // (unlike whatever Supabase had backing the old .upsert(..., { onConflict })
+  // call) - guard the insert with a NOT EXISTS check instead of ON CONFLICT,
+  // which would error without a matching constraint/index.
+  await migrationDb.query(
+    `INSERT INTO asset_editors (asset_id, editor_id)
+     SELECT $1, $2
+     WHERE NOT EXISTS (
+       SELECT 1 FROM asset_editors WHERE asset_id = $1 AND editor_id = $2
+     )`,
+    [assetId, params.editorId]
+  )
 
   // Trigger 1: notify the newly-assigned editor - but only when the
   // assignment is genuinely new to this lineage, not when it's just
@@ -150,18 +138,20 @@ export async function POST(req: NextRequest, { params }: { params: { editorId: s
   // effectively in place. Best-effort - the assignment itself already
   // succeeded above regardless of this.
   if (!alreadyAssignedToLineage) {
-    const { data: assetRow } = await supabaseAdmin
-      .from('assets')
-      .select('project_id, projects!assets_project_id_fkey(name)')
-      .eq('id', assetId)
-      .maybeSingle()
+    const { rows: assetRows } = await migrationDb.query(
+      `SELECT a.project_id, p.name AS project_name
+       FROM assets a
+       LEFT JOIN projects p ON p.id = a.project_id
+       WHERE a.id = $1`,
+      [assetId]
+    )
+    const assetRow = assetRows[0]
 
     if (assetRow?.project_id) {
-      const project = Array.isArray(assetRow.projects) ? assetRow.projects[0] : assetRow.projects
       await createNotification({
         userId: params.editorId,
         type: 'editor_assigned',
-        message: `New project assigned: ${project?.name ?? 'Untitled project'}`,
+        message: `New project assigned: ${assetRow.project_name ?? 'Untitled project'}`,
         link: `/project/${assetRow.project_id}`,
         assetId,
       })
@@ -184,12 +174,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { editorId:
   const asset = await findAssetInWorkspace(assetId, auth.workspaceId)
   if (!asset) return NextResponse.json({ error: 'Asset not found in your workspace' }, { status: 404 })
 
-  const { error } = await supabaseAdmin
-    .from('asset_editors')
-    .delete()
-    .eq('asset_id', assetId)
-    .eq('editor_id', params.editorId)
+  await migrationDb.query(
+    `DELETE FROM asset_editors WHERE asset_id = $1 AND editor_id = $2`,
+    [assetId, params.editorId]
+  )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }
