@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
 }
 
 // Ensures the calling user has a workspace they admin, creating a default
-// one on first use (e.g. the first time they open Settings > Team).
+// one on first use (e.g. the first time they open Settings > Team) - but
+// only for users who aren't in any workspace yet (see below).
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if ('error' in auth) return auth.error
@@ -56,6 +57,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       workspace: { id: existing.workspace_id, name: existing.name ?? 'Workspace', invite_code: existing.invite_code ?? '' },
     })
+  }
+
+  // Only provision for users with no workspace at all. An editor who already
+  // belongs to someone else's workspace must never be handed an admin row
+  // here: every role check (dashboard, /api/board, New Content) resolves
+  // "admin wins", so a silent self-provisioned admin workspace flips that
+  // editor's whole UI to an empty admin view of the new workspace.
+  const anyMembershipResult = await migrationDb.query(
+    `SELECT 1 FROM workspace_members WHERE user_id = $1 LIMIT 1`,
+    [user.id]
+  )
+  if (anyMembershipResult.rows.length > 0) {
+    return NextResponse.json(
+      { error: 'Only workspace admins can invite team members.' },
+      { status: 403 }
+    )
   }
 
   const profileResult = await migrationDb.query(`SELECT name FROM profiles WHERE id = $1`, [user.id])
