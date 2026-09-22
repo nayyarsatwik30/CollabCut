@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
      FROM asset_editors ae
      JOIN assets a ON a.id = ae.asset_id
      LEFT JOIN projects p ON p.id = a.project_id
-     WHERE ae.editor_id = $1 AND a.deleted_at IS NULL`,
+     WHERE ae.editor_id = $1 AND a.deleted_at IS NULL AND p.deleted_at IS NULL`,
     [user.id]
   )
 
