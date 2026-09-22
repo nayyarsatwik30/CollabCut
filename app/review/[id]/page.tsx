@@ -10,7 +10,6 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { useSessionGuard } from '@/lib/useSessionGuard'
-import { muxDownloadUrl, buildDownloadFilename } from '@/lib/utils'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 
 type SideTab = 'notes' | 'brief'
@@ -305,8 +304,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const muxSrc = asset?.mux_playback_id
     ? `https://stream.mux.com/${asset.mux_playback_id}.m3u8`
     : undefined
-  const downloadUrl = asset?.mux_playback_id ? muxDownloadUrl(asset.mux_playback_id) : undefined
-  const downloadName = asset ? buildDownloadFilename(asset.name, asset.version) : undefined
 
   const unfulfilled = !!asset && !asset.mux_upload_id
   const awaitingStream = !!asset && (asset.status === 'processing' || !asset.mux_playback_id)
@@ -533,8 +530,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               onTimeUpdate={setCurrentTime}
               onDurationChange={setDuration}
               approved={!!asset.is_complete}
-              downloadUrl={downloadUrl}
-              downloadFilename={downloadName}
             />
           )}
         </div>
@@ -747,14 +742,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       ? `https://stream.mux.com/${selV1.mux_playback_id}.m3u8`
                       : undefined
 
-                    return (
-                      <VideoPlayer
-                        src={v1Src}
-                        comments={[]}
-                        downloadUrl={selV1?.mux_playback_id ? muxDownloadUrl(selV1.mux_playback_id) : undefined}
-                        downloadFilename={selV1 ? buildDownloadFilename(selV1.name, selV1.version) : undefined}
-                      />
-                    )
+                    return <VideoPlayer src={v1Src} comments={[]} />
                   })()}
                 </div>
               </div>
@@ -781,14 +769,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       ? `https://stream.mux.com/${selV2.mux_playback_id}.m3u8`
                       : undefined
 
-                    return (
-                      <VideoPlayer
-                        src={v2Src}
-                        comments={[]}
-                        downloadUrl={selV2?.mux_playback_id ? muxDownloadUrl(selV2.mux_playback_id) : undefined}
-                        downloadFilename={selV2 ? buildDownloadFilename(selV2.name, selV2.version) : undefined}
-                      />
-                    )
+                    return <VideoPlayer src={v2Src} comments={[]} />
                   })()}
                 </div>
               </div>

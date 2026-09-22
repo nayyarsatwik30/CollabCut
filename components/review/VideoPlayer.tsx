@@ -14,9 +14,6 @@ interface VideoPlayerProps {
   onDurationChange?: (dur: number) => void
   approved?: boolean
   hideDownload?: boolean
-  /** Downloadable MP4 (Mux static rendition) - NOT the HLS `src`, which browsers can't save as a file */
-  downloadUrl?: string
-  downloadFilename?: string
 }
 
 export interface VideoPlayerHandle {
@@ -25,7 +22,7 @@ export interface VideoPlayerHandle {
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
-  { src, comments, onTimeUpdate, onDurationChange, approved, hideDownload, downloadUrl, downloadFilename },
+  { src, comments, onTimeUpdate, onDurationChange, approved, hideDownload },
   ref
 ) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -39,7 +36,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [videoReady, setVideoReady] = useState(false)
   const [videoError, setVideoError] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
-  const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
     const v = videoRef.current
@@ -165,32 +161,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     if (!el) return
     document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen()
   }
-
-  // Mux's MP4 rendition sends no Content-Disposition header, and a plain
-  // cross-origin <a download> just navigates the tab instead of saving -
-  // fetching it as a blob and downloading that blob URL forces a real save
-  // regardless of what the remote server's headers say.
-  const handleDownload = useCallback(async () => {
-    if (!downloadUrl || downloading) return
-    setDownloading(true)
-    try {
-      const res = await fetch(downloadUrl)
-      if (!res.ok) throw new Error(`Download failed: ${res.status}`)
-      const blob = await res.blob()
-      const blobUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = blobUrl
-      a.download = downloadFilename ?? 'download.mp4'
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(blobUrl)
-    } catch (err) {
-      console.error('Download failed', err)
-    } finally {
-      setDownloading(false)
-    }
-  }, [downloadUrl, downloadFilename, downloading])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -338,17 +308,15 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
           <div className="ml-auto flex items-center gap-2">
             {!hideDownload && (
-              <button
-                onClick={handleDownload}
-                disabled={!downloadUrl || downloading}
-                className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press disabled:opacity-40 disabled:pointer-events-none"
+              <a
+                href={src ?? '#'}
+                download
+                className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press"
                 title="Download"
+                onClick={(e) => !src && e.preventDefault()}
               >
-                {downloading
-                  ? <div className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                  : <Download size={13} />
-                }
-              </button>
+                <Download size={13} />
+              </a>
             )}
             <button onClick={toggleFullscreen}
               className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press"

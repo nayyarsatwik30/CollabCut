@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       `UPDATE assets
        SET mux_asset_id = $1,
            duration_sec = $2
-           ${playbackId ? ", mux_playback_id = $3, status = 'in_review', mux_ready_at = now()" : ''}
+           ${playbackId ? ", mux_playback_id = $3, status = 'in_review'" : ''}
        WHERE mux_upload_id = $${playbackId ? 4 : 3}
        RETURNING id, project_id`,
       playbackId
