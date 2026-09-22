@@ -268,7 +268,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   }, [userName, token])
 
   const handleToggleComplete = async () => {
-    if (!asset || !token || togglingComplete) return
+    if (!asset || togglingComplete) return
     const newComplete = !asset.is_complete
     setTogglingComplete(true)
     setAsset({ ...asset, is_complete: newComplete })

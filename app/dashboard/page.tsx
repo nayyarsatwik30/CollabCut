@@ -121,7 +121,7 @@ export default function DashboardPage() {
 
   const handleDashTabChange = async (tab: 'assigned' | 'projects') => {
     setDashTab(tab)
-    if (tab === 'projects' && myProjects.length === 0 && token) {
+    if (tab === 'projects' && myProjects.length === 0) {
       setMyProjectsLoading(true)
       try {
         const res = await fetch('/api/projects/assigned', {
@@ -139,7 +139,6 @@ export default function DashboardPage() {
   }
 
   const handleDeleteProject = async (id: string) => {
-    if (!token) return
     const res = await fetch(`/api/projects/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
@@ -263,7 +262,7 @@ export default function DashboardPage() {
         {showNew && (
           <NewContentModal
             onClose={() => setShowNew(false)}
-            onCreated={() => { setShowNew(false); if (token) loadProjects(token) }}
+            onCreated={() => { setShowNew(false); loadProjects(token ?? '') }}
           />
         )}
 
