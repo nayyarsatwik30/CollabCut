@@ -22,6 +22,7 @@ interface StorageUsageData {
 // from a stale cache.
 let cachedData: StorageUsageData | null = null
 let inFlight: Promise<StorageUsageData | null> | null = null
+const subscribers = new Set<(data: StorageUsageData) => void>()
 
 function fetchStorageUsage(): Promise<StorageUsageData | null> {
   if (!inFlight) {
@@ -30,11 +31,21 @@ function fetchStorageUsage(): Promise<StorageUsageData | null> {
       .then((data) => {
         const result = data ? { usedBytes: data.used_bytes ?? 0, workspacePlan: data.workspace_plan ?? null } : null
         cachedData = result
+        if (result) subscribers.forEach((notify) => notify(result))
         return result
       })
       .finally(() => { inFlight = null })
   }
   return inFlight
+}
+
+// Drops the cached usage and refetches it for every mounted
+// useStorageUsage() - call after anything that changes the user's stored
+// bytes (an upload), otherwise the bar keeps showing the first value it
+// ever loaded until a full page reload.
+export function invalidateStorageUsage() {
+  cachedData = null
+  if (subscribers.size > 0) fetchStorageUsage()
 }
 
 // Fetches the current user's storage usage from /api/storage-usage - their
@@ -47,6 +58,15 @@ export function useStorageUsage() {
   const [usedBytes, setUsedBytes] = useState<number | null>(cachedData?.usedBytes ?? null)
   const [workspacePlan, setWorkspacePlan] = useState<WorkspaceStoragePlan | null>(cachedData?.workspacePlan ?? null)
   const [loading, setLoading] = useState(!cachedData)
+
+  useEffect(() => {
+    const notify = (data: StorageUsageData) => {
+      setUsedBytes(data.usedBytes)
+      setWorkspacePlan(data.workspacePlan)
+    }
+    subscribers.add(notify)
+    return () => { subscribers.delete(notify) }
+  }, [])
 
   useEffect(() => {
     if (status === 'unauthenticated') {

@@ -28,7 +28,13 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { project_id, name, linked_asset_name, cut_type, fulfill_asset_id: requestedFulfillAssetId } = await req.json()
+  const { project_id, name, linked_asset_name, cut_type, fulfill_asset_id: requestedFulfillAssetId, size_bytes } = await req.json()
+
+  // The file goes browser -> Mux directly and Mux never reports the original
+  // file's size back, so the client's File.size is the only source for
+  // size_bytes - which /api/storage-usage sums. Without it every asset sits
+  // at the column default of 0 and the storage bar never moves.
+  const sizeBytes = Number.isSafeInteger(size_bytes) && size_bytes >= 0 ? size_bytes : 0
 
   let fulfill_asset_id = requestedFulfillAssetId
 
@@ -71,8 +77,8 @@ export async function POST(req: NextRequest) {
     })
 
     const updateResult = await migrationDb.query(
-      `UPDATE assets SET status = 'processing', pipeline_status = 'review', mux_upload_id = $1 WHERE id = $2 RETURNING *`,
-      [upload.id, fulfill_asset_id]
+      `UPDATE assets SET status = 'processing', pipeline_status = 'review', mux_upload_id = $1, size_bytes = $2 WHERE id = $3 RETURNING *`,
+      [upload.id, sizeBytes, fulfill_asset_id]
     )
     const asset = updateResult.rows[0]
 
@@ -164,8 +170,8 @@ export async function POST(req: NextRequest) {
   const newAssetId = randomUUID()
 
   const insertResult = await migrationDb.query(
-    `INSERT INTO assets (id, project_id, uploaded_by, name, version, status, pipeline_status, cut_type, mux_upload_id, asset_group_id)
-     VALUES ($1,$2,$3,$4,$5,'processing',$6,$7,$8,$9)
+    `INSERT INTO assets (id, project_id, uploaded_by, name, version, status, pipeline_status, cut_type, mux_upload_id, asset_group_id, size_bytes)
+     VALUES ($1,$2,$3,$4,$5,'processing',$6,$7,$8,$9,$10)
      RETURNING *`,
     [
       newAssetId,
@@ -177,6 +183,7 @@ export async function POST(req: NextRequest) {
       cutType,
       upload.id,
       linkedHead ? linkedHead.asset_group_id : newAssetId,
+      sizeBytes,
     ]
   )
   const asset = insertResult.rows[0]
