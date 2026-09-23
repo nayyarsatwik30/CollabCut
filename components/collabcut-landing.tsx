@@ -25,7 +25,8 @@ function ParallaxMockup({ children, className = '' }: { children: React.ReactNod
 }
 
 function Logo() {
-  return <Link href="/" className="cc-logo" aria-label="CollabCut home"><span className="cc-logo-mark">C</span><span>collabcut</span></Link>
+  // eslint-disable-next-line @next/next/no-img-element -- 28px static mark, nothing for next/image to optimise
+  return <Link href="/" className="cc-logo" aria-label="CollabCut home"><img className="cc-logo-mark" src="/collabcut-mark.png" alt="" width={28} height={28} /><span>collabcut</span></Link>
 }
 
 function Header({ agency = false }: { agency?: boolean }) {
