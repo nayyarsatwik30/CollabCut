@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
+import { DEFAULT_WORKSPACE_PLAN_ID } from '@/lib/storage-config'
 
 // Read-only admin-workspace-with-plan lookup for settings.tsx's initial
 // load (the Team tab's provisioning POST below is a separate, get-or-create
@@ -81,8 +82,8 @@ export async function POST(req: NextRequest) {
   const workspaceName = profile?.name ? `${profile.name}'s Workspace` : 'My Workspace'
 
   const workspaceResult = await migrationDb.query(
-    `INSERT INTO workspaces (name, owner_id) VALUES ($1, $2) RETURNING *`,
-    [workspaceName, user.id]
+    `INSERT INTO workspaces (name, owner_id, workspace_plan_id) VALUES ($1, $2, $3) RETURNING *`,
+    [workspaceName, user.id, DEFAULT_WORKSPACE_PLAN_ID]
   )
   const workspace = workspaceResult.rows[0]
 
