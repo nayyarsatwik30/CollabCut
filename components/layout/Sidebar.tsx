@@ -8,6 +8,7 @@ import { Grid3X3, Kanban, Clock, Bell, Settings, ChevronDown, Trash2 } from 'luc
 import { cn } from '@/lib/utils'
 import { useStorageUsage } from '@/lib/useStorageUsage'
 import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
+import { usePolling } from '@/lib/usePolling'
 
 const NAV_ITEMS = [
   { href: '/board', icon: Kanban, label: 'Board' },
@@ -45,9 +46,14 @@ export function Sidebar() {
     const res = await fetch('/api/notifications/unread-count')
     if (res.ok) {
       const data = await res.json()
-      setUnreadCount(data.count ?? 0)
+      // Functional update that returns the same number is a no-op render.
+      setUnreadCount((prev) => (prev === (data.count ?? 0) ? prev : data.count ?? 0))
     }
   }
+
+  // Badge picks up new notifications (e.g. a collaborator's comment) while
+  // the user sits on any sidebar page - pauses when the tab is hidden.
+  usePolling(fetchUnreadCount, 8000, status === 'authenticated')
 
   const initials = name
     ? name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
