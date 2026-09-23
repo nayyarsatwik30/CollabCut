@@ -57,7 +57,7 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
             className="px-3 py-1 rounded-th-full text-[11px] font-medium transition-colors btn-press capitalize"
             style={{
               background: filter === key ? 'color-mix(in srgb, var(--th-accent) 18%, transparent)' : 'transparent',
-              color: filter === key ? 'var(--th-accent)' : 'var(--th-muted)',
+              color: filter === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
               border: `1px solid ${filter === key ? 'var(--th-accent)' : 'var(--th-border)'}`,
             }}
           >

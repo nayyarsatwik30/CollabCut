@@ -236,7 +236,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             <button key={id} onClick={() => setTab(id)}
               className="px-4 py-3 text-[13px] transition-colors border-b-2 btn-press"
               style={{
-                color: tab === id ? 'var(--th-accent)' : 'var(--th-muted)',
+                color: tab === id ? 'var(--th-accent-text)' : 'var(--th-muted)',
                 borderColor: tab === id ? 'var(--th-accent)' : 'transparent',
                 fontWeight: tab === id ? 700 : 400,
               }}>

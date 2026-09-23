@@ -247,7 +247,7 @@ export default function DashboardPage() {
                 onClick={() => handleDashTabChange(key)}
                 className="flex items-center gap-1.5 px-3 py-2.5 text-[12px] border-b-2 btn-press transition-colors"
                 style={{
-                  color: dashTab === key ? 'var(--th-accent)' : 'var(--th-muted)',
+                  color: dashTab === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
                   borderColor: dashTab === key ? 'var(--th-accent)' : 'transparent',
                   fontWeight: dashTab === key ? 700 : 400,
                 }}

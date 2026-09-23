@@ -356,7 +356,7 @@ export default function BoardPage() {
                 onClick={() => handleBoardViewChange(key)}
                 className="flex items-center gap-1.5 px-3 py-2.5 text-[12px] border-b-2 btn-press transition-colors"
                 style={{
-                  color: boardView === key ? 'var(--th-accent)' : 'var(--th-muted)',
+                  color: boardView === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
                   borderColor: boardView === key ? 'var(--th-accent)' : 'transparent',
                   fontWeight: boardView === key ? 700 : 400,
                 }}

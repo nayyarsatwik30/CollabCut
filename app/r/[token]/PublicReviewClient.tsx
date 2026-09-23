@@ -269,9 +269,9 @@ export default function PublicReviewClient({ token }: { token: string }) {
                         onClick={() => handleSwitchVersion(v.id)}
                         className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
                       >
-                        <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-muted)' }} />
+                        <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent)' : 'var(--th-text)' }}>
+                          <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-text)' }}>
                             v{v.version}
                           </p>
                           <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
