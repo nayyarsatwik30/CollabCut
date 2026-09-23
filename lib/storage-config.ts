@@ -1,6 +1,4 @@
-// TEMPORARY placeholder for the per-editor storage usage cap shown on
-// Settings and in the Sidebar. NOT FINALIZED - product hasn't decided the
-// real number yet, expect this to change (and possibly become plan-based
-// later, distinct from plans.storage_gb, which is the separate
-// workspace-level billing figure).
-export const DEFAULT_EDITOR_STORAGE_CAP_GB = 10
+// Plan every newly created workspace starts on (workspace_plans.id), so the
+// storage bar has a real cap from the first login instead of "No plan
+// assigned". tier_1 = 2 TB / 2 admins / 3 editors.
+export const DEFAULT_WORKSPACE_PLAN_ID = 'tier_1'

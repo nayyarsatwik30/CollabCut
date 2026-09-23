@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { hashPassword } from '@/lib/password'
+import { DEFAULT_WORKSPACE_PLAN_ID } from '@/lib/storage-config'
 
 // Creates the profile + auth_credentials + workspace role in one CloudClusters
 // transaction, so a failure partway through (bad invite code, duplicate
@@ -62,8 +63,8 @@ export async function POST(req: NextRequest) {
 
     if (role === 'admin') {
       const workspaceResult = await client.query(
-        'INSERT INTO workspaces (name, owner_id) VALUES ($1, $2) RETURNING id, name, invite_code',
-        [`${name}'s Workspace`, userId]
+        'INSERT INTO workspaces (name, owner_id, workspace_plan_id) VALUES ($1, $2, $3) RETURNING id, name, invite_code',
+        [`${name}'s Workspace`, userId, DEFAULT_WORKSPACE_PLAN_ID]
       )
       const workspace = workspaceResult.rows[0]
 
