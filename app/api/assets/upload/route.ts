@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   let destinationProjectId: string | undefined = project_id
   if (requestedFulfillAssetId) {
     const placeholderResult = await migrationDb.query(
-      `SELECT project_id FROM assets WHERE id = $1`,
+      `SELECT project_id FROM assets WHERE id = $1 AND deleted_at IS NULL`,
       [requestedFulfillAssetId]
     )
     if (!placeholderResult.rows[0]) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
   if (linked_asset_name) {
     const existingResult = await migrationDb.query(
       `SELECT id, version, asset_group_id, cut_type FROM assets
-       WHERE project_id = $1 AND name = $2 ORDER BY version DESC LIMIT 1`,
+       WHERE project_id = $1 AND name = $2 AND deleted_at IS NULL ORDER BY version DESC LIMIT 1`,
       [project_id, linked_asset_name]
     )
     linkedHead = existingResult.rows[0] ?? null
@@ -174,7 +174,8 @@ export async function POST(req: NextRequest) {
   } else if ((cut_type ?? 'board') === 'board') {
     const existingResult = await migrationDb.query(
       `SELECT id, version, asset_group_id, cut_type FROM assets
-       WHERE project_id = $1 AND name = $2 AND cut_type = 'board' ORDER BY version DESC LIMIT 1`,
+       WHERE project_id = $1 AND name = $2 AND cut_type = 'board' AND deleted_at IS NULL
+       ORDER BY version DESC LIMIT 1`,
       [project_id, name]
     )
     linkedHead = existingResult.rows[0] ?? null

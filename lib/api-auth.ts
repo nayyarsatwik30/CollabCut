@@ -84,14 +84,15 @@ export async function canAccessAsset(userId: string, assetId: string): Promise<b
 }
 
 // Whether `userId` belongs (as admin or editor) to the workspace that owns
-// `projectId` - 'missing' when the project doesn't exist at all, so callers
-// can 404 instead of 403.
+// `projectId` - 'missing' when the project doesn't exist or is in the trash,
+// so callers can 404 instead of 403 (nothing should land in a trashed
+// project).
 export async function projectMembership(projectId: string, userId: string): Promise<'member' | 'not_member' | 'missing'> {
   const result = await migrationDb.query(
     `SELECT p.id, wm.user_id
      FROM projects p
      LEFT JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = $2
-     WHERE p.id = $1
+     WHERE p.id = $1 AND p.deleted_at IS NULL
      LIMIT 1`,
     [projectId, userId]
   )
