@@ -210,7 +210,7 @@ export default function SettingsPage() {
                   ) : (
                     <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-3">
                       <div>
-                        <span className="font-mono text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent/30 text-th-accent font-semibold">
+                        <span className="font-mono text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent/30 text-th-accent-text font-semibold">
                           {adminWorkspace.name}
                         </span>
                       </div>

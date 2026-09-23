@@ -191,7 +191,7 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
             onClick={handleRegenerate}
             disabled={loading || regenerating || !link || regenerateBlocked}
             title={regenerateBlocked ? 'Retype the password to include it in the new link' : undefined}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-sm text-[11px] font-semibold btn-press transition-all bg-th-surface-alt border border-th-border text-th-text hover:border-th-accent hover:text-th-accent disabled:opacity-50"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-sm text-[11px] font-semibold btn-press transition-all bg-th-surface-alt border border-th-border text-th-text hover:border-th-accent hover:text-th-accent-text disabled:opacity-50"
           >
             <RefreshCw size={12} className={regenerating ? 'animate-spin' : undefined} /> Regenerate
           </button>

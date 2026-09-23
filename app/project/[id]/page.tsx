@@ -295,7 +295,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                               alt={a.name}
                             />
                           ) : (
-                            <Film size={28} style={{ color: 'var(--th-accent)' }} />
+                            <Film size={28} style={{ color: 'var(--th-accent-text)' }} />
                           )}
                           <span className="thumb-badge font-mono text-[11px] px-1.5 py-0.5 rounded relative z-[1]">{formatDuration(a.duration_sec)}</span>
                         </div>
@@ -307,7 +307,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     ))}
                     <button
                       onClick={() => setShowUploadCustom(true)}
-                      className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent transition-colors btn-press overflow-hidden">
+                      className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent-text transition-colors btn-press overflow-hidden">
                       <div className="aspect-video shrink-0 flex items-center justify-center">
                         <Upload size={20} />
                       </div>
@@ -337,7 +337,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
                 {boardAssets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                    <div className="text-5xl"><Video size={48} style={{ color: 'var(--th-accent)' }} /></div>
+                    <div className="text-5xl"><Video size={48} style={{ color: 'var(--th-accent-text)' }} /></div>
                     <div>
                       <p className="font-semibold mb-1">No assets yet</p>
                       <p className="text-[13px] text-th-muted">Upload your first cut to start reviewing.</p>
@@ -376,7 +376,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                                 alt={a.name}
                               />
                             ) : (
-                              <Film size={28} style={{ color: 'var(--th-accent)' }} />
+                              <Film size={28} style={{ color: 'var(--th-accent-text)' }} />
                             )}
                             <span className="thumb-badge font-mono text-[11px] px-1.5 py-0.5 rounded relative z-[1]">{formatDuration(a.duration_sec)}</span>
                             <div className="thumb-badge absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-0.5 rounded z-[1]">
@@ -421,7 +421,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     })}
                     <button
                       onClick={() => setShowUploadBoard(true)}
-                      className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent transition-colors btn-press overflow-hidden">
+                      className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent-text transition-colors btn-press overflow-hidden">
                       <div className="aspect-video shrink-0 flex items-center justify-center">
                         <Upload size={20} />
                       </div>

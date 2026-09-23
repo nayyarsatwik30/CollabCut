@@ -299,7 +299,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
             <div className="py-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[13px] font-medium truncate pr-4">{fileName}</p>
-                <span className="font-mono text-[12px] text-th-accent shrink-0">{progress}%</span>
+                <span className="font-mono text-[12px] text-th-accent-text shrink-0">{progress}%</span>
               </div>
               <div className="h-2 rounded-full bg-th-surface-alt overflow-hidden">
                 <div

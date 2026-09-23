@@ -94,7 +94,7 @@ export default function RecentPage() {
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <span className="text-[13px] font-semibold">{h.author_name}</span>
                     <span className="text-[12px] text-th-muted">left a note on</span>
-                    <span className="text-[13px] font-semibold text-th-accent">{h.asset_name}</span>
+                    <span className="text-[13px] font-semibold text-th-accent-text">{h.asset_name}</span>
                     <span className="text-[11px] text-th-faint font-mono">in {h.project_name}</span>
                   </div>
                   <p className="text-[13px] text-th-text mb-2 line-clamp-2">{h.text}</p>

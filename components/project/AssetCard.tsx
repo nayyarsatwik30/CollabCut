@@ -25,7 +25,7 @@ export function AssetCard({ asset, projectId }: AssetCardProps) {
             alt={asset.name}
           />
         ) : (
-          <Film size={28} style={{ color: 'var(--th-accent)' }} />
+          <Film size={28} style={{ color: 'var(--th-accent-text)' }} />
         )}
         <div className="flex items-center gap-1.5 font-mono text-[11px] text-th-muted">
           <Clock size={10} />
@@ -42,7 +42,7 @@ export function AssetCard({ asset, projectId }: AssetCardProps) {
 
       {/* Info */}
       <div className="p-3.5">
-        <p className="text-[13px] font-semibold truncate mb-3 group-hover:text-th-accent transition-colors">{asset.name}</p>
+        <p className="text-[13px] font-semibold truncate mb-3 group-hover:text-th-accent-text transition-colors">{asset.name}</p>
         <div className="flex items-center justify-between text-[11px] text-th-faint font-mono">
           <span>{asset.sizeLabel}</span>
           <span className="flex items-center gap-1.5"><MessageSquare size={10} />{asset.commentCount}</span>

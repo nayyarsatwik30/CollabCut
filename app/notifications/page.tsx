@@ -139,7 +139,7 @@ export default function NotificationsPage() {
                   <button onClick={() => handleClick(n)} className="flex-1 min-w-0 flex items-start gap-3 text-left">
                     <span
                       className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                      style={{ background: 'color-mix(in srgb, var(--th-accent) 16%, transparent)', color: 'var(--th-accent)' }}
+                      style={{ background: 'color-mix(in srgb, var(--th-accent) 16%, transparent)', color: 'var(--th-accent-text)' }}
                     >
                       <Icon size={14} />
                     </span>
@@ -152,7 +152,7 @@ export default function NotificationsPage() {
                     <button
                       onClick={() => markAsRead(n.id)}
                       title="Mark as read"
-                      className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-1.5 text-th-accent hover:bg-th-accent hover:text-th-accent-fg transition-colors btn-press"
+                      className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-1.5 text-th-accent-text hover:bg-th-accent hover:text-th-accent-fg transition-colors btn-press"
                       style={{ background: 'color-mix(in srgb, var(--th-accent) 16%, transparent)' }}
                     >
                       <Check size={11} strokeWidth={3} />

@@ -84,7 +84,7 @@ export function Sidebar() {
                   : 'text-th-muted hover:text-th-text hover:bg-th-surface-alt',
               )}
             >
-              <Icon size={15} className={active ? 'text-th-accent' : ''} />
+              <Icon size={15} className={active ? 'text-th-accent-text' : ''} />
               <span className="flex-1">{label}</span>
               {href === '/notifications' && unreadCount > 0 && (
                 <span

@@ -15,7 +15,7 @@ const MOCK_COMMENTS = [
   {
     id: '1',
     author: 'Priya',
-    color: '#d946ef',
+    color: '#b36a75',
     time: '00:12',
     status: 'open' as const,
     text: 'Can we hold on this frame a beat longer before the cut? Feels rushed.',
@@ -31,7 +31,7 @@ const MOCK_COMMENTS = [
   {
     id: '3',
     author: 'Priya',
-    color: '#d946ef',
+    color: '#b36a75',
     time: '01:23',
     status: 'resolved' as const,
     text: 'Approved on my end ✅',
@@ -50,7 +50,7 @@ export default function DemoReviewPage() {
           </Link>
           <span className="w-px h-5 bg-th-border" />
           <span className="text-[13px] font-semibold">Trailer_Cut_v4.mp4</span>
-          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent/30 text-th-accent">
+          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent/30 text-th-accent-text">
             Sample review — no sign-in needed
           </span>
         </div>

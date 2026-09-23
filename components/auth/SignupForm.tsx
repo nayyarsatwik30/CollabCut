@@ -151,7 +151,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
         <h1 className="text-2xl font-extrabold mb-2">Start your free trial</h1>
         <p className="text-th-muted text-[13px] mb-10">
           Already have an account?{' '}
-          <Link href="/auth/login" className="text-th-accent hover:underline">Log in</Link>
+          <Link href="/auth/login" className="text-th-accent-text hover:underline">Log in</Link>
         </p>
 
         {error && (
@@ -231,7 +231,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
         <p className="mt-4 text-center text-[11px] text-th-faint font-mono">
           No credit card required. 14-day free trial.
           {planId !== 'basic' && (
-            <span className="block mt-1 text-th-accent">Selected plan: {planId} ({billingCycle})</span>
+            <span className="block mt-1 text-th-accent-text">Selected plan: {planId} ({billingCycle})</span>
           )}
         </p>
       </div>

@@ -60,7 +60,7 @@ export default function LoginPage() {
           <h1 className="text-2xl font-extrabold mb-1">Welcome back</h1>
           <p className="text-th-muted text-[13px] mb-8">
             No account?{' '}
-            <Link href="/auth/signup" className="text-th-accent hover:underline">Sign up free</Link>
+            <Link href="/auth/signup" className="text-th-accent-text hover:underline">Sign up free</Link>
           </p>
 
           {error && (
@@ -80,7 +80,7 @@ export default function LoginPage() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[12px] font-semibold text-th-muted font-mono uppercase tracking-wide">Password</label>
-                <Link href="/auth/forgot" className="text-[11px] text-th-accent hover:underline">Forgot password?</Link>
+                <Link href="/auth/forgot" className="text-[11px] text-th-accent-text hover:underline">Forgot password?</Link>
               </div>
               <div className="relative">
                 <input name="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="••••••••"

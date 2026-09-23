@@ -101,7 +101,7 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
       <div className="p-3.5 border-t border-th-border shrink-0 bg-th-surface">
         {/* Status selector + timecode label */}
         <div className="flex items-center gap-2 mb-2.5">
-          <span className="font-mono text-[10px] text-th-accent font-bold">
+          <span className="font-mono text-[10px] text-th-accent-text font-bold">
             AT {formatTimecode(currentTime)}
           </span>
           <div className="ml-auto flex items-center gap-1">

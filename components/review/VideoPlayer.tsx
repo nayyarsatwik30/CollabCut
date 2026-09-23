@@ -207,7 +207,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         )}
 
         {src && (
-          <div className="absolute bottom-3 left-3 font-mono text-[13px] text-th-accent bg-black/65 px-2.5 py-1 rounded pointer-events-none tracking-widest">
+          <div className="absolute bottom-3 left-3 font-mono text-[13px] text-th-accent-text bg-black/65 px-2.5 py-1 rounded pointer-events-none tracking-widest">
             {formatTimecode(currentTime)}
           </div>
         )}
@@ -295,7 +295,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume}
                   onChange={handleVolumeChange}
                   className="w-20 accent-th-accent"
-                  style={{ accentColor: 'var(--th-accent)' }}
+                  style={{ accentColor: 'var(--th-accent-text)' }}
                 />
               </div>
             )}

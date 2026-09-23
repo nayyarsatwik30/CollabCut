@@ -282,7 +282,7 @@ export default function DashboardPage() {
                 <CardGridSkeleton count={8} minWidth={240} />
               ) : filteredAssigned.length === 0 && !search ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                  <div className="text-5xl"><Film size={48} style={{ color: 'var(--th-accent)' }} /></div>
+                  <div className="text-5xl"><Film size={48} style={{ color: 'var(--th-accent-text)' }} /></div>
                   <div>
                     <p className="font-semibold mb-1">No assets assigned yet</p>
                     <p className="text-[13px] text-th-muted">An admin needs to assign you to an asset first.</p>
@@ -312,7 +312,7 @@ export default function DashboardPage() {
                               alt={a.name}
                             />
                           ) : (
-                            <Film size={36} style={{ color: 'var(--th-accent)' }} />
+                            <Film size={36} style={{ color: 'var(--th-accent-text)' }} />
                           )}
                           <span
                             className="absolute top-2.5 right-2.5 font-mono text-[10px] px-2 py-0.5 rounded-th-full"
@@ -342,7 +342,7 @@ export default function DashboardPage() {
                 <CardGridSkeleton count={8} minWidth={240} />
               ) : filteredMyProjects.length === 0 && !search ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                  <FolderKanban size={48} style={{ color: 'var(--th-accent)' }} />
+                  <FolderKanban size={48} style={{ color: 'var(--th-accent-text)' }} />
                   <div>
                     <p className="font-semibold mb-1">No projects yet</p>
                     <p className="text-[13px] text-th-muted">Projects with work assigned to you will show up here.</p>
@@ -372,7 +372,7 @@ export default function DashboardPage() {
                 <CardGridSkeleton count={8} minWidth={240} />
               ) : filtered.length === 0 && !search ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                  <div className="text-5xl"><Film size={48} style={{ color: 'var(--th-accent)' }} /></div>
+                  <div className="text-5xl"><Film size={48} style={{ color: 'var(--th-accent-text)' }} /></div>
                   <div>
                     <p className="font-semibold mb-1">No projects yet</p>
                     <p className="text-[13px] text-th-muted">Create your first project to get started.</p>
@@ -396,7 +396,7 @@ export default function DashboardPage() {
                   ))}
                   <button
                     onClick={() => setShowNew(true)}
-                    className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent transition-colors btn-press overflow-hidden"
+                    className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent-text transition-colors btn-press overflow-hidden"
                   >
                     <div className="aspect-video shrink-0 flex items-center justify-center">
                       <Upload size={22} />

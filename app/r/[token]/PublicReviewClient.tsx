@@ -276,7 +276,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
                           </p>
                           <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
                         </div>
-                        {v.id === asset.id && <Check size={12} className="text-th-accent shrink-0" />}
+                        {v.id === asset.id && <Check size={12} className="text-th-accent-text shrink-0" />}
                       </button>
                     ))}
                   </div>
@@ -291,7 +291,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
             onClick={handleOpenCompare}
             className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
           >
-            <Layers size={10} className="text-th-accent" />
+            <Layers size={10} className="text-th-accent-text" />
             Compare versions
           </button>
         )}
@@ -377,7 +377,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
           <div className="glass border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-th-border flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Layers size={16} className="text-th-accent" />
+                <Layers size={16} className="text-th-accent-text" />
                 <h2 className="font-bold text-[16px]">Compare versions</h2>
               </div>
               <button

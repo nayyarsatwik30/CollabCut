@@ -197,7 +197,7 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
                         {initialsFor(ed.name)}
                       </span>
                       <span className="truncate flex-1">{ed.name}</span>
-                      {asset.editor?.id === ed.id && <Check size={12} style={{ color: 'var(--th-accent)' }} />}
+                      {asset.editor?.id === ed.id && <Check size={12} style={{ color: 'var(--th-accent-text)' }} />}
                     </button>
                   ))
                 )}

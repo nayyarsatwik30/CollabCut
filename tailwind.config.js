@@ -18,6 +18,7 @@ module.exports = {
         'th-faint':       'var(--th-faint)',
         'th-accent':      'var(--th-accent)',
         'th-accent-fg':   'var(--th-accent-fg)',
+        'th-accent-text': 'var(--th-accent-text)',
         'th-open':        'var(--th-open)',
         'th-resolved':    'var(--th-resolved)',
         'th-changes':     'var(--th-changes)',

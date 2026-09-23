@@ -53,7 +53,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
           href={`/project/${project.id}`}
           className="flex items-center gap-4 px-5 py-3.5 border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors"
         >
-          <Film size={20} style={{ color: 'var(--th-accent)' }} />
+          <Film size={20} style={{ color: 'var(--th-accent-text)' }} />
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold truncate">{project.name}</p>
             <p className="text-[11px] text-th-muted">{project.client}</p>
@@ -91,7 +91,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
               alt={project.name}
             />
           ) : (
-            <Film size={36} style={{ color: 'var(--th-accent)' }} />
+            <Film size={36} style={{ color: 'var(--th-accent-text)' }} />
           )}
           <span
             className="absolute top-2.5 right-2.5 font-mono text-[10px] px-2 py-0.5 rounded-th-full"

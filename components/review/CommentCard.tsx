@@ -54,7 +54,7 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
           <button
             onClick={() => onSeek(c.timeSec)}
             className="font-mono text-[10px] px-2 py-0.5 rounded-th-sm btn-press transition-colors"
-            style={{ color: 'var(--th-accent)', background: 'color-mix(in srgb, var(--th-accent) 14%, transparent)' }}
+            style={{ color: 'var(--th-accent-text)', background: 'color-mix(in srgb, var(--th-accent) 14%, transparent)' }}
           >
             {formatTimecode(c.timeSec)}
           </button>
@@ -75,7 +75,7 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
               <MessageSquare size={11} />
               Reply
               {c.replies.length > 0 && (
-                <span className="font-mono text-[10px] font-bold text-th-accent">{c.replies.length}</span>
+                <span className="font-mono text-[10px] font-bold text-th-accent-text">{c.replies.length}</span>
               )}
             </button>
 

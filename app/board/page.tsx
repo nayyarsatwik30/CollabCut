@@ -33,7 +33,7 @@ interface Column {
 
 const COLUMNS: Column[] = [
   { key: 'idea',      label: 'Cut',          color: 'var(--th-muted)' },
-  { key: 'editing',   label: 'Editing',      color: 'var(--th-accent)' },
+  { key: 'editing',   label: 'Editing',      color: 'var(--th-accent-text)' },
   { key: 'review',    label: 'Review',       color: 'var(--th-changes)' },
   { key: 'revision',  label: 'Revision',     color: '#fb923c' },
   { key: 'approved',  label: 'Approved',     color: 'var(--th-resolved)' },
@@ -320,7 +320,7 @@ export default function BoardPage() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center justify-between px-6">
           <div className="flex items-center gap-2">
-            <LayoutGrid size={15} style={{ color: 'var(--th-accent)' }} />
+            <LayoutGrid size={15} style={{ color: 'var(--th-accent-text)' }} />
             <h1 className="text-[15px] font-bold">Board</h1>
           </div>
           <div className="flex items-center gap-3">

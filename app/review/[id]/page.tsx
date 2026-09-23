@@ -420,7 +420,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                               </p>
                               <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
                             </div>
-                            {v.id === asset.id && <Check size={12} className="text-th-accent shrink-0" />}
+                            {v.id === asset.id && <Check size={12} className="text-th-accent-text shrink-0" />}
                           </button>
                         ))}
                       </div>
@@ -432,7 +432,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                               setShowVersions(false)
                               setShowUploadModal(true)
                             }}
-                            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-th text-[12px] font-semibold bg-th-surface border border-th-border text-th-text hover:border-th-accent hover:text-th-accent transition-colors btn-press"
+                            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-th text-[12px] font-semibold bg-th-surface border border-th-border text-th-text hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
                           >
                             <Upload size={13} />
                             Upload new version
@@ -453,7 +453,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   onClick={handleOpenCompare}
                   className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
                 >
-                  <Layers size={10} className="text-th-accent" />
+                  <Layers size={10} className="text-th-accent-text" />
                   Compare versions
                 </button>
               )}
@@ -657,7 +657,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       href={asset.raw_file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent transition-colors btn-press"
+                      className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
                     >
                       <ExternalLink size={12} /> Open reference link
                     </a>
@@ -735,7 +735,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           <div className="glass border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-th-border flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Layers size={16} className="text-th-accent" />
+                <Layers size={16} className="text-th-accent-text" />
                 <h2 className="font-bold text-[16px]">Compare versions</h2>
               </div>
               <button
