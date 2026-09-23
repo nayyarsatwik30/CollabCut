@@ -120,7 +120,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
         setEnteredPassword(passwordInput)
         setUnlocked(true)
       } else {
-        setPasswordError('Incorrect password')
+        setPasswordError(res.status === 404 ? 'This link no longer exists' : res.status === 410 ? 'This link has expired' : res.ok ? 'Incorrect password' : 'Something went wrong - try again')
       }
     } catch {
       setPasswordError('Something went wrong - try again')
