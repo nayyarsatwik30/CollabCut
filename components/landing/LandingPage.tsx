@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Check, ArrowRight, Play, Upload, MessageSquare,
   Layers, CheckCircle, Zap, Users, Lock, Sparkles, Menu, X
 } from 'lucide-react'
 import { useRedirectIfAuthenticated } from '@/lib/useSessionGuard'
+import { Reveal, Stagger, RevealItem, EASE } from './motion'
 
 /* ── Data ── */
 
@@ -106,24 +108,7 @@ export function LandingPage() {
     fetchPlans()
   }, [])
 
-  useEffect(() => {
-    const container = scrollRef.current
-    if (!container) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in-view')
-          }
-        })
-      },
-      { root: container, threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
-    )
-
-    container.querySelectorAll('.reveal').forEach((el) => observer.observe(el))
-    return () => observer.disconnect()
-  }, [plans])
+  const reducedMotion = useReducedMotion()
 
   return (
     <div ref={scrollRef} className="page-scroll">
@@ -161,61 +146,80 @@ export function LandingPage() {
           </div>
         </div>
 
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-th-border px-4 sm:px-6 py-4 flex flex-col gap-4 text-[14px]">
-            <a href="#how" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>How it works</a>
-            <a href="#features" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>Features</a>
-            <a href="#pricing" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
-            <Link href="/auth/login" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
-            <Link
-              href="/auth/signup"
-              onClick={() => setMobileMenuOpen(false)}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-th-full bg-gradient-cta text-white text-[13px] font-semibold btn-press"
+        <AnimatePresence initial={false}>
+          {mobileMenuOpen && (
+            <motion.div
+              key="mobile-menu"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: reducedMotion ? 0 : 0.18, ease: EASE }}
+              className="md:hidden overflow-hidden"
             >
-              Start free <ArrowRight size={13} />
-            </Link>
-          </div>
-        )}
+              <div className="border-t border-th-border px-4 sm:px-6 py-4 flex flex-col gap-4 text-[14px]">
+                <a href="#how" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>How it works</a>
+                <a href="#features" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>Features</a>
+                <a href="#pricing" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
+                <Link href="/auth/login" className="text-th-muted" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
+                <Link
+                  href="/auth/signup"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-th-full bg-gradient-cta text-white text-[13px] font-semibold btn-press"
+                >
+                  Start free <ArrowRight size={13} />
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* ═══════════════ HERO ═══════════════ */}
       <section className="max-w-6xl mx-auto px-6 pt-20 pb-16">
-        <div className="text-center reveal">
-          <div className="flex justify-center">
-            <span className="hero-badge">
-              <Sparkles size={14} className="text-th-accent" />
-              Frame-accurate video review
-            </span>
-          </div>
+        <Stagger trigger="mount" staggerChildren={0.06} className="text-center">
+          <RevealItem>
+            <div className="flex justify-center">
+              <span className="hero-badge">
+                <Sparkles size={14} className="text-th-accent" />
+                Frame-accurate video review
+              </span>
+            </div>
+          </RevealItem>
 
-          <h1 className="text-[clamp(2.4rem,6vw,4.2rem)] font-extrabold leading-[1.08] tracking-tight max-w-3xl mx-auto mb-6">
-            From rough cut to<br />
-            <span className="font-display text-gradient">picture lock</span>
-          </h1>
+          <RevealItem>
+            <h1 className="text-[clamp(2.4rem,6vw,4.2rem)] font-extrabold leading-[1.08] tracking-tight max-w-3xl mx-auto mb-6">
+              From rough cut to<br />
+              <span className="font-display text-gradient">picture lock</span>
+            </h1>
+          </RevealItem>
 
-          <p className="text-[17px] text-th-muted max-w-xl mx-auto leading-relaxed mb-10">
-            Upload a cut, drop notes on the exact frame, and send one link.
-            Reviewers open it without an account. You never pay per reviewer.
-          </p>
+          <RevealItem>
+            <p className="text-[17px] text-th-muted max-w-xl mx-auto leading-relaxed mb-10">
+              Upload a cut, drop notes on the exact frame, and send one link.
+              Reviewers open it without an account. You never pay per reviewer.
+            </p>
+          </RevealItem>
 
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              href="/auth/signup"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full bg-gradient-cta text-white font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
-            >
-              Start free — 14 days <ArrowRight size={14} />
-            </Link>
-            <Link
-              href="/review/demo"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full border border-th-border text-th-text font-semibold text-[14px] btn-press hover:bg-th-surface-alt transition-colors"
-            >
-              <Play size={13} className="text-th-accent" /> See a live review
-            </Link>
-          </div>
-        </div>
+          <RevealItem>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link
+                href="/auth/signup"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full bg-gradient-cta text-white font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
+              >
+                Start free — 14 days <ArrowRight size={14} />
+              </Link>
+              <Link
+                href="/review/demo"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full border border-th-border text-th-text font-semibold text-[14px] btn-press hover:bg-th-surface-alt transition-colors"
+              >
+                <Play size={13} className="text-th-accent" /> See a live review
+              </Link>
+            </div>
+          </RevealItem>
+        </Stagger>
 
         {/* ── Mock Video Player ── */}
-        <div className="mt-16 reveal" style={{ transitionDelay: '0.15s' }}>
+        <Reveal trigger="mount" delay={0.35} className="mt-16">
           <div className="mock-player max-w-4xl mx-auto">
             <div className="mock-player-toolbar">
               <div className="flex items-center gap-1.5 mr-3">
@@ -281,11 +285,11 @@ export function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* ═══════════════ TRUSTED BY ═══════════════ */}
-      <section className="trusted-strip reveal" style={{ transitionDelay: '0.1s' }}>
+      <Reveal trigger="inView" root={scrollRef} className="trusted-strip">
         <p className="trusted-strip-label">
           Trusted by indie studios shipping picture lock on time
         </p>
@@ -294,163 +298,197 @@ export function LandingPage() {
             <span key={s}>{s}</span>
           ))}
         </div>
-      </section>
+      </Reveal>
 
       {/* ═══════════════ HOW IT WORKS ═══════════════ */}
       <section id="how" className="max-w-6xl mx-auto px-6 py-24">
-        <div className="reveal">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-gradient mb-4">
-            How it works
-          </p>
-          <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-14">
-            The review loop, <span className="font-display text-gradient">simplified</span>.
-          </h2>
-        </div>
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.05}>
+          <RevealItem>
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-gradient mb-4">
+              How it works
+            </p>
+          </RevealItem>
+          <RevealItem>
+            <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-14">
+              The review loop, <span className="font-display text-gradient">simplified</span>.
+            </h2>
+          </RevealItem>
+        </Stagger>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {STEPS.map((s, i) => (
-            <div key={s.n} className="step-card reveal" style={{ transitionDelay: `${i * 0.08}s` }}>
-              <div
-                className="step-icon"
-                style={{ background: `${s.color}15` }}
-              >
-                <s.icon size={20} style={{ color: s.color }} />
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.07} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {STEPS.map((s) => (
+            <RevealItem key={s.n} className="h-full">
+              <div className="step-card h-full">
+                <div
+                  className="step-icon"
+                  style={{ background: `${s.color}15` }}
+                >
+                  <s.icon size={20} style={{ color: s.color }} />
+                </div>
+                <p className="font-mono text-[11px] mb-2" style={{ color: s.color }}>{s.n}</p>
+                <h3 className="font-bold text-[15px] mb-2">{s.title}</h3>
+                <p className="text-[13px] text-th-muted leading-relaxed">{s.body}</p>
               </div>
-              <p className="font-mono text-[11px] mb-2" style={{ color: s.color }}>{s.n}</p>
-              <h3 className="font-bold text-[15px] mb-2">{s.title}</h3>
-              <p className="text-[13px] text-th-muted leading-relaxed">{s.body}</p>
-            </div>
+            </RevealItem>
           ))}
-        </div>
+        </Stagger>
       </section>
 
       {/* ═══════════════ FILE MANAGEMENT ═══════════════ */}
       <section id="features" className="max-w-6xl mx-auto px-6 py-24 border-t border-th-border">
-        <div className="reveal">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-gradient mb-4">
-            File Management
-          </p>
-          <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-4 max-w-2xl leading-tight">
-            Upload, organize, and <span className="font-display text-gradient">share</span> with ease.
-          </h2>
-          <div className="mb-14 flex justify-end">
-            <button className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-th border border-th-border text-[13px] font-semibold text-th-text bg-th-surface-alt hover:bg-th-surface-hov transition-colors btn-press">
-              Manage files effortlessly <ArrowRight size={13} />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid sm:grid-cols-3 gap-5">
-          {FEATURES.map((f, i) => (
-            <div key={f.title} className="feature-card reveal" style={{ transitionDelay: `${i * 0.08}s` }}>
-              <div
-                className="feature-icon"
-                style={{ background: `${f.color}15` }}
-              >
-                <f.icon size={20} style={{ color: f.color }} />
-              </div>
-              <h3 className="font-bold text-[16px] mb-2">{f.title}</h3>
-              <p className="text-[13px] text-th-muted leading-relaxed">{f.body}</p>
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.05}>
+          <RevealItem>
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-gradient mb-4">
+              File Management
+            </p>
+          </RevealItem>
+          <RevealItem>
+            <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-4 max-w-2xl leading-tight">
+              Upload, organize, and <span className="font-display text-gradient">share</span> with ease.
+            </h2>
+          </RevealItem>
+          <RevealItem>
+            <div className="mb-14 flex justify-end">
+              <button className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-th border border-th-border text-[13px] font-semibold text-th-text bg-th-surface-alt hover:bg-th-surface-hov transition-colors btn-press">
+                Manage files effortlessly <ArrowRight size={13} />
+              </button>
             </div>
+          </RevealItem>
+        </Stagger>
+
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.07} className="grid sm:grid-cols-3 gap-5">
+          {FEATURES.map((f) => (
+            <RevealItem key={f.title} className="h-full">
+              <div className="feature-card h-full">
+                <div
+                  className="feature-icon"
+                  style={{ background: `${f.color}15` }}
+                >
+                  <f.icon size={20} style={{ color: f.color }} />
+                </div>
+                <h3 className="font-bold text-[16px] mb-2">{f.title}</h3>
+                <p className="text-[13px] text-th-muted leading-relaxed">{f.body}</p>
+              </div>
+            </RevealItem>
           ))}
-        </div>
+        </Stagger>
       </section>
 
       {/* ═══════════════ PRICING ═══════════════ */}
       <section id="pricing" className="max-w-6xl mx-auto px-6 py-24 border-t border-th-border">
-        <div className="text-center reveal">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-gradient mb-4">
-            Pricing
-          </p>
-          <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-3">
-            Simple, transparent <span className="font-display text-gradient">pricing</span>.
-          </h2>
-          <p className="text-th-muted mb-8 text-[15px]">
-            Choose the plan that best fits your workflow.
-          </p>
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.05} className="text-center">
+          <RevealItem>
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-gradient mb-4">
+              Pricing
+            </p>
+          </RevealItem>
+          <RevealItem>
+            <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-3">
+              Simple, transparent <span className="font-display text-gradient">pricing</span>.
+            </h2>
+          </RevealItem>
+          <RevealItem>
+            <p className="text-th-muted mb-8 text-[15px]">
+              Choose the plan that best fits your workflow.
+            </p>
+          </RevealItem>
 
-          <div className="inline-flex items-center gap-1.5 p-1.5 rounded-full glass mb-12 border border-th-border">
-            <button
-              onClick={() => setBillingCycle('monthly')}
-              className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${billingCycle === 'monthly'
-                ? 'bg-gradient-cta text-white shadow-md'
-                : 'text-th-muted hover:text-th-text'
-                }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBillingCycle('yearly')}
-              className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-all flex items-center gap-1.5 ${billingCycle === 'yearly'
-                ? 'bg-gradient-cta text-white shadow-md'
-                : 'text-th-muted hover:text-th-text'
-                }`}
-            >
-              <span>Yearly</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
-                Save 17%
-              </span>
-            </button>
-          </div>
-        </div>
+          <RevealItem>
+            <div className="relative inline-flex items-center gap-1.5 p-1.5 rounded-full glass mb-12 border border-th-border">
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                className={`relative px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${billingCycle === 'monthly' ? 'text-white' : 'text-th-muted hover:text-th-text'
+                  }`}
+              >
+                {billingCycle === 'monthly' && (
+                  <motion.span
+                    layoutId="billing-pill"
+                    className="absolute inset-0 rounded-full bg-gradient-cta shadow-md"
+                    transition={{ duration: reducedMotion ? 0 : 0.25, ease: EASE }}
+                  />
+                )}
+                <span className="relative z-10">Monthly</span>
+              </button>
+              <button
+                onClick={() => setBillingCycle('yearly')}
+                className={`relative px-4 py-2 rounded-full text-[13px] font-semibold transition-colors flex items-center gap-1.5 ${billingCycle === 'yearly' ? 'text-white' : 'text-th-muted hover:text-th-text'
+                  }`}
+              >
+                {billingCycle === 'yearly' && (
+                  <motion.span
+                    layoutId="billing-pill"
+                    className="absolute inset-0 rounded-full bg-gradient-cta shadow-md"
+                    transition={{ duration: reducedMotion ? 0 : 0.25, ease: EASE }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <span>Yearly</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
+                    Save 17%
+                  </span>
+                </span>
+              </button>
+            </div>
+          </RevealItem>
+        </Stagger>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch max-w-5xl mx-auto">
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.08} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch max-w-5xl mx-auto">
           {plans.map((plan, index) => {
             const isPro = plan.id === 'pro'
             const price = billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly
             return (
-              <div
-                key={plan.id || index}
-                className={`relative flex flex-col justify-between p-8 rounded-2xl transition-all duration-300 reveal pricing-plan-card ${isPro
-                  ? 'card-elevated border-th-accent/50 shadow-xl ring-1 ring-th-accent/40'
-                  : 'glass border-th-border'
-                  }`}
-                style={{ transitionDelay: `${index * 0.1}s` }}
-              >
-                {isPro && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-cta text-white text-[11px] font-bold uppercase tracking-wider shadow-md">
-                    Recommended
-                  </div>
-                )}
+              <RevealItem key={plan.id || index} className="h-full">
+                <div
+                  className={`relative h-full flex flex-col justify-between p-8 rounded-2xl transition-all duration-300 pricing-plan-card ${isPro
+                    ? 'card-elevated border-th-accent/50 shadow-xl ring-1 ring-th-accent/40'
+                    : 'glass border-th-border'
+                    }`}
+                >
+                  {isPro && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-cta text-white text-[11px] font-bold uppercase tracking-wider shadow-md">
+                      Recommended
+                    </div>
+                  )}
 
-                <div>
-                  <div className="mb-4">
-                    <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
-                    <p className="text-[12px] text-th-muted font-mono">{plan.storage_gb} GB storage</p>
+                  <div>
+                    <div className="mb-4">
+                      <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
+                      <p className="text-[12px] text-th-muted font-mono">{plan.storage_gb} GB storage</p>
+                    </div>
+
+                    <div className="flex items-baseline gap-1.5 mb-6">
+                      <span className="text-4xl font-extrabold tracking-tight">₹{price}</span>
+                      <span className="text-[13px] text-th-muted">
+                        / {billingCycle === 'monthly' ? 'month' : 'year'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 mb-8 border-t border-th-border pt-6">
+                      {plan.features?.map((feature, fIdx) => (
+                        <div key={fIdx} className="flex items-start gap-2.5 text-[13px] text-th-text">
+                          <Check size={14} className="text-th-accent mt-0.5 shrink-0" />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="flex items-baseline gap-1.5 mb-6">
-                    <span className="text-4xl font-extrabold tracking-tight">₹{price}</span>
-                    <span className="text-[13px] text-th-muted">
-                      / {billingCycle === 'monthly' ? 'month' : 'year'}
-                    </span>
-                  </div>
-
-                  <div className="space-y-3 mb-8 border-t border-th-border pt-6">
-                    {plan.features?.map((feature, fIdx) => (
-                      <div key={fIdx} className="flex items-start gap-2.5 text-[13px] text-th-text">
-                        <Check size={14} className="text-th-accent mt-0.5 shrink-0" />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
+                  <div>
+                    <Link
+                      href={`/auth/signup?plan=${plan.id}&cycle=${billingCycle}`}
+                      className={`w-full py-3 rounded-xl font-semibold text-[13px] transition-all flex items-center justify-center gap-2 btn-press no-underline ${isPro
+                        ? 'bg-gradient-cta text-white shadow-lg hover:opacity-90'
+                        : 'bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov'
+                        }`}
+                    >
+                      Start free trial <ArrowRight size={14} />
+                    </Link>
                   </div>
                 </div>
-
-                <div>
-                  <Link
-                    href={`/auth/signup?plan=${plan.id}&cycle=${billingCycle}`}
-                    className={`w-full py-3 rounded-xl font-semibold text-[13px] transition-all flex items-center justify-center gap-2 btn-press no-underline ${isPro
-                      ? 'bg-gradient-cta text-white shadow-lg hover:opacity-90'
-                      : 'bg-th-surface-alt border border-th-border text-th-text hover:bg-th-surface-hov'
-                      }`}
-                  >
-                    Start free trial <ArrowRight size={14} />
-                  </Link>
-                </div>
-              </div>
+              </RevealItem>
             )
           })}
-        </div>
+        </Stagger>
       </section>
 
       {/* ═══════════════ FOOTER ═══════════════ */}

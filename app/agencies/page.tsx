@@ -1,11 +1,12 @@
-import type { Metadata } from 'next'
-import { AgencyLandingPage } from '@/components/landing/AgencyLandingPage'
-
-export const metadata: Metadata = {
-  title: 'CollabCut for Agencies',
-  description: 'Run your whole editing team out of one workspace — assign editors, manage every client project, and keep review approvals in one place.',
-}
+import { AgencyLanding } from '@/components/collabcut-landing'
 
 export default function AgenciesPage() {
-  return <AgencyLandingPage />
+  return <AgencyLanding />
 }
+
+export const metadata = {
+  title: 'CollabCut for agencies — Make the work legible',
+  description: 'A clear production workspace for agencies managing clients, editors, and every cut.',
+}
+
+export const viewport = { themeColor: '#0e0b0c' }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   ArrowRight, Play, Sparkles, Zap, Users, Lock, Layers, CheckCircle
 } from 'lucide-react'
+import { Reveal, Stagger, RevealItem } from './motion'
 
 /* ── Data ── */
 
@@ -71,25 +72,6 @@ export function AgencyLandingPage() {
     }
   }, [])
 
-  useEffect(() => {
-    const container = scrollRef.current
-    if (!container) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in-view')
-          }
-        })
-      },
-      { root: container, threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
-    )
-
-    container.querySelectorAll('.reveal').forEach((el) => observer.observe(el))
-    return () => observer.disconnect()
-  }, [])
-
   return (
     <div ref={scrollRef} className="page-scroll">
 
@@ -118,43 +100,51 @@ export function AgencyLandingPage() {
 
       {/* ═══════════════ HERO ═══════════════ */}
       <section className="max-w-6xl mx-auto px-6 pt-20 pb-16">
-        <div className="text-center reveal">
-          <div className="flex justify-center">
-            <span className="hero-badge">
-              <Sparkles size={14} className="text-th-accent" />
-              Built for creative agencies
-            </span>
-          </div>
+        <Stagger trigger="mount" staggerChildren={0.06} className="text-center">
+          <RevealItem>
+            <div className="flex justify-center">
+              <span className="hero-badge">
+                <Sparkles size={14} className="text-th-accent" />
+                Built for creative agencies
+              </span>
+            </div>
+          </RevealItem>
 
-          <h1 className="text-[clamp(2.4rem,6vw,4.2rem)] font-extrabold leading-[1.08] tracking-tight max-w-3xl mx-auto mb-6">
-            Every editor, every client,<br />
-            <span className="font-display text-gradient">one workspace</span>
-          </h1>
+          <RevealItem>
+            <h1 className="text-[clamp(2.4rem,6vw,4.2rem)] font-extrabold leading-[1.08] tracking-tight max-w-3xl mx-auto mb-6">
+              Every editor, every client,<br />
+              <span className="font-display text-gradient">one workspace</span>
+            </h1>
+          </RevealItem>
 
-          <p className="text-[17px] text-th-muted max-w-xl mx-auto leading-relaxed mb-10">
-            Run your whole editing team out of one workspace. Assign editors to
-            specific cuts, keep every client project organized, and let clients
-            review and approve without ever needing an account.
-          </p>
+          <RevealItem>
+            <p className="text-[17px] text-th-muted max-w-xl mx-auto leading-relaxed mb-10">
+              Run your whole editing team out of one workspace. Assign editors to
+              specific cuts, keep every client project organized, and let clients
+              review and approve without ever needing an account.
+            </p>
+          </RevealItem>
 
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              href="/auth/signup/agency"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full bg-gradient-cta text-white font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
-            >
-              Request access <ArrowRight size={14} />
-            </Link>
-            <Link
-              href="/review/demo"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full border border-th-border text-th-text font-semibold text-[14px] btn-press hover:bg-th-surface-alt transition-colors"
-            >
-              <Play size={13} className="text-th-accent" /> See a live review
-            </Link>
-          </div>
-        </div>
+          <RevealItem>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link
+                href="/auth/signup/agency"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full bg-gradient-cta text-white font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
+              >
+                Request access <ArrowRight size={14} />
+              </Link>
+              <Link
+                href="/review/demo"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full border border-th-border text-th-text font-semibold text-[14px] btn-press hover:bg-th-surface-alt transition-colors"
+              >
+                <Play size={13} className="text-th-accent" /> See a live review
+              </Link>
+            </div>
+          </RevealItem>
+        </Stagger>
 
         {/* ── Mock Video Player ── */}
-        <div className="mt-16 reveal" style={{ transitionDelay: '0.15s' }}>
+        <Reveal trigger="mount" delay={0.35} className="mt-16">
           <div className="mock-player max-w-4xl mx-auto">
             <div className="mock-player-toolbar">
               <div className="flex items-center gap-1.5 mr-3">
@@ -220,11 +210,11 @@ export function AgencyLandingPage() {
               </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* ═══════════════ TRUSTED BY ═══════════════ */}
-      <section className="trusted-strip reveal" style={{ transitionDelay: '0.1s' }}>
+      <Reveal trigger="inView" root={scrollRef} className="trusted-strip">
         <p className="trusted-strip-label">
           Trusted by agencies coordinating teams of editors across dozens of clients
         </p>
@@ -233,77 +223,97 @@ export function AgencyLandingPage() {
             <span key={s}>{s}</span>
           ))}
         </div>
-      </section>
+      </Reveal>
 
       {/* ═══════════════ HOW IT WORKS ═══════════════ */}
       <section id="how" className="max-w-6xl mx-auto px-6 py-24">
-        <div className="reveal">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-gradient mb-4">
-            How it works
-          </p>
-          <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-14">
-            Set up once, <span className="font-display text-gradient">run every client</span> through it.
-          </h2>
-        </div>
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.05}>
+          <RevealItem>
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-gradient mb-4">
+              How it works
+            </p>
+          </RevealItem>
+          <RevealItem>
+            <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-14">
+              Set up once, <span className="font-display text-gradient">run every client</span> through it.
+            </h2>
+          </RevealItem>
+        </Stagger>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {STEPS.map((s, i) => (
-            <div key={s.n} className="step-card reveal" style={{ transitionDelay: `${i * 0.08}s` }}>
-              <div
-                className="step-icon"
-                style={{ background: `${s.color}15` }}
-              >
-                <s.icon size={20} style={{ color: s.color }} />
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.07} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {STEPS.map((s) => (
+            <RevealItem key={s.n} className="h-full">
+              <div className="step-card h-full">
+                <div
+                  className="step-icon"
+                  style={{ background: `${s.color}15` }}
+                >
+                  <s.icon size={20} style={{ color: s.color }} />
+                </div>
+                <p className="font-mono text-[11px] mb-2" style={{ color: s.color }}>{s.n}</p>
+                <h3 className="font-bold text-[15px] mb-2">{s.title}</h3>
+                <p className="text-[13px] text-th-muted leading-relaxed">{s.body}</p>
               </div>
-              <p className="font-mono text-[11px] mb-2" style={{ color: s.color }}>{s.n}</p>
-              <h3 className="font-bold text-[15px] mb-2">{s.title}</h3>
-              <p className="text-[13px] text-th-muted leading-relaxed">{s.body}</p>
-            </div>
+            </RevealItem>
           ))}
-        </div>
+        </Stagger>
       </section>
 
       {/* ═══════════════ WHY AGENCIES ═══════════════ */}
       <section id="features" className="max-w-6xl mx-auto px-6 py-24 border-t border-th-border">
-        <div className="reveal">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-gradient mb-4">
-            Why agencies
-          </p>
-          <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-14 max-w-2xl leading-tight">
-            Built for teams, <span className="font-display text-gradient">not just solo edits</span>.
-          </h2>
-        </div>
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.05}>
+          <RevealItem>
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-gradient mb-4">
+              Why agencies
+            </p>
+          </RevealItem>
+          <RevealItem>
+            <h2 className="text-[clamp(1.8rem,4vw,2.5rem)] font-extrabold mb-14 max-w-2xl leading-tight">
+              Built for teams, <span className="font-display text-gradient">not just solo edits</span>.
+            </h2>
+          </RevealItem>
+        </Stagger>
 
-        <div className="grid sm:grid-cols-3 gap-5">
-          {FEATURES.map((f, i) => (
-            <div key={f.title} className="feature-card reveal" style={{ transitionDelay: `${i * 0.08}s` }}>
-              <div
-                className="feature-icon"
-                style={{ background: `${f.color}15` }}
-              >
-                <f.icon size={20} style={{ color: f.color }} />
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.07} className="grid sm:grid-cols-3 gap-5">
+          {FEATURES.map((f) => (
+            <RevealItem key={f.title} className="h-full">
+              <div className="feature-card h-full">
+                <div
+                  className="feature-icon"
+                  style={{ background: `${f.color}15` }}
+                >
+                  <f.icon size={20} style={{ color: f.color }} />
+                </div>
+                <h3 className="font-bold text-[16px] mb-2">{f.title}</h3>
+                <p className="text-[13px] text-th-muted leading-relaxed">{f.body}</p>
               </div>
-              <h3 className="font-bold text-[16px] mb-2">{f.title}</h3>
-              <p className="text-[13px] text-th-muted leading-relaxed">{f.body}</p>
-            </div>
+            </RevealItem>
           ))}
-        </div>
+        </Stagger>
       </section>
 
       {/* ═══════════════ FINAL CTA ═══════════════ */}
-      <section className="max-w-6xl mx-auto px-6 py-24 border-t border-th-border text-center reveal">
-        <h2 className="text-[clamp(1.6rem,3.6vw,2.2rem)] font-extrabold mb-4">
-          Ready to bring your team on board?
-        </h2>
-        <p className="text-th-muted mb-8 text-[15px] max-w-md mx-auto">
-          Set up your agency workspace and start assigning editors to client work today.
-        </p>
-        <Link
-          href="/auth/signup/agency"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full bg-gradient-cta text-white font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
-        >
-          Request access <ArrowRight size={14} />
-        </Link>
+      <section className="max-w-6xl mx-auto px-6 py-24 border-t border-th-border text-center">
+        <Stagger trigger="inView" root={scrollRef} staggerChildren={0.06}>
+          <RevealItem>
+            <h2 className="text-[clamp(1.6rem,3.6vw,2.2rem)] font-extrabold mb-4">
+              Ready to bring your team on board?
+            </h2>
+          </RevealItem>
+          <RevealItem>
+            <p className="text-th-muted mb-8 text-[15px] max-w-md mx-auto">
+              Set up your agency workspace and start assigning editors to client work today.
+            </p>
+          </RevealItem>
+          <RevealItem>
+            <Link
+              href="/auth/signup/agency"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full bg-gradient-cta text-white font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
+            >
+              Request access <ArrowRight size={14} />
+            </Link>
+          </RevealItem>
+        </Stagger>
       </section>
 
       {/* ═══════════════ FOOTER ═══════════════ */}
