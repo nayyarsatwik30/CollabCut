@@ -54,16 +54,22 @@ function Footer() {
 }
 
 function OpeningSequence() {
-  const { scrollY } = useScroll()
-  const scrollYProgress = useTransform(scrollY, [0, 2354], [0, 1])
-  const titleOpacity = useTransform(scrollYProgress, [0, 0.16, 0.28], [1, 0, 0])
-  const placeholderOpacity = useTransform(scrollYProgress, [0.08, 0.22, 0.55], [0, 1, 0])
-  const reviewOpacity = useTransform(scrollYProgress, [0.26, 0.55, 0.82, 1], [0, 1, 0.56, 0])
-  const reviewScale = useTransform(scrollYProgress, [0.26, 0.55, 0.82, 1], [0.72, 1, 0.92, 0.76])
-  const sceneBlur = useTransform(scrollYProgress, [0.68, 0.9, 1], [0, 0, 12])
-  const sceneOpacity = useTransform(scrollYProgress, [0.72, 1], [1, 0.2])
+  // 0 -> 1 across the sequence's own sticky range (its height minus one
+  // viewport), whatever the screen height.
+  const ref = useRef<HTMLElement>(null)
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] })
+  // Every range spans the full 0 -> 1: framer-motion runs these as native
+  // scroll-driven animations, and a range that stops short of 1 interpolates
+  // back to the element's base style after its last keyframe (the logo faded
+  // back in over the review screen).
+  const titleOpacity = useTransform(scrollYProgress, [0, 0.16, 1], [1, 0, 0])
+  const placeholderOpacity = useTransform(scrollYProgress, [0, 0.08, 0.22, 0.55, 1], [0, 0, 1, 0, 0])
+  const reviewOpacity = useTransform(scrollYProgress, [0, 0.26, 0.55, 0.82, 1], [0, 0, 1, 0.56, 0])
+  const reviewScale = useTransform(scrollYProgress, [0, 0.26, 0.55, 0.82, 1], [0.72, 0.72, 1, 0.92, 0.76])
+  const sceneBlur = useTransform(scrollYProgress, [0, 0.68, 0.9, 1], [0, 0, 0, 12])
+  const sceneOpacity = useTransform(scrollYProgress, [0, 0.72, 1], [1, 1, 0.2])
 
-  return <section className="opening-sequence" aria-label="CollabCut product introduction">
+  return <section ref={ref} className="opening-sequence" aria-label="CollabCut product introduction">
     <div className="opening-sticky">
       <motion.div className="opening-title" style={{ opacity: titleOpacity }}><span className="opening-mark">C</span><span>collabcut</span></motion.div>
       <motion.div className="opening-scene" style={{ opacity: sceneOpacity, filter: useTransform(sceneBlur, (value) => `blur(${value}px)`) }}>

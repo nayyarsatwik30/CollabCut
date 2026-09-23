@@ -643,8 +643,13 @@ h3,
    toggles this class on <html>/<body> for as long as they're active. */
 html.cc-scroll-unlocked, body.cc-scroll-unlocked {
   height: auto !important;
-  overflow: auto !important;
 }
+html.cc-scroll-unlocked { overflow: auto !important; }
+/* body must stay overflow: visible. Any other value makes it the scroll
+   container for position: sticky, and since body itself never scrolls (the
+   viewport does), the opening sequence's sticky stage scrolled away with the
+   page instead of holding - a blank black screen where the video belongs. */
+body.cc-scroll-unlocked { overflow: visible !important; }
 :root { --cc-ink: #18201f; --cc-muted: #68716d; --cc-paper: #f3efe7; --cc-card: #fbfaf7; --cc-line: #d9d8d1; --cc-accent: #c86f45; --cc-blue: #63858c; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
