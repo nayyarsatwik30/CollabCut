@@ -3,7 +3,70 @@
 import { useState, useRef } from 'react'
 import { X, Upload, CheckCircle, AlertCircle } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import * as UpChunk from '@mux/upchunk'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
+
+// UpChunk pauses (rather than failing) while the browser reports itself
+// offline and resumes on its own once it's back - but it would wait forever.
+// Give up after this long so a dead connection ends in a real error instead
+// of a progress bar frozen mid-way.
+const OFFLINE_GIVE_UP_MS = 60_000
+
+// Chunked, resumable upload straight to the Mux direct-upload URL. A single
+// raw PUT of the whole file died on any network blip (surfacing in the
+// browser as a misleading CORS error), leaving the asset row stuck in
+// "processing" forever. Here each 8 MB chunk is retried on its own - 10
+// attempts, 3s apart, so ~30s of flakiness per chunk is survivable - and the
+// upload resumes from the last good chunk instead of starting over.
+export function uploadFileToMux(
+  file: File,
+  url: string,
+  onProgress: (percent: number) => void,
+  onStatus: (message: string) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const upload = UpChunk.createUpload({
+      endpoint: url,
+      file,
+      chunkSize: 8192, // KB
+      attempts: 10,
+      delayBeforeAttempt: 3,
+    })
+
+    let settled = false
+    let offlineTimer: ReturnType<typeof setTimeout> | undefined
+
+    const finish = (err?: Error) => {
+      if (settled) return
+      settled = true
+      clearTimeout(offlineTimer)
+      if (err) reject(err)
+      else resolve()
+    }
+
+    const waitForReconnect = () => {
+      onStatus('Connection lost - upload paused, it will resume automatically')
+      clearTimeout(offlineTimer)
+      offlineTimer = setTimeout(() => {
+        upload.abort()
+        finish(new Error('Upload failed: no internet connection. Check your connection and try again.'))
+      }, OFFLINE_GIVE_UP_MS)
+    }
+
+    upload.on('progress', (e) => onProgress(Math.floor(e.detail)))
+    upload.on('attemptFailure', (e) => onStatus(`Connection problem - retrying (${e.detail.attemptsLeft} attempts left)`))
+    upload.on('chunkSuccess', () => onStatus(''))
+    upload.on('offline', waitForReconnect)
+    upload.on('online', () => {
+      clearTimeout(offlineTimer)
+      onStatus('Connection restored - resuming upload')
+    })
+    upload.on('success', () => finish())
+    upload.on('error', (e) => finish(new Error(`Upload failed: ${e.detail.message}`)))
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) waitForReconnect()
+  })
+}
 
 interface UploadModalProps {
   projectId: string
@@ -21,6 +84,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
   const fileRef = useRef<HTMLInputElement>(null)
   const [state, setState] = useState<UploadState>('idle')
   const [progress, setProgress] = useState(0)
+  const [uploadStatus, setUploadStatus] = useState('')
   const [fileName, setFileName] = useState('')
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
@@ -64,7 +128,9 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
 
       // Upload directly to Mux
       setState('uploading')
-      await uploadToMux(file, upload_url)
+      setProgress(0)
+      setUploadStatus('')
+      await uploadFileToMux(file, upload_url, setProgress, setUploadStatus)
       // size_bytes was recorded when the row was created - once the bytes
       // actually land, refresh the sidebar/settings storage bar.
       invalidateStorageUsage()
@@ -79,29 +145,6 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
       setError(err.message ?? 'Upload failed')
       setState('error')
     }
-  }
-
-  const uploadToMux = (file: File, url: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest()
-
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          setProgress(Math.round((e.loaded / e.total) * 100))
-        }
-      })
-
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) resolve()
-        else reject(new Error(`Upload failed: ${xhr.status}`))
-      })
-
-      xhr.addEventListener('error', () => reject(new Error('Network error during upload')))
-
-      xhr.open('PUT', url)
-      xhr.setRequestHeader('Content-Type', file.type)
-      xhr.send(file)
-    })
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -188,6 +231,11 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
               <p className="text-[11px] text-th-muted mt-3 font-mono">
                 Uploading directly to Mux — do not close this window
               </p>
+              {uploadStatus && (
+                <p className="mt-2 flex items-center gap-2 text-[12px] text-th-changes">
+                  <AlertCircle size={13} /> {uploadStatus}
+                </p>
+              )}
             </div>
           )}
 
