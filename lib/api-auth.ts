@@ -41,6 +41,11 @@ export async function hasWorkspaceRole(
 // which cards to show that editor, and the same embedded-filter shape the
 // POST handler in /api/board/editor/[editorId]/assets uses to check for an
 // existing lineage assignment.
+//
+// Uploading any version in the lineage counts the same as an assignment. The
+// upload route never creates an asset_editors row, so without this an
+// editor's own brand-new upload 403'd for them (view, versions, comments)
+// until an admin assigned it to them.
 export async function isAssignedEditor(assetId: string, userId: string): Promise<boolean> {
   const assetResult = await migrationDb.query(
     `SELECT asset_group_id FROM assets WHERE id = $1`,
@@ -50,15 +55,16 @@ export async function isAssignedEditor(assetId: string, userId: string): Promise
   if (!asset) return false
   const targetGroupId = asset.asset_group_id ?? assetId
 
-  const assignmentResult = await migrationDb.query(
-    `SELECT ae.id
-     FROM asset_editors ae
-     JOIN assets a ON a.id = ae.asset_id
-     WHERE ae.editor_id = $1 AND a.asset_group_id = $2
+  const accessResult = await migrationDb.query(
+    `SELECT 1
+     FROM assets a
+     WHERE (a.asset_group_id = $2 OR a.id = $3)
+       AND (a.uploaded_by = $1
+            OR EXISTS (SELECT 1 FROM asset_editors ae WHERE ae.asset_id = a.id AND ae.editor_id = $1))
      LIMIT 1`,
-    [userId, targetGroupId]
+    [userId, targetGroupId, assetId]
   )
-  return assignmentResult.rows.length > 0
+  return accessResult.rows.length > 0
 }
 
 // Authenticates the request, then requires `role` in `workspaceId` outright,
