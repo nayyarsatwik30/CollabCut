@@ -12,6 +12,18 @@ import { invalidateStorageUsage } from '@/lib/useStorageUsage'
 // of a progress bar frozen mid-way.
 const OFFLINE_GIVE_UP_MS = 60_000
 
+// UpChunk sets no request timeout, so a chunk whose connection silently stops
+// moving (no error, no bytes) would hang forever. If nothing happens for this
+// long while online, fail with a clear message instead.
+const STALL_GIVE_UP_MS = 90_000
+
+// A dropped connection surfaces from UpChunk's XHR layer as status 0, which
+// its default retry list (408/502/503/504) treats as fatal - one blip would
+// end the whole upload. Retry it (and the other transient codes) instead.
+const RETRY_CODES = [0, 408, 429, 500, 502, 503, 504]
+
+const NO_CONNECTION_MESSAGE = 'Upload failed: no internet connection. Check your connection and try again.'
+
 // Chunked, resumable upload straight to the Mux direct-upload URL. A single
 // raw PUT of the whole file died on any network blip (surfacing in the
 // browser as a misleading CORS error), leaving the asset row stuck in
@@ -31,40 +43,67 @@ export function uploadFileToMux(
       chunkSize: 8192, // KB
       attempts: 10,
       delayBeforeAttempt: 3,
+      retryCodes: RETRY_CODES,
     })
 
     let settled = false
     let offlineTimer: ReturnType<typeof setTimeout> | undefined
+    let stallTimer: ReturnType<typeof setTimeout> | undefined
 
     const finish = (err?: Error) => {
       if (settled) return
       settled = true
       clearTimeout(offlineTimer)
-      if (err) reject(err)
-      else resolve()
+      clearTimeout(stallTimer)
+      if (err) {
+        upload.abort()
+        reject(err)
+      } else resolve()
+    }
+
+    // Re-armed on every sign of life; paused while offline (the offline
+    // timer owns that case).
+    const watchForStall = () => {
+      clearTimeout(stallTimer)
+      stallTimer = setTimeout(() => {
+        finish(new Error('Upload failed: the connection stopped sending data. Check your connection and try again.'))
+      }, STALL_GIVE_UP_MS)
     }
 
     const waitForReconnect = () => {
       onStatus('Connection lost - upload paused, it will resume automatically')
+      clearTimeout(stallTimer)
       clearTimeout(offlineTimer)
-      offlineTimer = setTimeout(() => {
-        upload.abort()
-        finish(new Error('Upload failed: no internet connection. Check your connection and try again.'))
-      }, OFFLINE_GIVE_UP_MS)
+      offlineTimer = setTimeout(() => finish(new Error(NO_CONNECTION_MESSAGE)), OFFLINE_GIVE_UP_MS)
     }
 
-    upload.on('progress', (e) => onProgress(Math.floor(e.detail)))
-    upload.on('attemptFailure', (e) => onStatus(`Connection problem - retrying (${e.detail.attemptsLeft} attempts left)`))
+    upload.on('progress', (e) => {
+      onProgress(Math.floor(e.detail))
+      if (!upload.offline) watchForStall()
+    })
+    upload.on('attemptFailure', (e) => {
+      onStatus(`Connection problem - retrying (${e.detail.attemptsLeft} attempts left)`)
+      if (!upload.offline) watchForStall()
+    })
     upload.on('chunkSuccess', () => onStatus(''))
     upload.on('offline', waitForReconnect)
     upload.on('online', () => {
       clearTimeout(offlineTimer)
+      watchForStall()
       onStatus('Connection restored - resuming upload')
     })
     upload.on('success', () => finish())
-    upload.on('error', (e) => finish(new Error(`Upload failed: ${e.detail.message}`)))
+    upload.on('error', (e) => {
+      // Status 0 = never reached the server; after all retries that means
+      // the connection kept dropping, not that Mux rejected the file.
+      const status = e.detail.response?.statusCode
+      finish(new Error(status
+        ? `Upload failed: ${e.detail.message}`
+        : 'Upload failed: the connection kept dropping. Check your connection and try again.'))
+    })
 
     if (typeof navigator !== 'undefined' && !navigator.onLine) waitForReconnect()
+    else watchForStall()
   })
 }
 
@@ -102,7 +141,13 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
     try {
       if (status !== 'authenticated' || !session) { setError('Not logged in'); setState('error'); return }
 
-      // Request Mux upload URL from our API
+      // Checked before the request below creates the asset row, so starting
+      // an upload while offline never leaves a row stuck in "processing".
+      if (!navigator.onLine) throw new Error(NO_CONNECTION_MESSAGE)
+
+      // Request Mux upload URL from our API. fetch() only rejects when the
+      // request never got through, which would otherwise surface as a bare
+      // "Failed to fetch".
       const res = await fetch('/api/assets/upload', {
         method: 'POST',
         headers: {
@@ -117,7 +162,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
           ...(linkedAsset ? { linked_asset_name: linkedAsset.name } : {}),
           ...(fulfillAssetId ? { fulfill_asset_id: fulfillAssetId } : {}),
         }),
-      })
+      }).catch(() => { throw new Error(NO_CONNECTION_MESSAGE) })
 
       if (!res.ok) {
         const err = await res.json()
