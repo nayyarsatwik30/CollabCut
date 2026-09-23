@@ -19,8 +19,3 @@ Planned work that isn't urgent but is committed to. Newest decisions at the top 
   - GHSA-2xp9-vwfh-vxw4 (AVIF / `libheif` RCE in image optimization): `sharp` isn't installed, Vercel serves `/_next/image` on its own infrastructure, nothing uses `next/image`, and the remote image allowlist was removed (commit `93baf3d`).
 - **Scope to expect:** async request APIs (`cookies()`, `headers()`, `params`), React 19, changed `fetch`/route-handler caching defaults, NextAuth 4 compatibility, `eslint-config-next` in lockstep.
 - **Done when:** `npm audit --omit=dev` shows no `next`/`postcss` advisories, typecheck and production build are clean, and the authorization and soft-delete test suites pass against the upgraded build.
-
-### Patch `nanoid` (2 high advisories)
-
-- **Why:** transitive dependency below the fixed versions (`<3.3.18`). Not tied to the Next major — `npm audit fix` resolves it without a breaking change.
-- **Done when:** `npm audit --omit=dev` no longer lists `nanoid`.
