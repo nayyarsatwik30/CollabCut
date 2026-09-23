@@ -29,7 +29,7 @@ A Frame.io-inspired video review and agency workflow platform. CollabCut lets vi
 | Domain | collabcut.in (GoDaddy DNS → Vercel) |
 | Planned | Backblaze B2 (raw footage archival), Razorpay (payments) |
  
-> **Note:** CollabCut originally ran on Supabase (Postgres + Auth) and was migrated to a self-hosted CloudClusters Postgres instance with NextAuth. A small amount of legacy Supabase code (password reset flow, a few routes) is still being cleaned up.
+> **Note:** CollabCut originally ran on Supabase (Postgres + Auth) and was migrated to a self-hosted CloudClusters Postgres instance with NextAuth. All Supabase code has since been removed.
  
 ## Getting started
  
