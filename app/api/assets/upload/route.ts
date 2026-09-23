@@ -4,7 +4,7 @@ import { migrationDb } from '@/lib/migrationDb'
 import { video, getCorsOrigin } from '@/lib/mux'
 import { syncProjectStatus } from '@/lib/project-status'
 import { notifyWorkspaceAdmins } from '@/lib/notifications'
-import { requireAuth } from '@/lib/api-auth'
+import { requireAuth, projectMembership, canAccessAsset } from '@/lib/api-auth'
 
 // Shared context every upload-triggered notification needs - the project's
 // display name/workspace (to fan a notification out to its admins) and the
@@ -35,6 +35,29 @@ export async function POST(req: NextRequest) {
   // size_bytes - which /api/storage-usage sums. Without it every asset sits
   // at the column default of 0 and the storage bar never moves.
   const sizeBytes = Number.isSafeInteger(size_bytes) && size_bytes >= 0 ? size_bytes : 0
+
+  // Every upload lands in some project - the placeholder's own project when
+  // fulfilling, otherwise project_id - and the caller must belong to that
+  // project's workspace. Checked before anything else touches the project:
+  // uploading a version into a lineage grants access to the whole lineage
+  // (isAssignedEditor), so an unchecked upload would let an outsider take
+  // over someone else's video.
+  let destinationProjectId: string | undefined = project_id
+  if (requestedFulfillAssetId) {
+    const placeholderResult = await migrationDb.query(
+      `SELECT project_id FROM assets WHERE id = $1`,
+      [requestedFulfillAssetId]
+    )
+    if (!placeholderResult.rows[0]) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    destinationProjectId = placeholderResult.rows[0].project_id
+  }
+  if (destinationProjectId) {
+    const membership = await projectMembership(destinationProjectId, user.id)
+    if (membership === 'missing') return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    if (membership === 'not_member') {
+      return NextResponse.json({ error: 'Not authorized to upload to this project' }, { status: 403 })
+    }
+  }
 
   let fulfill_asset_id = requestedFulfillAssetId
 
@@ -125,6 +148,15 @@ export async function POST(req: NextRequest) {
     )
     linkedHead = existingResult.rows[0] ?? null
 
+    // Stacking a version makes the uploader part of the lineage, which grants
+    // access to all of it (isAssignedEditor) - so only someone who can
+    // already access this video may add a version to it. Workspace
+    // membership alone isn't enough: an unassigned editor could otherwise
+    // take over any video in the workspace.
+    if (linkedHead && !(await canAccessAsset(user.id, linkedHead.id))) {
+      return NextResponse.json({ error: 'Not authorized to add a version to this video' }, { status: 403 })
+    }
+
     // A lineage's v1 (its earliest version) must have a real file before any
     // new version can stack on top of it - otherwise the placeholder never
     // gets fulfilled and is left orphaned underneath a "v2".
@@ -146,6 +178,12 @@ export async function POST(req: NextRequest) {
       [project_id, name]
     )
     linkedHead = existingResult.rows[0] ?? null
+
+    // Same rule as an explicit version upload, but a filename collision with
+    // a video the uploader can't access (and may not even see) shouldn't
+    // block a normal first-time upload - it just becomes its own new video
+    // instead of stacking onto someone else's.
+    if (linkedHead && !(await canAccessAsset(user.id, linkedHead.id))) linkedHead = null
   }
 
   // A version upload always inherits its lineage's real cut_type - never

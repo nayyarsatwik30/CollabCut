@@ -2,24 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { createNotification } from '@/lib/notifications'
 import { syncProjectStatus } from '@/lib/project-status'
-import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
+import { requireAuth, hasWorkspaceRole, canAccessAsset } from '@/lib/api-auth'
 import { verifyShareAccess } from '@/lib/share-access'
-
-// True if `userId` is an admin of the asset's workspace, or is assigned as
-// an editor on it - the same admin-or-assigned-editor gate every other
-// asset-scoped route in the app uses.
-async function canAccessAsset(userId: string, assetId: string): Promise<boolean> {
-  const assetResult = await migrationDb.query(
-    `SELECT p.workspace_id FROM assets a
-     JOIN projects p ON p.id = a.project_id
-     WHERE a.id = $1`,
-    [assetId]
-  )
-  const workspaceId = assetResult.rows[0]?.workspace_id ?? null
-
-  const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, userId, 'admin') : false
-  return isAdmin || await isAssignedEditor(assetId, userId)
-}
 
 // Comments are readable by a logged-in admin/assigned editor (the review
 // screen) OR by anyone holding a valid, non-expired, correctly-passworded
@@ -71,7 +55,7 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { asset_id, time_sec, text, status, author_name } = await req.json()
+  const { asset_id, time_sec, text, status } = await req.json()
 
   if (!asset_id || time_sec === undefined || !text) {
     return NextResponse.json({ error: 'asset_id, time_sec and text required' }, { status: 400 })
@@ -80,10 +64,16 @@ export async function POST(req: NextRequest) {
   const authorized = await canAccessAsset(user.id, asset_id)
   if (!authorized) return NextResponse.json({ error: 'Not authorized to comment on this asset' }, { status: 403 })
 
+  // Always attributed to the caller's own profile - never a name from the
+  // request body, which anyone could set to someone else's.
+  const profileResult = await migrationDb.query(`SELECT name, email FROM profiles WHERE id = $1`, [user.id])
+  const profile = profileResult.rows[0]
+  const authorName = profile?.name || profile?.email || user.email || 'Unknown'
+
   const insertResult = await migrationDb.query(
     `INSERT INTO comments (asset_id, time_sec, text, status, author_id, author_name)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [asset_id, time_sec, text, status ?? 'open', user.id, author_name ?? 'Anonymous']
+    [asset_id, time_sec, text, status ?? 'open', user.id, authorName]
   )
   const data = insertResult.rows[0]
 

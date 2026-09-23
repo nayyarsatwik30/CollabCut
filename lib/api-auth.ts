@@ -67,6 +67,39 @@ export async function isAssignedEditor(assetId: string, userId: string): Promise
   return accessResult.rows.length > 0
 }
 
+// True if `userId` is an admin of the asset's workspace, or is assigned as
+// an editor on it - the same admin-or-assigned-editor gate every other
+// asset-scoped route in the app uses.
+export async function canAccessAsset(userId: string, assetId: string): Promise<boolean> {
+  const assetResult = await migrationDb.query(
+    `SELECT p.workspace_id FROM assets a
+     JOIN projects p ON p.id = a.project_id
+     WHERE a.id = $1`,
+    [assetId]
+  )
+  const workspaceId = assetResult.rows[0]?.workspace_id ?? null
+
+  const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, userId, 'admin') : false
+  return isAdmin || await isAssignedEditor(assetId, userId)
+}
+
+// Whether `userId` belongs (as admin or editor) to the workspace that owns
+// `projectId` - 'missing' when the project doesn't exist at all, so callers
+// can 404 instead of 403.
+export async function projectMembership(projectId: string, userId: string): Promise<'member' | 'not_member' | 'missing'> {
+  const result = await migrationDb.query(
+    `SELECT p.id, wm.user_id
+     FROM projects p
+     LEFT JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = $2
+     WHERE p.id = $1
+     LIMIT 1`,
+    [projectId, userId]
+  )
+  const row = result.rows[0]
+  if (!row) return 'missing'
+  return row.user_id ? 'member' : 'not_member'
+}
+
 // Authenticates the request, then requires `role` in `workspaceId` outright,
 // with no "or assigned editor" escape hatch. Use for flat role gates where
 // the workspace is already known - for resource-scoped routes (asset/

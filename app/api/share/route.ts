@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { hashSharePassword } from '@/lib/share-password'
-import { requireAuth } from '@/lib/api-auth'
+import { requireAuth, canAccessAsset } from '@/lib/api-auth'
 import { getPublicShareLink } from '@/lib/share-access'
 import { buildShareUrl } from '@/lib/share-slug'
 
@@ -24,6 +24,9 @@ export async function POST(req: NextRequest) {
   )
   const assetRow = assetResult.rows[0]
   if (!assetRow) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+  if (!(await canAccessAsset(user.id, asset_id))) {
+    return NextResponse.json({ error: 'Not authorized to share this asset' }, { status: 403 })
+  }
   const groupId = assetRow.asset_group_id ?? asset_id
 
   if (!regenerate) {
@@ -88,6 +91,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const auth = await requireAuth(req)
   if ('error' in auth) return auth.error
+  const { user } = auth
 
   const { asset_id, downloads_disabled, comments_only, expires_at, password } = await req.json()
   if (!asset_id) return NextResponse.json({ error: 'asset_id required' }, { status: 400 })
@@ -98,6 +102,9 @@ export async function PATCH(req: NextRequest) {
   )
   const assetRow = assetResult.rows[0]
   if (!assetRow) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+  if (!(await canAccessAsset(user.id, asset_id))) {
+    return NextResponse.json({ error: 'Not authorized to change this share link' }, { status: 403 })
+  }
   const groupId = assetRow.asset_group_id ?? asset_id
 
   const existingResult = await migrationDb.query(
