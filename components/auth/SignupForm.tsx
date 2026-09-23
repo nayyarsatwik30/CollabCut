@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight, Check, Copy } from 'lucide-react'
@@ -14,30 +14,13 @@ const PERKS = [
 
 type SignupRole = 'admin' | 'editor'
 
-interface Plan {
-  id: string
-  name: string
-  price_monthly: number
-  price_yearly: number
-}
-
-// Renders instantly on first paint so the price box never shows a blank
-// dash while /api/plans is in flight - the fetch below then reconciles
-// with live data (source of truth stays the `plans` table).
-const FALLBACK_PLANS: Plan[] = [
-  { id: 'basic', name: 'Basic', price_monthly: 349, price_yearly: 3490 },
-  { id: 'pro', name: 'Pro', price_monthly: 499, price_yearly: 4990 },
-  { id: 'master', name: 'Master', price_monthly: 1599, price_yearly: 15990 },
-]
-
 interface SignupFormProps {
   // Shows the "Create a workspace / Join a workspace" role picker and
   // invite-code field. Off for the public self-serve signup (always an
   // admin of their own new workspace); on for the private agency-onboarding
   // link, which needs both roles.
   allowWorkspaceChoice: boolean
-  // The self-serve prices don't apply to agencies (custom negotiated
-  // pricing), so the agency route omits this sidebar entirely.
+  // Perks + default-plan summary; the agency route omits this sidebar.
   showPricingSidebar: boolean
 }
 
@@ -50,21 +33,9 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
   const [role, setRole] = useState<SignupRole>('admin')
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', inviteCode: '' })
   const [createdInviteCode, setCreatedInviteCode] = useState('')
-  const [plans, setPlans] = useState<Plan[]>(FALLBACK_PLANS)
 
   const planId = searchParams.get('plan') ?? 'basic'
   const billingCycle = searchParams.get('cycle') ?? 'monthly'
-  const selectedPlan = plans.find((p) => p.id === planId)
-  const selectedPrice = selectedPlan
-    ? billingCycle === 'yearly' ? selectedPlan.price_yearly : selectedPlan.price_monthly
-    : null
-
-  useEffect(() => {
-    fetch('/api/plans')
-      .then((res) => res.json())
-      .then((data) => setPlans(data.plans ?? []))
-      .catch(() => {})
-  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -275,12 +246,14 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
               </li>
             ))}
           </ul>
+          {/* No prices yet - new workspaces start on tier_1 (see
+              DEFAULT_WORKSPACE_PLAN_ID), so describe that instead. */}
           <div className="mt-14 p-6 rounded-th-lg border border-th-border bg-th-surface max-w-xs">
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-4xl font-extrabold">₹{selectedPrice ?? '—'}</span>
-              <span className="text-th-muted text-[13px]">/ {billingCycle === 'yearly' ? 'year' : 'month'} after trial</span>
+              <span className="text-4xl font-extrabold">2 TB</span>
+              <span className="text-th-muted text-[13px]">workspace storage</span>
             </div>
-            <p className="text-[12px] text-th-muted">{selectedPlan?.name ?? 'Basic'} plan, everything included.</p>
+            <p className="text-[12px] text-th-muted">Tier 1: 2 admins and 3 editors, everything included.</p>
           </div>
         </div>
       )}

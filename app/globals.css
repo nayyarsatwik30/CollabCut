@@ -773,7 +773,7 @@ body { background-image: radial-gradient(rgba(243,239,231,.035) .7px, transparen
 .cc-footer p, .footer-links a { color: #9d9290; }
 .footer-links b { color: #d2c6c0; }
 .footer-bottom { border-color: #35282b; color: #817578; }
-.price-plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.price-plans { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .plan-card, .agency-quote-card { display: grid; gap: 14px; padding: 27px; border: 1px solid var(--cc-line); background: #171214; }
 .plan-card.featured { border-color: var(--cc-accent); transform: translateY(-10px); }
 .plan-card strong, .agency-quote-card strong { display: block; margin: 10px 0 3px; color: var(--cc-ink); font: 400 34px Georgia, serif; letter-spacing: -.05em; }
