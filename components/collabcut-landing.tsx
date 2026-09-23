@@ -53,6 +53,13 @@ function Footer() {
   return <footer className="cc-footer"><div className="footer-main"><div><Logo /><p>The clear path from first cut<br />to final approval.</p></div><div className="footer-links"><div><b>Product</b><Link href="#workflow">How it works</Link><Link href="#features">Features</Link><Link href="#pricing">Plans</Link></div><div><b>Company</b><Link href="#about">About</Link><Link href="mailto:hello@collabcut.in">Contact</Link></div><div><b>Legal</b><Link href="/terms">Terms of Service</Link><Link href="/privacy">Privacy Policy</Link></div></div></div><div className="footer-bottom"><span>© 2026 CollabCut. Built for better cuts.</span><span>Made for the people behind the timeline.</span></div></footer>
 }
 
+// The reel shown full-frame in stage 2 and inside the review mockup's player
+// in stage 3. The gradient on its container stays as the backdrop until the
+// first frame loads.
+function HeroVideo() {
+  return <video className="opening-hero-video" src="/hero.mp4" muted autoPlay loop playsInline preload="auto" />
+}
+
 function OpeningSequence() {
   // 0 -> 1 across the sequence's own sticky range (its height minus one
   // viewport), whatever the screen height.
@@ -74,13 +81,12 @@ function OpeningSequence() {
       <motion.div className="opening-title" style={{ opacity: titleOpacity }}><span className="opening-mark">C</span><span>collabcut</span></motion.div>
       <motion.div className="opening-scene" style={{ opacity: sceneOpacity, filter: useTransform(sceneBlur, (value) => `blur(${value}px)`) }}>
         <motion.div className="opening-placeholder" style={{ opacity: placeholderOpacity }}>
-          <span className="opening-play">▶</span><span>Video placeholder</span><small>Scroll to enter the review</small>
+          <HeroVideo />
         </motion.div>
         <motion.div className="opening-review" style={{ opacity: reviewOpacity, scale: reviewScale }}>
           <div className="opening-window-bar"><span>●</span><span>●</span><span>●</span><b>Review link · cut_014.mp4</b></div>
           <div className="opening-review-body"><div className="opening-video">
-            {/* TODO: replace placeholder with real <video> element */}
-            <div className="opening-video-placeholder"><span className="opening-play">▶</span><span>Video placeholder</span></div>
+            <div className="opening-video-placeholder"><HeroVideo /></div>
             <div className="opening-timeline"><i /><b>00:14</b></div>
           </div><div className="opening-comments"><strong>Review notes</strong><span className="opening-comment-count">1 open</span><div className="opening-typed-comment"><b>00:14</b><p>Push the color grade warmer here</p><small><span className="avatar avatar-amber">M</span> Maya · client</small></div></div></div>
           <div className="opening-cursor" aria-hidden="true" />
