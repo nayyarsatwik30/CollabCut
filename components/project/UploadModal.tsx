@@ -20,10 +20,12 @@ const OFFLINE_GIVE_UP_MS = 60_000
 // while that buffer drains - that is not a stall.
 const STALL_GIVE_UP_MS = 5 * 60_000
 
-// 4 MB chunks (must be a multiple of 256 KB): at ~40 KB/s one chunk takes
-// under two minutes, so a drop mid-chunk loses little and the stall window
-// above comfortably covers a chunk's drain time.
-const CHUNK_SIZE_KB = 4096
+// 2 MB chunks (must be a multiple of 256 KB). Measured as low as ~14 KB/s to
+// Mux, where a chunk takes ~2.5 min: a drop mid-chunk loses little, and each
+// chunk's drain time stays well inside the stall window above. Mux sends no
+// preflight max-age, so every chunk also pays a CORS preflight - smaller
+// chunks than this would start to add up.
+const CHUNK_SIZE_KB = 2048
 
 // A dropped connection surfaces from UpChunk's XHR layer as status 0, which
 // its default retry list (408/502/503/504) treats as fatal - one blip would
@@ -35,7 +37,7 @@ const NO_CONNECTION_MESSAGE = 'Upload failed: no internet connection. Check your
 // Chunked, resumable upload straight to the Mux direct-upload URL. A single
 // raw PUT of the whole file died on any network blip (surfacing in the
 // browser as a misleading CORS error), leaving the asset row stuck in
-// "processing" forever. Here each 4 MB chunk is retried on its own - 10
+// "processing" forever. Here each 2 MB chunk is retried on its own - 10
 // attempts, 3s apart, so ~30s of flakiness per chunk is survivable - and the
 // upload resumes from the last good chunk instead of starting over.
 export function uploadFileToMux(
