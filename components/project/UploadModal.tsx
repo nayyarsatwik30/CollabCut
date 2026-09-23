@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { X, Upload, CheckCircle, AlertCircle } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { invalidateStorageUsage } from '@/lib/useStorageUsage'
 
 interface UploadModalProps {
   projectId: string
@@ -48,6 +49,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
           name: file.name,
           version: 1,
           cut_type: cutType,
+          size_bytes: file.size,
           ...(linkedAsset ? { linked_asset_name: linkedAsset.name } : {}),
           ...(fulfillAssetId ? { fulfill_asset_id: fulfillAssetId } : {}),
         }),
@@ -63,6 +65,9 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
       // Upload directly to Mux
       setState('uploading')
       await uploadToMux(file, upload_url)
+      // size_bytes was recorded when the row was created - once the bytes
+      // actually land, refresh the sidebar/settings storage bar.
+      invalidateStorageUsage()
 
       setState('processing')
       setTimeout(() => {

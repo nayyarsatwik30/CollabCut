@@ -7,5 +7,4 @@ build
 .env.local
 .env.migration
 tsconfig.tsbuildinfo
-supabase/.temp
 backups/

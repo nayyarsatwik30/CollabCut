@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
 import { attachCoverPlaybackIds } from '@/lib/project-covers'
 
@@ -12,31 +12,20 @@ export async function GET(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { data: assignedRows, error: assignedError } = await supabaseAdmin
-    .from('asset_editors')
-    .select('assets!inner(project_id, deleted_at)')
-    .eq('editor_id', user.id)
-    .is('assets.deleted_at', null)
+  const result = await migrationDb.query(
+    `SELECT p.*
+     FROM projects p
+     WHERE p.deleted_at IS NULL
+       AND p.id IN (
+         SELECT a.project_id
+         FROM asset_editors ae
+         JOIN assets a ON a.id = ae.asset_id
+         WHERE ae.editor_id = $1 AND a.deleted_at IS NULL
+       )
+     ORDER BY p.updated_at DESC`,
+    [user.id]
+  )
 
-  if (assignedError) return NextResponse.json({ error: assignedError.message }, { status: 500 })
-
-  const projectIds = Array.from(new Set(
-    (assignedRows ?? [])
-      .map((row: any) => (Array.isArray(row.assets) ? row.assets[0] : row.assets)?.project_id)
-      .filter(Boolean)
-  ))
-
-  if (projectIds.length === 0) return NextResponse.json({ projects: [] })
-
-  const { data, error } = await supabaseAdmin
-    .from('projects')
-    .select('*')
-    .in('id', projectIds)
-    .is('deleted_at', null)
-    .order('updated_at', { ascending: false })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  const projects = await attachCoverPlaybackIds(data ?? [])
+  const projects = await attachCoverPlaybackIds(result.rows)
   return NextResponse.json({ projects })
 }

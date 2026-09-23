@@ -11,7 +11,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const projectResult = await migrationDb.query(`SELECT * FROM projects WHERE id = $1`, [params.id])
   const data = projectResult.rows[0]
 
-  if (!data) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+  // A soft-deleted project lives only in Trash (restored via /api/projects/trash).
+  if (!data || data.deleted_at) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
   // A project with no workspace can't rely on the admin-membership check
   // below, it has to be excluded up front instead.

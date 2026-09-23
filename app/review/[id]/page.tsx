@@ -10,6 +10,7 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { useSessionGuard } from '@/lib/useSessionGuard'
+import { usePolling, sameData } from '@/lib/usePolling'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 
 type SideTab = 'notes' | 'brief'
@@ -151,6 +152,23 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     return () => clearInterval(interval)
   }, [asset?.id, asset?.mux_upload_id, asset?.status, asset?.mux_playback_id])
 
+  // Keep the notes panel in step with collaborators without a manual
+  // refresh. Only replaces state when the payload actually differs, so an
+  // idle cycle causes no re-render at all.
+  const assetIdRef = useRef<string | null>(null)
+  assetIdRef.current = asset?.id ?? null
+  usePolling(async () => {
+    const assetId = assetIdRef.current
+    if (!assetId) return
+    const res = await fetch(`/api/comments?asset_id=${assetId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    })
+    if (!res.ok || assetIdRef.current !== assetId) return // switched versions mid-flight
+    const data = await res.json()
+    const next: Comment[] = data.comments ?? []
+    setComments((prev) => (sameData(prev, next) ? prev : next))
+  }, 6000, !loading && !!asset)
+
   const handleSwitchVersion = async (targetId: string) => {
     setShowVersions(false)
     if (!asset || targetId === asset.id) return
@@ -212,7 +230,12 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     })
     if (res.ok) {
       const data = await res.json()
-      setComments((prev) => [...prev, { ...data.comment, replies: [] }].sort((a, b) => a.time_sec - b.time_sec))
+      // A poll can land between the insert and this response - don't add it twice.
+      setComments((prev) =>
+        prev.some((c) => c.id === data.comment.id)
+          ? prev
+          : [...prev, { ...data.comment, replies: [] }].sort((a, b) => a.time_sec - b.time_sec)
+      )
       showToast('Note added', 'success')
       return true
     }
@@ -261,13 +284,17 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     if (res.ok) {
       const data = await res.json()
       setComments((prev) =>
-        prev.map((c) => (c.id === commentId ? { ...c, replies: [...(c.replies ?? []), data.reply] } : c))
+        prev.map((c) =>
+          c.id === commentId && !(c.replies ?? []).some((r) => r.id === data.reply.id)
+            ? { ...c, replies: [...(c.replies ?? []), data.reply] }
+            : c
+        )
       )
     }
   }, [userName, token])
 
   const handleToggleComplete = async () => {
-    if (!asset || !token || togglingComplete) return
+    if (!asset || togglingComplete) return
     const newComplete = !asset.is_complete
     setTogglingComplete(true)
     setAsset({ ...asset, is_complete: newComplete })

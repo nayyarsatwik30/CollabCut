@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LayoutGrid, Plus, FolderKanban, Users, ChevronLeft, Film, LogOut } from 'lucide-react'
@@ -13,6 +13,7 @@ import { Toast, useToast } from '@/components/ui/Toast'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { performLogout } from '@/lib/auth'
 import { useSessionGuard } from '@/lib/useSessionGuard'
+import { usePolling, sameData } from '@/lib/usePolling'
 
 type BoardView = 'board' | 'projects' | 'editors'
 
@@ -105,12 +106,46 @@ export default function BoardPage() {
     setLoading(false)
   }
 
+  // Background refresh of the Kanban so another user's moves/new cards show
+  // up without a reload. Never touches `loading` (no skeleton flash) and only
+  // calls setAssets when the payload really changed. `mutationRef` guards
+  // local optimistic edits: while one is in flight - or if one started while
+  // this poll's request was out - the poll result is stale and gets dropped
+  // instead of snapping the card back.
+  const mutationRef = useRef({ pending: 0, generation: 0, dragging: false })
+  const beginMutation = () => {
+    mutationRef.current.pending += 1
+    mutationRef.current.generation += 1
+  }
+  const endMutation = () => {
+    mutationRef.current.pending -= 1
+  }
+
+  usePolling(async () => {
+    const m = mutationRef.current
+    if (m.pending > 0 || m.dragging) return
+    const generation = m.generation
+    const res = await fetch('/api/board', { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) return
+    const data = await res.json()
+    if (m.pending > 0 || m.dragging || m.generation !== generation) return
+    const next: BoardAsset[] = data.assets ?? []
+    // /api/board has no ORDER BY, so compare order-insensitively - a mere
+    // row reshuffle from Postgres isn't a change worth re-rendering for.
+    const byId = (list: BoardAsset[]) => [...list].sort((a, b) => a.id.localeCompare(b.id))
+    setAssets((prev) => (sameData(byId(prev), byId(next)) ? prev : next))
+  }, 7000, !loading && !error && boardView === 'board')
+
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, assetId: string) => {
+    mutationRef.current.dragging = true
     e.dataTransfer.setData('text/plain', assetId)
     e.dataTransfer.effectAllowed = 'move'
   }
 
-  const handleDragEnd = () => setDragOverColumn(null)
+  const handleDragEnd = () => {
+    mutationRef.current.dragging = false
+    setDragOverColumn(null)
+  }
 
   const handleLogout = async () => {
     await performLogout(router)
@@ -141,6 +176,7 @@ export default function BoardPage() {
     const nextComplete = columnKey === 'approved'
     setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, pipeline_status: columnKey, is_complete: nextComplete } : a)))
 
+    beginMutation()
     try {
       const res = await fetch(`/api/assets/${assetId}/status`, {
         method: 'PATCH',
@@ -152,6 +188,8 @@ export default function BoardPage() {
       }
     } catch (err) {
       setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, pipeline_status: previousStatus, is_complete: previousComplete } : a)))
+    } finally {
+      endMutation()
     }
   }
 
@@ -170,6 +208,7 @@ export default function BoardPage() {
     const previousAssets = assets
     setAssets((prev) => prev.filter((a) => a.id !== assetId))
 
+    beginMutation()
     try {
       const res = await fetch(`/api/assets/${assetId}/delete`, {
         method: 'POST',
@@ -182,6 +221,8 @@ export default function BoardPage() {
     } catch (err) {
       setAssets(previousAssets)
       showToast('Failed to delete cut.', 'error')
+    } finally {
+      endMutation()
     }
   }
 
@@ -194,6 +235,7 @@ export default function BoardPage() {
 
     setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, editor: { id: newEditor.id, name: newEditor.name } } : a)))
 
+    beginMutation()
     try {
       if (previousEditor) {
         await fetch(`/api/board/editor/${previousEditor.id}/assets`, {
@@ -212,6 +254,8 @@ export default function BoardPage() {
       }
     } catch (err) {
       setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, editor: previousEditor } : a)))
+    } finally {
+      endMutation()
     }
   }
 

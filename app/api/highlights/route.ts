@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
 
     // Get all projects owned by this user
     const projectsResult = await migrationDb.query(
-        `SELECT id, name FROM projects WHERE owner_id = $1`,
+        `SELECT id, name FROM projects WHERE owner_id = $1 AND deleted_at IS NULL`,
         [user.id]
     )
     const projects = projectsResult.rows
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     // Get assets in those projects
     const assetsResult = await migrationDb.query(
-        `SELECT id, name, project_id, status FROM assets WHERE project_id = ANY($1::uuid[])`,
+        `SELECT id, name, project_id, status FROM assets WHERE project_id = ANY($1::uuid[]) AND deleted_at IS NULL`,
         [projectIds]
     )
     const assets = assetsResult.rows

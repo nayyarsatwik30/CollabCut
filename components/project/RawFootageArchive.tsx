@@ -62,7 +62,6 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
 
   const loadFiles = async () => {
-    if (!token) return
     const res = await fetch(`/api/raw-upload/list?projectId=${projectId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -82,11 +81,6 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
 
     if (file.size > MAX_RAW_FILE_BYTES) {
       setError('File exceeds the 750MB archival limit')
-      return
-    }
-
-    if (!token) {
-      setError('Not logged in')
       return
     }
 
@@ -128,7 +122,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
       message: f.file_name,
       confirmLabel: 'Delete',
     })
-    if (!ok || !token) return
+    if (!ok) return
 
     const res = await fetch(`/api/raw-upload/${f.id}`, {
       method: 'DELETE',

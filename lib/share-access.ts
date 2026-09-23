@@ -47,14 +47,21 @@ export async function getPublicShareLink(token: string): Promise<PublicShareLink
   if (data.expires_at && new Date(data.expires_at) < new Date()) return { status: 'expired' }
 
   const versionsResult = await migrationDb.query(
-    `SELECT id, version, name, status, created_at, size_bytes, mux_playback_id, mux_upload_id, is_complete, deleted_at
-     FROM assets WHERE asset_group_id = $1 ORDER BY version DESC`,
+    `SELECT a.id, a.version, a.name, a.status, a.created_at, a.size_bytes, a.mux_playback_id, a.mux_upload_id, a.is_complete, a.deleted_at,
+            p.deleted_at AS project_deleted_at
+     FROM assets a LEFT JOIN projects p ON p.id = a.project_id
+     WHERE a.asset_group_id = $1 ORDER BY a.version DESC`,
     [data.asset_group_id]
   )
   const rows = versionsResult.rows
 
-  const versions = rows.filter((v) => !v.deleted_at).map(({ deleted_at, ...v }) => v)
-  if (versions.length === 0) return { status: 'not_found' } // whole lineage soft-deleted
+  // A soft-deleted project hides its assets without touching their own
+  // deleted_at, so check both - otherwise deleting a project leaves its
+  // public share links live.
+  const versions = rows
+    .filter((v) => !v.deleted_at && !v.project_deleted_at)
+    .map(({ deleted_at, project_deleted_at, ...v }) => v)
+  if (versions.length === 0) return { status: 'not_found' } // whole lineage (or its project) soft-deleted
 
   const latest = versions[0] // already ordered desc by version
 
@@ -94,12 +101,13 @@ export async function verifyShareAccess(
   if (shareLink.expires_at && new Date(shareLink.expires_at) < new Date()) return false
 
   const versionResult = await migrationDb.query(
-    `SELECT asset_group_id, deleted_at FROM assets WHERE id = $1`,
+    `SELECT a.asset_group_id, a.deleted_at, p.deleted_at AS project_deleted_at
+     FROM assets a LEFT JOIN projects p ON p.id = a.project_id WHERE a.id = $1`,
     [assetId]
   )
   const version = versionResult.rows[0]
 
-  if (!version || version.deleted_at) return false
+  if (!version || version.deleted_at || version.project_deleted_at) return false
   if (version.asset_group_id !== shareLink.asset_group_id) return false
 
   if (shareLink.password_hash) {
