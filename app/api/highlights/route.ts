@@ -7,26 +7,28 @@ export async function GET(req: NextRequest) {
     if ('error' in auth) return auth.error
     const { user } = auth
 
-    // Get all projects owned by this user
-    const projectsResult = await migrationDb.query(
-        `SELECT id, name FROM projects WHERE owner_id = $1 AND deleted_at IS NULL`,
+    // Assets this user can see activity on: everything in projects they own
+    // (the admin case), plus every version in any asset lineage they're
+    // assigned to as an editor. Editors own no projects, so scoping by
+    // owner_id alone left their Recent tab permanently empty. Lineage-level
+    // match mirrors isAssignedEditor - an assignment is pinned to one
+    // version, but comments land on whichever version is current.
+    const assetsResult = await migrationDb.query(
+        `SELECT a.id, a.name, a.project_id, a.status, p.name AS project_name
+         FROM assets a
+         JOIN projects p ON p.id = a.project_id
+         WHERE a.deleted_at IS NULL AND p.deleted_at IS NULL
+           AND (p.owner_id = $1
+            OR COALESCE(a.asset_group_id, a.id) IN (
+                SELECT COALESCE(ea.asset_group_id, ea.id)
+                FROM asset_editors ae
+                JOIN assets ea ON ea.id = ae.asset_id
+                WHERE ae.editor_id = $1
+            ))`,
         [user.id]
     )
-    const projects = projectsResult.rows
-
-    const projectIds = projects.map((p) => p.id)
-    const projectMap = Object.fromEntries(projects.map((p) => [p.id, p.name]))
-
-    if (projectIds.length === 0) {
-        return NextResponse.json({ highlights: [] })
-    }
-
-    // Get assets in those projects
-    const assetsResult = await migrationDb.query(
-        `SELECT id, name, project_id, status FROM assets WHERE project_id = ANY($1::uuid[]) AND deleted_at IS NULL`,
-        [projectIds]
-    )
     const assets = assetsResult.rows
+    const projectMap = Object.fromEntries(assets.map((a) => [a.project_id, a.project_name]))
 
     const assetIds = assets.map((a) => a.id)
     const assetMap = Object.fromEntries(
