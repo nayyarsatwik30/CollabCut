@@ -4,12 +4,6 @@ Planned work that isn't urgent but is committed to. Newest decisions at the top 
 
 ## Planned (near term, weeks)
 
-### Chunked / resumable uploads (branch `fix/chunked-uploads`, commit `956723a`)
-
-- **Why:** a real, valuable fix for the upload reliability issues seen on 23 Sep 2026 - a single raw PUT of the whole file dies on any network blip (showing up as a misleading CORS error) and leaves the asset stuck in "processing".
-- **State:** implemented with `@mux/upchunk` (8 MB chunks, per-chunk retries, resume from last good chunk, 60s offline give-up) but untested - deliberately not merged to main.
-- **Done when:** tested on a calm day against large files and a flaky connection, then merged.
-
 ### Upgrade Next.js 14.2.35 → 15.5.x
 
 - **Why:** 14.2.35 is the last 14.x release. `npm audit` still reports 27 advisories against it (23 in `next`, 4 in the `postcss` bundled with it) that are fixed only in Next 15.5.24+.
