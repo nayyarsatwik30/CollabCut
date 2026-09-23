@@ -56,6 +56,25 @@ export function uploadFileToMux(
       retryCodes: RETRY_CODES,
     })
 
+    // UpChunk's own 'online' listener calls sendChunks() unconditionally. If
+    // the in-flight chunk survived the offline blip (it can), that starts a
+    // second send loop next to the first: both pull chunks from one file
+    // iterator but share one byte offset, so data lands at the wrong position
+    // and Mux never gets a complete file - while UpChunk reports success.
+    // Allow only one loop at a time. (Present in 3.5.0, the latest release.)
+    const internals = upload as unknown as { sendChunks: () => Promise<void> }
+    const sendChunks = internals.sendChunks.bind(upload)
+    let sending: Promise<void> | null = null
+    internals.sendChunks = () => {
+      if (!sending) sending = sendChunks().finally(() => { sending = null })
+      return sending
+    }
+
+    // UpChunk treats 308 ("resume incomplete") as a successful chunk. On the
+    // last chunk Mux answers 200/201 once it has the whole file, so a final
+    // 308 means it doesn't - never report that as a finished upload.
+    let lastChunkStatus: number | undefined
+
     let settled = false
     let offlineTimer: ReturnType<typeof setTimeout> | undefined
     let stallTimer: ReturnType<typeof setTimeout> | undefined
@@ -95,14 +114,19 @@ export function uploadFileToMux(
       onStatus(`Connection problem - retrying (${e.detail.attemptsLeft} attempts left)`)
       if (!upload.offline) watchForStall()
     })
-    upload.on('chunkSuccess', () => onStatus(''))
+    upload.on('chunkSuccess', (e) => {
+      lastChunkStatus = e.detail.response?.statusCode
+      onStatus('')
+    })
     upload.on('offline', waitForReconnect)
     upload.on('online', () => {
       clearTimeout(offlineTimer)
       watchForStall()
       onStatus('Connection restored - resuming upload')
     })
-    upload.on('success', () => finish())
+    upload.on('success', () => finish(lastChunkStatus === 308
+      ? new Error('Upload failed: Mux did not receive the whole file. Please try again.')
+      : undefined))
     upload.on('error', (e) => {
       // Status 0 = never reached the server; after all retries that means
       // the connection kept dropping, not that Mux rejected the file.
