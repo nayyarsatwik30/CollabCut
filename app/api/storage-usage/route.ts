@@ -9,8 +9,9 @@ import { migrationDb } from '@/lib/migrationDb'
 // If the caller belongs to a workspace that's been assigned an agency plan
 // tier (workspaces.workspace_plan_id), usage is pooled across every project
 // in that workspace instead of scoped to their own uploads - agency tiers
-// bill storage at the workspace level, not per editor. Everyone else keeps
-// the existing per-user ("my own uploads") scoping. Read-only - never
+// bill storage at the workspace level, not per editor. Anyone without a
+// planned workspace gets their own uploads and plan_missing: true, so the
+// bar says "No plan assigned" instead of inventing a cap. Read-only - never
 // touches upload logic or the underlying columns.
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req)
@@ -23,6 +24,7 @@ export async function GET(req: NextRequest) {
      JOIN workspaces w ON w.id = wm.workspace_id
      JOIN workspace_plans wp ON wp.id = w.workspace_plan_id
      WHERE wm.user_id = $1
+     ORDER BY wp.sort_order DESC
      LIMIT 1`,
     [user.id]
   )
@@ -52,6 +54,7 @@ export async function GET(req: NextRequest) {
         max_admins: agencyMembership.max_admins,
         max_editors: agencyMembership.max_editors,
       },
+      plan_missing: false,
     })
   }
 
@@ -63,5 +66,5 @@ export async function GET(req: NextRequest) {
   const assetsTotal = Number(assetsResult.rows[0].total)
   const rawFilesTotal = Number(rawFilesResult.rows[0].total)
 
-  return NextResponse.json({ used_bytes: assetsTotal + rawFilesTotal, workspace_plan: null })
+  return NextResponse.json({ used_bytes: assetsTotal + rawFilesTotal, workspace_plan: null, plan_missing: true })
 }

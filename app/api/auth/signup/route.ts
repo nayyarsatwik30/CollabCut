@@ -4,10 +4,9 @@ import { hashPassword } from '@/lib/password'
 
 // Creates the profile + auth_credentials + workspace role in one CloudClusters
 // transaction, so a failure partway through (bad invite code, duplicate
-// email, etc.) never leaves behind a created-but-unassigned account. Mirrors
-// the proven transaction shape from the auth-migration scaffold's signup
-// route, extended with this route's existing admin/editor branching and
-// response contract (SignupForm.tsx expects workspace.invite_code for admins).
+// email, etc.) never leaves behind a created-but-unassigned account. Keeps
+// this route's admin/editor branching and response contract (SignupForm.tsx
+// expects workspace.invite_code for admins).
 export async function POST(req: NextRequest) {
   const { name, email, password, role, inviteCode } = await req.json()
 

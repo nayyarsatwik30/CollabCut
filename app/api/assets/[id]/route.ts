@@ -9,15 +9,21 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const [auth, assetMetaResult] = await Promise.all([
     requireAuth(req),
     migrationDb.query(
-      `SELECT p.workspace_id FROM assets a LEFT JOIN projects p ON p.id = a.project_id WHERE a.id = $1`,
+      `SELECT p.workspace_id, a.deleted_at, p.deleted_at AS project_deleted_at
+       FROM assets a LEFT JOIN projects p ON p.id = a.project_id WHERE a.id = $1`,
       [params.id]
     ),
   ])
   if ('error' in auth) return auth.error
   const { user } = auth
 
+  // A trashed asset, or any asset in a trashed project, is gone as far as
+  // the review screen is concerned - old links and notifications shouldn't
+  // still open it. The Trash page lists and restores through /api/assets/trash.
   const assetMeta = assetMetaResult.rows[0]
-  if (!assetMeta) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!assetMeta || assetMeta.deleted_at || assetMeta.project_deleted_at) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   const workspaceId = assetMeta.workspace_id ?? null
 

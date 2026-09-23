@@ -41,6 +41,11 @@ export async function hasWorkspaceRole(
 // which cards to show that editor, and the same embedded-filter shape the
 // POST handler in /api/board/editor/[editorId]/assets uses to check for an
 // existing lineage assignment.
+//
+// Uploading any version in the lineage counts the same as an assignment. The
+// upload route never creates an asset_editors row, so without this an
+// editor's own brand-new upload 403'd for them (view, versions, comments)
+// until an admin assigned it to them.
 export async function isAssignedEditor(assetId: string, userId: string): Promise<boolean> {
   const assetResult = await migrationDb.query(
     `SELECT asset_group_id FROM assets WHERE id = $1`,
@@ -50,15 +55,50 @@ export async function isAssignedEditor(assetId: string, userId: string): Promise
   if (!asset) return false
   const targetGroupId = asset.asset_group_id ?? assetId
 
-  const assignmentResult = await migrationDb.query(
-    `SELECT ae.id
-     FROM asset_editors ae
-     JOIN assets a ON a.id = ae.asset_id
-     WHERE ae.editor_id = $1 AND a.asset_group_id = $2
+  const accessResult = await migrationDb.query(
+    `SELECT 1
+     FROM assets a
+     WHERE (a.asset_group_id = $2 OR a.id = $3)
+       AND (a.uploaded_by = $1
+            OR EXISTS (SELECT 1 FROM asset_editors ae WHERE ae.asset_id = a.id AND ae.editor_id = $1))
      LIMIT 1`,
-    [userId, targetGroupId]
+    [userId, targetGroupId, assetId]
   )
-  return assignmentResult.rows.length > 0
+  return accessResult.rows.length > 0
+}
+
+// True if `userId` is an admin of the asset's workspace, or is assigned as
+// an editor on it - the same admin-or-assigned-editor gate every other
+// asset-scoped route in the app uses.
+export async function canAccessAsset(userId: string, assetId: string): Promise<boolean> {
+  const assetResult = await migrationDb.query(
+    `SELECT p.workspace_id FROM assets a
+     JOIN projects p ON p.id = a.project_id
+     WHERE a.id = $1`,
+    [assetId]
+  )
+  const workspaceId = assetResult.rows[0]?.workspace_id ?? null
+
+  const isAdmin = workspaceId ? await hasWorkspaceRole(workspaceId, userId, 'admin') : false
+  return isAdmin || await isAssignedEditor(assetId, userId)
+}
+
+// Whether `userId` belongs (as admin or editor) to the workspace that owns
+// `projectId` - 'missing' when the project doesn't exist or is in the trash,
+// so callers can 404 instead of 403 (nothing should land in a trashed
+// project).
+export async function projectMembership(projectId: string, userId: string): Promise<'member' | 'not_member' | 'missing'> {
+  const result = await migrationDb.query(
+    `SELECT p.id, wm.user_id
+     FROM projects p
+     LEFT JOIN workspace_members wm ON wm.workspace_id = p.workspace_id AND wm.user_id = $2
+     WHERE p.id = $1 AND p.deleted_at IS NULL
+     LIMIT 1`,
+    [projectId, userId]
+  )
+  const row = result.rows[0]
+  if (!row) return 'missing'
+  return row.user_id ? 'member' : 'not_member'
 }
 
 // Authenticates the request, then requires `role` in `workspaceId` outright,

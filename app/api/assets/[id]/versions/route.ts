@@ -25,7 +25,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const versionsResult = await migrationDb.query(
     `SELECT id, version, name, status, created_at, size_bytes, mux_playback_id, mux_upload_id
-     FROM assets WHERE project_id = $1 AND asset_group_id = $2 ORDER BY version DESC`,
+     FROM assets WHERE project_id = $1 AND asset_group_id = $2 AND deleted_at IS NULL
+     ORDER BY version DESC`,
     [current.project_id, current.asset_group_id]
   )
 
