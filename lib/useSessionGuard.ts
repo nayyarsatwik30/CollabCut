@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession, getSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 
 // Shaped like the old Supabase Session so every existing call site
 // (session.user.id, .user.email, .user.user_metadata?.name,
@@ -23,19 +23,6 @@ function toGuardSession(
     user: { id: user.id, email: user.email ?? '', user_metadata: { name: user.name ?? undefined } },
     access_token: '',
   }
-}
-
-// Standalone session read for call sites outside a React render (the
-// project page's account-switch check, fired from a Supabase auth-state
-// listener, not a mount effect) - hits NextAuth's /api/auth/session under
-// the hood with no caching. Don't call this from inside a component that's
-// already under AuthProvider's SessionProvider - use useSession() there
-// instead so you read the shared cached session rather than firing a new
-// network request (Sidebar and useStorageUsage used to make this mistake -
-// each mounted instance triggered its own /api/auth/session fetch).
-export async function resolveSession(): Promise<GuardSession | null> {
-  const session = await getSession()
-  return toGuardSession(session)
 }
 
 // For pages that require a session: callers must wait for `ready` before

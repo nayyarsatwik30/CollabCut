@@ -4,13 +4,11 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { RawFootageArchive } from '@/components/project/RawFootageArchive'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { ChevronRight, Upload, Trash2, Video, Film, CheckCircle2, Clock } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
-import { supabase } from '@/lib/supabase'
-import { useSessionGuard, resolveSession } from '@/lib/useSessionGuard'
+import { useSessionGuard } from '@/lib/useSessionGuard'
 
 type Tab = 'assets' | 'raw-footage' | 'members'
 
@@ -54,7 +52,6 @@ interface Asset {
 }
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
-  const router = useRouter()
   const { session, ready } = useSessionGuard()
   const [tab, setTab] = useState<Tab>('assets')
   const [project, setProject] = useState<Project | null>(null)
@@ -135,7 +132,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         try {
           await loadData()
         } catch {
-          // Transient failure (e.g. a Supabase timeout) - swallow it and
+          // Transient failure (e.g. a DB timeout) - swallow it and
           // let the next poll cycle retry instead of surfacing a broken
           // UI for one bad fetch.
         }
@@ -146,18 +143,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
     scheduleNext()
   }, [assets])
-
-  useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        resolveSession().then((confirmed) => {
-          if (!confirmed) router.push('/auth/login')
-        })
-      }
-    })
-
-    return () => listener.subscription.unsubscribe()
-  }, [router])
 
   const loadData = async () => {
     if (!session) return

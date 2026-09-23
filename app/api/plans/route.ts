@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { migrationDb } from '@/lib/migrationDb'
+
+// No request/session input here, so without this Next statically prerenders
+// the route at build time and serves that frozen plans list forever.
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
-    const { data, error } = await supabaseAdmin
-        .from('plans')
-        .select('*')
-        .order('sort_order', { ascending: true })
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ plans: data ?? [] })
+    const result = await migrationDb.query(`SELECT * FROM plans ORDER BY sort_order ASC`)
+    return NextResponse.json({ plans: result.rows })
 }
