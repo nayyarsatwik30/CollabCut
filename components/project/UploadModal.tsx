@@ -17,16 +17,25 @@ const OFFLINE_GIVE_UP_MS = 60_000
 // moving (no error, no bytes) would hang forever. If nothing happens for this
 // long while online, fail with a clear message instead. Generous on purpose:
 // upload progress counts bytes handed to the OS socket buffer, so on a slow
-// uplink (~40 KB/s measured to Mux) it can sit at a chunk's end for minutes
-// while that buffer drains - that is not a stall.
-const STALL_GIVE_UP_MS = 5 * 60_000
+// uplink it can sit at a chunk's end for minutes while that buffer drains -
+// that is not a stall. 12 minutes = the largest chunk (MAX_CHUNK_SIZE_KB,
+// 8 MB) divided by the slowest speed measured to Mux (~14 KB/s), which is
+// ~9.8 minutes, plus headroom for the response and the next chunk's preflight.
+const STALL_GIVE_UP_MS = 12 * 60_000
 
-// 2 MB chunks (must be a multiple of 256 KB). Measured as low as ~14 KB/s to
-// Mux, where a chunk takes ~2.5 min: a drop mid-chunk loses little, and each
-// chunk's drain time stays well inside the stall window above. Mux sends no
-// preflight max-age, so every chunk also pays a CORS preflight - smaller
-// chunks than this would start to add up.
+// Adaptive chunk sizes, all in KB and all multiples of 256 (required by the
+// resumable-upload protocol). Editors upload from very different connections
+// - office fibre to a phone hotspot - so no single fixed size suits everyone.
+// UpChunk starts at CHUNK_SIZE_KB, doubles the size after a chunk that took
+// under 10 s and halves it after one that took over 30 s, staying within the
+// bounds below. Mux sends no preflight max-age, so every chunk pays a CORS
+// preflight on top of its PUT: the 8 MB ceiling keeps that overhead low on
+// fast links. The 1 MB floor keeps a drop mid-chunk cheap on slow ones, since
+// a failed chunk is resent whole. The ceiling also caps how long one chunk can
+// drain, which is what sizes the stall window above.
 const CHUNK_SIZE_KB = 2048
+const MIN_CHUNK_SIZE_KB = 1024
+const MAX_CHUNK_SIZE_KB = 8192
 
 // A dropped connection surfaces from UpChunk's XHR layer as status 0, which
 // its default retry list (408/502/503/504) treats as fatal - one blip would
@@ -52,6 +61,9 @@ export function uploadFileToMux(
       endpoint: url,
       file,
       chunkSize: CHUNK_SIZE_KB,
+      dynamicChunkSize: true,
+      minChunkSize: MIN_CHUNK_SIZE_KB,
+      maxChunkSize: MAX_CHUNK_SIZE_KB,
       attempts: 10,
       delayBeforeAttempt: 3,
       retryCodes: RETRY_CODES,
@@ -109,6 +121,12 @@ export function uploadFileToMux(
 
     upload.on('progress', (e) => {
       onProgress(Math.floor(e.detail))
+      if (!upload.offline) watchForStall()
+    })
+    // Fires just before every chunk request - re-arms the timer so the gap
+    // before that chunk's first progress event (preflight, reading a bigger
+    // chunk from disk) is covered too.
+    upload.on('attempt', () => {
       if (!upload.offline) watchForStall()
     })
     upload.on('attemptFailure', (e) => {
