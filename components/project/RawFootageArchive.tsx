@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Archive, UploadCloud, AlertCircle, File as FileIcon, Trash2 } from 'lucide-react'
 import { MAX_RAW_FILE_BYTES } from '@/lib/raw-files'
+import { invalidateStorageUsage } from '@/lib/useStorageUsage'
 import { useConfirm, ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface RawFootageArchiveProps {
@@ -21,6 +22,37 @@ interface RawFile {
 }
 
 type UploadState = 'idle' | 'uploading' | 'error'
+
+interface UploadSession {
+  uploadToken: string
+  cancelled: boolean
+  xhrs: Set<XMLHttpRequest>
+}
+
+const PART_CONCURRENCY = 3
+const URL_BATCH_SIZE = 3
+const PART_RETRIES = 3
+
+// Reads any response as text first, so a non-JSON body (a proxy or platform
+// error page) becomes a readable message instead of a JSON.parse exception.
+async function readJson(res: Response): Promise<any> {
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { error: `Request failed (${res.status})` }
+  }
+}
+
+class UploadError extends Error {
+  status?: number
+  constructor(message: string, status?: number) {
+    super(message)
+    this.status = status
+  }
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function formatSize(bytes: number | null) {
   if (!bytes) return '—'
@@ -59,14 +91,30 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   const [files, setFiles] = useState<RawFile[]>([])
   const [state, setState] = useState<UploadState>('idle')
   const [error, setError] = useState('')
+  const [progress, setProgress] = useState(0)
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
+
+  // Live upload session, so unmounting mid-upload can cancel it and abort the
+  // multipart upload instead of leaving orphaned parts in the bucket.
+  const sessionRef = useRef<UploadSession | null>(null)
+  const tokenRef = useRef(token)
+  tokenRef.current = token
+
+  const authHeaders = () => ({ Authorization: `Bearer ${tokenRef.current}`, 'Content-Type': 'application/json' })
+
+  const postJson = async (path: string, body: object) => {
+    const res = await fetch(path, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) })
+    const data = await readJson(res)
+    if (!res.ok) throw new UploadError(data.error ?? `Request failed (${res.status})`, res.status)
+    return data
+  }
 
   const loadFiles = async () => {
     const res = await fetch(`/api/raw-upload/list?projectId=${projectId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) {
-      const data = await res.json()
+      const data = await readJson(res)
       setFiles(data.rawFiles ?? [])
     }
   }
@@ -75,6 +123,89 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     loadFiles()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, token])
+
+  useEffect(() => {
+    return () => {
+      const session = sessionRef.current
+      if (!session) return
+      session.cancelled = true
+      session.xhrs.forEach((xhr) => xhr.abort())
+      // keepalive lets the abort request outlive the component/page.
+      fetch('/api/raw-upload/multipart/abort', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ uploadToken: session.uploadToken }),
+        keepalive: true,
+      }).catch(() => {})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // One PUT straight to B2 via a presigned URL. No Authorization or custom
+  // headers: the URL carries its own signature.
+  const putPart = (url: string, blob: Blob, session: UploadSession, onProgress: (loaded: number) => void) =>
+    new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      session.xhrs.add(xhr)
+      xhr.open('PUT', url)
+      xhr.upload.onprogress = (e) => onProgress(e.loaded)
+      xhr.onload = () => {
+        session.xhrs.delete(xhr)
+        if (xhr.status >= 200 && xhr.status < 300) resolve()
+        else reject(new UploadError(`Part upload failed (${xhr.status})`, xhr.status))
+      }
+      xhr.onerror = () => { session.xhrs.delete(xhr); reject(new UploadError('Network error while uploading')) }
+      xhr.onabort = () => { session.xhrs.delete(xhr); reject(new UploadError('Upload cancelled')) }
+      xhr.send(blob)
+    })
+
+  const uploadParts = async (file: File, session: UploadSession, partSize: number, totalParts: number) => {
+    const loaded = new Array<number>(totalParts + 1).fill(0)
+    const reportProgress = () => {
+      const sum = loaded.reduce((a, b) => a + b, 0)
+      setProgress(Math.min(99, Math.floor((sum / file.size) * 100)))
+    }
+    const fetchUrls = async (partNumbers: number[]) => {
+      const data = await postJson('/api/raw-upload/multipart/part', { uploadToken: session.uploadToken, partNumbers })
+      return new Map<number, string>((data.urls as { partNumber: number; url: string }[]).map((u) => [u.partNumber, u.url]))
+    }
+
+    let nextPart = 1
+    const worker = async () => {
+      while (!session.cancelled) {
+        // Claim a small batch and request its URLs only now, so a slow
+        // connection never sits on URLs that expire before they are used.
+        const batch: number[] = []
+        while (batch.length < URL_BATCH_SIZE && nextPart <= totalParts) batch.push(nextPart++)
+        if (batch.length === 0) return
+
+        const urls = await fetchUrls(batch)
+        for (const partNumber of batch) {
+          const blob = file.slice((partNumber - 1) * partSize, Math.min(partNumber * partSize, file.size))
+          let attempt = 0
+          for (;;) {
+            if (session.cancelled) throw new UploadError('Upload cancelled')
+            try {
+              await putPart(urls.get(partNumber)!, blob, session, (n) => { loaded[partNumber] = n; reportProgress() })
+              loaded[partNumber] = blob.size
+              reportProgress()
+              break
+            } catch (err) {
+              const status = err instanceof UploadError ? err.status : undefined
+              const retryable = status === undefined || status >= 500 || status === 403
+              if (session.cancelled || !retryable || attempt >= PART_RETRIES) throw err
+              attempt++
+              loaded[partNumber] = 0
+              await sleep(1000 * 2 ** (attempt - 1))
+              if (status === 403) urls.set(partNumber, (await fetchUrls([partNumber])).get(partNumber)!)
+            }
+          }
+        }
+      }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(PART_CONCURRENCY, totalParts) }, worker))
+  }
 
   const handleFile = async (file: File) => {
     setError('')
@@ -85,27 +216,34 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     }
 
     setState('uploading')
+    setProgress(0)
+    let session: UploadSession | null = null
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('projectId', projectId)
-
-      // No Content-Type header here - the browser sets the correct
-      // multipart boundary itself when the body is a FormData instance.
-      const res = await fetch('/api/raw-upload/upload', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+      const init = await postJson('/api/raw-upload/multipart/initiate', {
+        projectId,
+        fileName: file.name,
+        fileSize: file.size,
+        contentType: file.type,
       })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error ?? 'Upload failed')
-      }
+      session = { uploadToken: init.uploadToken, cancelled: false, xhrs: new Set() }
+      sessionRef.current = session
 
+      await uploadParts(file, session, init.partSize, init.totalParts)
+      await postJson('/api/raw-upload/multipart/complete', { uploadToken: session.uploadToken })
+
+      sessionRef.current = null
+      setProgress(100)
       setState('idle')
+      invalidateStorageUsage()
       await loadFiles()
     } catch (err: any) {
-      setError(err.message ?? 'Upload failed')
+      if (session && !session.cancelled) {
+        session.cancelled = true
+        session.xhrs.forEach((xhr) => xhr.abort())
+        await postJson('/api/raw-upload/multipart/abort', { uploadToken: session.uploadToken }).catch(() => {})
+      }
+      sessionRef.current = null
+      setError(err?.message ?? 'Upload failed')
       setState('error')
     }
   }
@@ -130,8 +268,9 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     })
     if (res.ok) {
       setFiles((prev) => prev.filter((row) => row.id !== f.id))
+      invalidateStorageUsage()
     } else {
-      const err = await res.json()
+      const err = await readJson(res)
       setError(err.error ?? 'Failed to delete file')
     }
   }
@@ -150,7 +289,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
           onClick={() => fileRef.current?.click()}
           disabled={state === 'uploading'}
           className="flex items-center gap-1.5 h-7 px-3 rounded-th border border-th-border text-[12px] font-semibold btn-press hover:border-th-accent transition-colors disabled:opacity-50">
-          <UploadCloud size={12} /> {state === 'uploading' ? 'Uploading…' : 'Upload Raw Footage'}
+          <UploadCloud size={12} /> {state === 'uploading' ? `Uploading… ${progress}%` : 'Upload Raw Footage'}
         </button>
         <input ref={fileRef} type="file" className="hidden" onChange={handleFileInput} />
       </div>
