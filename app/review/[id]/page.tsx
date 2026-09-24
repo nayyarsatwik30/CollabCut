@@ -345,7 +345,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-th-bg">
-        <Orb state="working" size={32} label="Loading" />
+        <Orb state="composing" size={64} label="Loading" />
       </div>
     )
   }
@@ -539,7 +539,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           ) : awaitingStream ? (
             <div className="flex-1 flex items-center justify-center bg-black">
               <div className="text-center">
-                <Orb state="working" size={64} label="Processing your video" className="mx-auto mb-4" />
+                <Orb state="composing" size={64} label="Processing your video" className="mx-auto mb-4" />
                 <p className="text-white text-[13px]">Mux is still processing this video…</p>
                 <p className="text-white/50 text-[11px] mt-1">This updates automatically once it's ready</p>
               </div>

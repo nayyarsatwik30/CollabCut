@@ -75,7 +75,7 @@ export default function RecentPage() {
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-24">
-              <Orb state="working" size={32} label="Loading" />
+              <Orb state="composing" size={64} label="Loading" />
             </div>
           ) : highlights.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">

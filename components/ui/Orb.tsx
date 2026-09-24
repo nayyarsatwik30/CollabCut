@@ -9,6 +9,6 @@ interface OrbProps {
   className?: string
 }
 
-export function Orb({ state = 'working', size = 20, label, className }: OrbProps) {
+export function Orb({ state = 'composing', size = 64, label, className }: OrbProps) {
   return <ThinkingOrb state={state} size={size} theme="dark" aria-label={label} className={className} />
 }
