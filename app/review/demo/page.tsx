@@ -55,7 +55,7 @@ export default function DemoReviewPage() {
           </span>
         </div>
         <Link
-          href="/auth/signup"
+          href="/auth/signup/agency"
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-th-full bg-gradient-cta text-white text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
         >
           Start free trial <ArrowRight size={13} />
@@ -117,7 +117,7 @@ export default function DemoReviewPage() {
             Upload a cut, drop notes on the exact frame, share one link — free for 14 days.
           </p>
           <Link
-            href="/auth/signup"
+            href="/auth/signup/agency"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full bg-gradient-cta text-white font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
           >
             Start your free trial <ArrowRight size={14} />

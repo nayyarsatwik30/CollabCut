@@ -60,7 +60,7 @@ export default function LoginPage() {
           <h1 className="text-2xl font-extrabold mb-1">Welcome back</h1>
           <p className="text-th-muted text-[13px] mb-8">
             No account?{' '}
-            <Link href="/auth/signup" className="text-th-accent-text hover:underline">Sign up free</Link>
+            <Link href="/auth/signup/agency" className="text-th-accent-text hover:underline">Create your workspace</Link>
           </p>
 
           {error && (
