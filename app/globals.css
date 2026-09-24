@@ -855,3 +855,12 @@ body { background-image: radial-gradient(rgba(243,239,231,.035) .7px, transparen
 .motion-stage:has(.parallax-mockup:hover)::before { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .parallax-mockup { transform: none !important; }.product-window, .board-card, .comment, .version-pill, .versions span, .asset-card { transition: none; } .opening-content > .cc-hero::before, .opening-content > .statement-section::before, .opening-content > .product-section::before, .opening-content > .split-section::before, .opening-content > .pricing-section::before, .opening-content > .agency-proof::before, .opening-content > .final-cta::before, .opening-content > .cc-hero::after, .opening-content > .statement-section::after, .opening-content > .product-section::after, .opening-content > .split-section::after, .opening-content > .pricing-section::after, .opening-content > .agency-proof::after, .opening-content > .final-cta::after { animation: none; } }
 @media (max-width: 760px) { .hero-product.parallax-mockup { margin-top: 70px; } }
+
+.workflow-strip-wrap { margin-top: 70px; }
+.workflow-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin: 0; padding: 0; list-style: none; }
+.workflow-strip li { display: block; padding: 17px 0; border-top: 1px solid var(--cc-line); }
+.workflow-strip li:last-child { border-top-color: var(--cc-accent); }
+.workflow-strip span { display: block; color: var(--cc-accent); font: 10px var(--th-mono); }
+.workflow-strip b { display: block; margin-top: 10px; color: var(--cc-ink); font: 700 13px var(--th-font); }
+.workflow-strip em { display: block; margin-top: 5px; color: var(--cc-muted); font: normal 12px/1.45 var(--th-font); }
+@media (max-width: 760px) { .workflow-strip-wrap { margin-top: 50px; } .workflow-strip { grid-template-columns: 1fr; gap: 5px; } }
