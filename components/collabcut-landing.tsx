@@ -79,7 +79,7 @@ function OpeningSequence() {
 
   return <section ref={ref} className="opening-sequence" aria-label="CollabCut product introduction">
     <div className="opening-sticky">
-      <motion.div className="opening-title" style={{ opacity: titleOpacity }}><span className="opening-mark">C</span><span>collabcut</span></motion.div>
+      <motion.div className="opening-title" style={{ opacity: titleOpacity }}>{/* eslint-disable-next-line @next/next/no-img-element -- small static mark, same as Logo */}<img className="opening-mark" src="/collabcut-mark.png" alt="" width={44} height={44} /><span>collabcut</span></motion.div>
       <motion.div className="opening-scene" style={{ opacity: sceneOpacity, filter: useTransform(sceneBlur, (value) => `blur(${value}px)`) }}>
         <motion.div className="opening-placeholder" style={{ opacity: placeholderOpacity }}>
           <HeroVideo />
