@@ -47,9 +47,10 @@ const NO_CONNECTION_MESSAGE = 'Upload failed: no internet connection. Check your
 // Chunked, resumable upload straight to the Mux direct-upload URL. A single
 // raw PUT of the whole file died on any network blip (surfacing in the
 // browser as a misleading CORS error), leaving the asset row stuck in
-// "processing" forever. Here each 2 MB chunk is retried on its own - 10
-// attempts, 3s apart, so ~30s of flakiness per chunk is survivable - and the
-// upload resumes from the last good chunk instead of starting over.
+// "processing" forever. Here chunks are adaptive, between 1 and 8 MB, and each
+// is retried on its own - 10 attempts, 3s apart, so ~30s of flakiness per
+// chunk is survivable - and the upload resumes from the last good chunk
+// instead of starting over.
 export function uploadFileToMux(
   file: File,
   url: string,
