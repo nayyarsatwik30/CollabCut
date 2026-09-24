@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Clock, MessageSquare } from 'lucide-react'
 import { useSessionGuard } from '@/lib/useSessionGuard'
+import { Orb } from '@/components/ui/Orb'
 
 interface Highlight {
   id: string
@@ -74,7 +75,7 @@ export default function RecentPage() {
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-24">
-              <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+              <Orb state="working" size={20} label="Loading" />
             </div>
           ) : highlights.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">

@@ -5,6 +5,7 @@ import { Lock, MessageSquare, Send, Layers, ChevronDown, Check, X } from 'lucide
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { Avatar } from '@/components/ui/Badge'
 import { formatTimecode } from '@/lib/utils'
+import { Orb } from '@/components/ui/Orb'
 
 const NAME_STORAGE_KEY = 'dailies_reviewer_name'
 
@@ -175,7 +176,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
   if (state === 'loading') {
     return (
       <div className="flex h-screen items-center justify-center bg-th-bg">
-        <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+        <Orb state="working" size={20} label="Loading" />
       </div>
     )
   }

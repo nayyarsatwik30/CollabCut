@@ -11,6 +11,7 @@ import { useSessionGuard } from '@/lib/useSessionGuard'
 import { useStorageUsage } from '@/lib/useStorageUsage'
 import type { WorkspaceStoragePlan } from '@/lib/useStorageUsage'
 import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
+import { Orb } from '@/components/ui/Orb'
 
 // 'plan' (Plan & billing) is deliberately removed for now: it read the
 // per-user profiles.plan_id / plans system, which disagrees with the
@@ -106,7 +107,7 @@ export default function SettingsPage() {
       <div className="flex h-screen overflow-hidden bg-th-bg">
         <Sidebar />
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+          <Orb state="working" size={20} label="Loading" />
         </div>
       </div>
     )

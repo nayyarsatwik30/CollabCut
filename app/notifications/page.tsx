@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Bell, MessageSquare, UserPlus, Upload, CheckCircle2, Check, CheckCheck } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { useSessionGuard } from '@/lib/useSessionGuard'
+import { Orb } from '@/components/ui/Orb'
 
 interface Notification {
   id: string
@@ -118,7 +119,7 @@ export default function NotificationsPage() {
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+            <Orb state="working" size={20} label="Loading" />
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center gap-3 text-center">

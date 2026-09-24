@@ -14,6 +14,7 @@ import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { performLogout } from '@/lib/auth'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
+import { Orb } from '@/components/ui/Orb'
 
 type BoardView = 'board' | 'projects' | 'editors'
 
@@ -377,7 +378,7 @@ export default function BoardPage() {
           <div className="flex-1 overflow-y-auto p-6">
             {projectsLoading ? (
               <div className="flex items-center justify-center py-16">
-                <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+                <Orb state="working" size={20} label="Loading" />
               </div>
             ) : projects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
@@ -417,7 +418,7 @@ export default function BoardPage() {
 
                 {editorAssetsLoading ? (
                   <div className="flex items-center justify-center py-16">
-                    <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+                    <Orb state="working" size={20} label="Loading" />
                   </div>
                 ) : !editorAssets || editorAssets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">

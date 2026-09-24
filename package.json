@@ -25,7 +25,8 @@
     "pg": "^8.23.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^2.3.0",
+    "thinking-orbs": "0.3.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

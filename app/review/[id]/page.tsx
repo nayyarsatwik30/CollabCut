@@ -12,6 +12,7 @@ import { Toast, useToast } from '@/components/ui/Toast'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
+import { Orb } from '@/components/ui/Orb'
 
 type SideTab = 'notes' | 'brief'
 
@@ -344,7 +345,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-th-bg">
-        <div className="w-6 h-6 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+        <Orb state="working" size={20} label="Loading" />
       </div>
     )
   }
@@ -538,7 +539,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           ) : awaitingStream ? (
             <div className="flex-1 flex items-center justify-center bg-black">
               <div className="text-center">
-                <div className="w-8 h-8 rounded-full border-2 border-th-accent border-t-transparent animate-spin mx-auto mb-4" />
+                <Orb state="working" size={64} label="Processing your video" className="mx-auto mb-4" />
                 <p className="text-white text-[13px]">Mux is still processing this video…</p>
                 <p className="text-white/50 text-[11px] mt-1">This updates automatically once it's ready</p>
               </div>
