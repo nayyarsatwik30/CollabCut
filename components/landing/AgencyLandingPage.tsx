@@ -79,7 +79,7 @@ export function AgencyLandingPage() {
       <header className="sticky top-0 z-50 glass">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="CollabCut" className="w-7 h-7 rounded-lg" />
+            <img src="/collabcut-mark.png" alt="CollabCut" className="w-7 h-7 object-contain shrink-0" />
             <span className="text-[16px] font-bold tracking-tight">CollabCut</span>
           </div>
 
@@ -320,7 +320,7 @@ export function AgencyLandingPage() {
       <footer className="border-t border-th-border">
         <div className="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="CollabCut" className="w-5 h-5 rounded-md" />
+            <img src="/collabcut-mark.png" alt="CollabCut" className="w-5 h-5 object-contain shrink-0" />
             <span className="text-[13px] font-bold">CollabCut</span>
           </div>
           <p className="font-mono text-[11px] text-th-faint">Built for the loop between a cut and a lock.</p>
