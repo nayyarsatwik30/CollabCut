@@ -161,7 +161,7 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
             <span className="text-[11px] text-th-muted truncate">{asset.editor.name}</span>
           </div>
         ) : (
-          <span className="text-[11px] text-th-faint italic">Unassigned</span>
+          <span className="text-[11px] text-th-faint">Unassigned</span>
         )}
 
         {isAdmin && (

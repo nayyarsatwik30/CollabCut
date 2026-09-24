@@ -9,4 +9,4 @@ export const metadata = {
   description: 'Timecoded video review and a clear path from first cut to final approval.',
 }
 
-export const viewport = { themeColor: '#0e0b0c' }
+export const viewport = { themeColor: '#1a1416' }

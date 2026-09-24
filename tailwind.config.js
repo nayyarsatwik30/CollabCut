@@ -32,6 +32,7 @@ module.exports = {
       },
       fontFamily: {
         'th': 'var(--th-font)',
+        'th-serif': 'var(--th-serif)',
         'th-mono': 'var(--th-mono)',
       },
       boxShadow: {
