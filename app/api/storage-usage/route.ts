@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     const projectIds = projectsResult.rows.map((p) => p.id)
 
     const [assetsResult, rawFilesResult] = await Promise.all([
-      migrationDb.query(`SELECT COALESCE(SUM(size_bytes), 0) AS total FROM assets WHERE project_id = ANY($1)`, [projectIds]),
+      migrationDb.query(`SELECT COALESCE(SUM(size_bytes), 0) AS total FROM assets WHERE project_id = ANY($1) AND deleted_at IS NULL`, [projectIds]),
       migrationDb.query(`SELECT COALESCE(SUM(file_size_bytes), 0) AS total FROM raw_files WHERE project_id = ANY($1)`, [projectIds]),
     ])
 
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   }
 
   const [assetsResult, rawFilesResult] = await Promise.all([
-    migrationDb.query(`SELECT COALESCE(SUM(size_bytes), 0) AS total FROM assets WHERE uploaded_by = $1`, [user.id]),
+    migrationDb.query(`SELECT COALESCE(SUM(size_bytes), 0) AS total FROM assets WHERE uploaded_by = $1 AND deleted_at IS NULL`, [user.id]),
     migrationDb.query(`SELECT COALESCE(SUM(file_size_bytes), 0) AS total FROM raw_files WHERE uploaded_by = $1`, [user.id]),
   ])
 
