@@ -107,7 +107,7 @@ export default function SettingsPage() {
       <div className="flex h-screen overflow-hidden bg-th-bg">
         <Sidebar />
         <div className="flex-1 flex items-center justify-center">
-          <Orb state="working" size={20} label="Loading" />
+          <Orb state="working" size={32} label="Loading" />
         </div>
       </div>
     )
@@ -196,7 +196,7 @@ export default function SettingsPage() {
                   {!adminWorkspace ? (
                     provisioningWorkspace ? (
                       <div className="flex items-center gap-2 text-[13px] text-th-muted">
-                        <div className="w-4 h-4 rounded-full border-2 border-th-accent border-t-transparent animate-spin" />
+                        <Orb state="working" size={20} label="Setting up" />
                         Setting up your workspace…
                       </div>
                     ) : workspaceError ? (

@@ -345,7 +345,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-th-bg">
-        <Orb state="working" size={20} label="Loading" />
+        <Orb state="working" size={32} label="Loading" />
       </div>
     )
   }

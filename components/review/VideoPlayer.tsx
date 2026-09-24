@@ -6,6 +6,7 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Downlo
 import { Comment } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { FilmScrubber } from './FilmScrubber'
+import { Orb } from '@/components/ui/Orb'
 
 interface VideoPlayerProps {
   src?: string
@@ -241,7 +242,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
         {src && !videoReady && !videoError && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/30">
-            <div className="w-8 h-8 rounded-full border-2 border-white/70 border-t-transparent animate-spin" />
+            <Orb state="working" size={32} label="Loading video" />
           </div>
         )}
 

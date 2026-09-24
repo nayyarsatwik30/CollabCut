@@ -119,7 +119,7 @@ export default function NotificationsPage() {
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
-            <Orb state="working" size={20} label="Loading" />
+            <Orb state="working" size={32} label="Loading" />
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center gap-3 text-center">

@@ -5,6 +5,7 @@ import { X, Upload, CheckCircle, AlertCircle } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import * as UpChunk from '@mux/upchunk'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
+import { Orb } from '@/components/ui/Orb'
 
 // UpChunk pauses (rather than failing) while the browser reports itself
 // offline and resumes on its own once it's back - but it would wait forever.
@@ -289,7 +290,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
           {/* Requesting upload URL */}
           {state === 'requesting' && (
             <div className="py-8 text-center">
-              <div className="w-8 h-8 rounded-full border-2 border-th-accent border-t-transparent animate-spin mx-auto mb-4" />
+              <div className="flex justify-center mb-4"><Orb state="working" size={32} label="Preparing upload" /></div>
               <p className="text-[13px] text-th-muted">Preparing upload…</p>
             </div>
           )}
@@ -297,6 +298,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
           {/* Uploading */}
           {state === 'uploading' && (
             <div className="py-6">
+              <div className="flex justify-center mb-4"><Orb state="working" size={32} label="Uploading" /></div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[13px] font-medium truncate pr-4">{fileName}</p>
                 <span className="font-mono text-[12px] text-th-accent-text shrink-0">{progress}%</span>
@@ -321,7 +323,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
           {/* Processing */}
           {state === 'processing' && (
             <div className="py-8 text-center">
-              <div className="w-8 h-8 rounded-full border-2 border-th-accent border-t-transparent animate-spin mx-auto mb-4" />
+              <div className="flex justify-center mb-4"><Orb state="working" size={32} label="Processing your video" /></div>
               <p className="font-semibold mb-1">Upload complete</p>
               <p className="text-[12px] text-th-muted">Mux is processing your video…</p>
             </div>

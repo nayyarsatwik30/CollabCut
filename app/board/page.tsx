@@ -378,7 +378,7 @@ export default function BoardPage() {
           <div className="flex-1 overflow-y-auto p-6">
             {projectsLoading ? (
               <div className="flex items-center justify-center py-16">
-                <Orb state="working" size={20} label="Loading" />
+                <Orb state="working" size={32} label="Loading" />
               </div>
             ) : projects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
@@ -418,7 +418,7 @@ export default function BoardPage() {
 
                 {editorAssetsLoading ? (
                   <div className="flex items-center justify-center py-16">
-                    <Orb state="working" size={20} label="Loading" />
+                    <Orb state="working" size={32} label="Loading" />
                   </div>
                 ) : !editorAssets || editorAssets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">

@@ -4,7 +4,7 @@ import { ThinkingOrb, type OrbState } from 'thinking-orbs'
 
 interface OrbProps {
   state?: OrbState
-  size?: 20 | 64
+  size?: 20 | 32 | 64
   label?: string
   className?: string
 }
