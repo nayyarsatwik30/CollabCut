@@ -633,7 +633,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   const notes = asset.notes || pb?.notes
                   const reference = asset.reference || pb?.reference
                   const deadline = asset.deadline || pb?.deadline
-                  const link = asset.raw_file_url || pb?.drive_link
+                  const rawLink = asset.raw_file_url
+                  const projectLink = pb?.drive_link
                   return (
                     <>
                       {notes && (
@@ -671,20 +672,37 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                         </div>
                       )}
 
-                      {link && (
+                      {rawLink && (
                         <div className="px-4 py-3.5">
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <ExternalLink size={11} className="text-th-muted" />
                             <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Raw Footage Link (external folder)</span>
-                            {!asset.raw_file_url && fromProject}
                           </div>
                           <a
-                            href={link}
+                            href={rawLink}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
                           >
                             <ExternalLink size={12} /> Open reference link
+                          </a>
+                        </div>
+                      )}
+
+                      {projectLink && (
+                        <div className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <ExternalLink size={11} className="text-th-muted" />
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Project drive link</span>
+                            {fromProject}
+                          </div>
+                          <a
+                            href={projectLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
+                          >
+                            <ExternalLink size={12} /> Open project drive link
                           </a>
                         </div>
                       )}
