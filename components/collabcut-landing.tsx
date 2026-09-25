@@ -2,7 +2,7 @@
 
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
-import { ArrowUpRight, Check, ChevronRight, CirclePlay, Clock3, Layers3, MessageSquare, ShieldCheck, Users2 } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, Check, ChevronRight, CirclePlay, Clock3, Layers3, MessageSquare, ShieldCheck, Users2 } from 'lucide-react'
 import Link from 'next/link'
 import { LandingScrollUnlock } from './collabcut-landing-scroll-unlock'
 
@@ -76,6 +76,9 @@ function OpeningSequence() {
   const reviewScale = useTransform(scrollYProgress, [0, 0.26, 0.55, 0.82, 1], [0.72, 0.72, 1, 0.92, 0.76])
   const sceneBlur = useTransform(scrollYProgress, [0, 0.68, 0.9, 1], [0, 0, 0, 12])
   const sceneOpacity = useTransform(scrollYProgress, [0, 0.72, 1], [1, 1, 0.2])
+  // Fades with the title, and stops taking clicks once it has faded.
+  const cueEvents = useTransform(titleOpacity, (value) => (value > 0.3 ? 'auto' : 'none'))
+  const scrollToNext = () => ref.current?.nextElementSibling?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   return <section ref={ref} className="opening-sequence" aria-label="CollabCut product introduction">
     <div className="opening-sticky">
@@ -93,6 +96,9 @@ function OpeningSequence() {
           <div className="opening-cursor" aria-hidden="true" />
         </motion.div>
       </motion.div>
+      <motion.button type="button" className="opening-scroll-cue" style={{ opacity: titleOpacity, pointerEvents: cueEvents }} onClick={scrollToNext}>
+        Scroll to explore <ArrowDown size={14} aria-hidden="true" />
+      </motion.button>
     </div>
   </section>
 }

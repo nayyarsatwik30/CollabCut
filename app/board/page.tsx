@@ -135,7 +135,7 @@ export default function BoardPage() {
     // row reshuffle from Postgres isn't a change worth re-rendering for.
     const byId = (list: BoardAsset[]) => [...list].sort((a, b) => a.id.localeCompare(b.id))
     setAssets((prev) => (sameData(byId(prev), byId(next)) ? prev : next))
-  }, 7000, !loading && !error && boardView === 'board')
+  }, 3000, !loading && !error && boardView === 'board')
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, assetId: string) => {
     mutationRef.current.dragging = true
@@ -197,6 +197,10 @@ export default function BoardPage() {
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>, columnKey: string) => {
     e.preventDefault()
     setDragOverColumn(null)
+    // A successful drop moves the card to another column, which unmounts the
+    // dragged element - and a removed element never fires dragend. Clear the
+    // flag here too, or polling stays paused until the next reload.
+    mutationRef.current.dragging = false
     const assetId = e.dataTransfer.getData('text/plain')
     if (!assetId) return
     await updateAssetStatus(assetId, columnKey)
