@@ -66,7 +66,11 @@ CREATE TABLE projects (
   deleted_at timestamptz,
   workspace_id uuid REFERENCES workspaces(id),
   cover_asset_id uuid,
-  cover_playback_id text
+  cover_playback_id text,
+  brief_notes text,
+  brief_reference text,
+  brief_deadline date,
+  brief_drive_link text
 );
 
 CREATE TABLE assets (

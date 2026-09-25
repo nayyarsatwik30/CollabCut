@@ -119,6 +119,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     seekTo(currentTime + (dir / 24))
   }, [currentTime, seekTo])
 
+  const skip = useCallback((secs: number) => {
+    seekTo(currentTime + secs)
+  }, [currentTime, seekTo])
+
   useImperativeHandle(ref, () => ({
     seekTo: (time: number) => {
       videoRef.current?.pause()
@@ -167,13 +171,13 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     const handler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
       if (e.key === ' ') { e.preventDefault(); togglePlay() }
-      if (e.key === 'ArrowLeft') stepFrame(-1)
-      if (e.key === 'ArrowRight') stepFrame(1)
+      if (e.key === 'ArrowLeft') e.shiftKey ? skip(-10) : stepFrame(-1)
+      if (e.key === 'ArrowRight') e.shiftKey ? skip(10) : stepFrame(1)
       if (e.key === 'm') toggleMute()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [togglePlay, stepFrame])
+  }, [togglePlay, stepFrame, skip])
 
   const activeComment = comments.find((c) => Math.abs(c.timeSec - currentTime) < 0.4)
 
@@ -264,9 +268,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         />
 
         <div className="flex items-center gap-2 px-4 pb-3">
-          <button onClick={() => stepFrame(-1)} title="Previous frame (←)"
-            className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text hover:bg-th-surface-hov transition-colors btn-press">
+          <button onClick={() => skip(-10)} title="Back 10s (Shift+←)"
+            className="relative w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text hover:bg-th-surface-hov transition-colors btn-press">
             <SkipBack size={14} />
+            <span className="absolute bottom-0 right-0.5 text-[8px] font-bold leading-none pointer-events-none">10</span>
           </button>
 
           <button onClick={togglePlay} title="Play/Pause (Space)"
@@ -278,9 +283,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
             }
           </button>
 
-          <button onClick={() => stepFrame(1)} title="Next frame (→)"
-            className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text hover:bg-th-surface-hov transition-colors btn-press">
+          <button onClick={() => skip(10)} title="Forward 10s (Shift+→)"
+            className="relative w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text hover:bg-th-surface-hov transition-colors btn-press">
             <SkipForward size={14} />
+            <span className="absolute bottom-0 right-0.5 text-[8px] font-bold leading-none pointer-events-none">10</span>
           </button>
 
           <div className="relative flex items-center gap-1.5"

@@ -10,12 +10,13 @@ import { Avatar } from '@/components/ui/Badge'
 import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 
-type Tab = 'assets' | 'raw-footage' | 'members'
+type Tab = 'assets' | 'raw-footage' | 'members' | 'brief'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'assets', label: 'Assets' },
   { id: 'raw-footage', label: 'Raw Footage' },
   { id: 'members', label: 'Members' },
+  { id: 'brief', label: 'Brief' },
 ]
 
 interface Member {
@@ -35,6 +36,10 @@ interface Project {
   owner?: Member | null
   members?: Member[]
   viewer_is_admin?: boolean
+  brief_notes?: string | null
+  brief_reference?: string | null
+  brief_deadline?: string | null
+  brief_drive_link?: string | null
 }
 
 interface Asset {
@@ -49,6 +54,135 @@ interface Asset {
   created_at: string
   is_complete?: boolean
   cut_type: 'custom' | 'board'
+}
+
+const BRIEF_LABEL = 'font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold mb-1.5 block'
+const BRIEF_INPUT = 'w-full px-3 py-2 text-[13px] bg-th-surface-alt border border-th-border text-th-text focus:outline-none focus:border-th-accent'
+
+function BriefTab({ project, token, onSaved }: {
+  project: Project
+  token: string | null
+  onSaved: (p: Project) => void
+}) {
+  const isAdmin = !!project.viewer_is_admin
+  const [notes, setNotes] = useState(project.brief_notes ?? '')
+  const [reference, setReference] = useState(project.brief_reference ?? '')
+  const [deadline, setDeadline] = useState(project.brief_deadline?.slice(0, 10) ?? '')
+  const [driveLink, setDriveLink] = useState(project.brief_drive_link ?? '')
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null)
+
+  const save = async () => {
+    setSaving(true)
+    setMessage(null)
+    const res = await fetch(`/api/projects/${project.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({
+        brief_notes: notes,
+        brief_reference: reference,
+        brief_deadline: deadline,
+        brief_drive_link: driveLink,
+      }),
+    })
+    setSaving(false)
+    if (res.ok) {
+      const { project: saved } = await res.json()
+      onSaved({
+        ...project,
+        brief_notes: saved.brief_notes,
+        brief_reference: saved.brief_reference,
+        brief_deadline: saved.brief_deadline,
+        brief_drive_link: saved.brief_drive_link,
+      })
+      setMessage({ text: 'Brief saved', ok: true })
+    } else {
+      const err = await res.json().catch(() => ({}))
+      setMessage({ text: err.error ?? 'Could not save the brief', ok: false })
+    }
+  }
+
+  if (!isAdmin) {
+    const empty = !project.brief_notes && !project.brief_reference && !project.brief_deadline && !project.brief_drive_link
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="bg-th-surface border border-th-border divide-y divide-th-border" style={{ borderRadius: 0 }}>
+          {empty && <div className="px-5 py-8 text-center text-[13px] text-th-muted">No project brief yet.</div>}
+          {project.brief_notes && (
+            <div className="px-5 py-3.5">
+              <span className={BRIEF_LABEL}>Notes</span>
+              <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{project.brief_notes}</p>
+            </div>
+          )}
+          {project.brief_reference && (
+            <div className="px-5 py-3.5">
+              <span className={BRIEF_LABEL}>Reference</span>
+              <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{project.brief_reference}</p>
+            </div>
+          )}
+          {project.brief_deadline && (
+            <div className="px-5 py-3.5">
+              <span className={BRIEF_LABEL}>Deadline</span>
+              <p className="text-[13px] text-th-text">
+                {new Date(`${project.brief_deadline.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+            </div>
+          )}
+          {project.brief_drive_link && (
+            <div className="px-5 py-3.5">
+              <span className={BRIEF_LABEL}>Drive link</span>
+              <a
+                href={project.brief_drive_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[13px] text-th-accent-text underline break-all"
+              >
+                {project.brief_drive_link}
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-lg mx-auto">
+      <div className="bg-th-surface border border-th-border p-5 flex flex-col gap-4" style={{ borderRadius: 0 }}>
+        <label>
+          <span className={BRIEF_LABEL}>Notes</span>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={5}
+            className={BRIEF_INPUT} style={{ borderRadius: 0 }} placeholder="What should editors know about this project?" />
+        </label>
+        <label>
+          <span className={BRIEF_LABEL}>Reference</span>
+          <textarea value={reference} onChange={(e) => setReference(e.target.value)} rows={3}
+            className={BRIEF_INPUT} style={{ borderRadius: 0 }} placeholder="Reference videos, links or style notes" />
+        </label>
+        <label>
+          <span className={BRIEF_LABEL}>Deadline</span>
+          <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)}
+            className={BRIEF_INPUT} style={{ borderRadius: 0 }} />
+        </label>
+        <label>
+          <span className={BRIEF_LABEL}>Drive link</span>
+          <input type="url" value={driveLink} onChange={(e) => setDriveLink(e.target.value)}
+            className={BRIEF_INPUT} style={{ borderRadius: 0 }} placeholder="https://drive.google.com/..." />
+        </label>
+        <div className="flex items-center gap-3">
+          <button onClick={save} disabled={saving}
+            className="px-4 py-2 text-[13px] font-semibold bg-th-accent text-th-accent-fg hover:opacity-90 transition-opacity disabled:opacity-50 btn-press"
+            style={{ borderRadius: 0 }}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          {message && (
+            <span className="text-[12px]" style={{ color: message.ok ? 'var(--th-resolved)' : 'var(--th-open)' }}>{message.text}</span>
+          )}
+        </div>
+        <p className="text-[11px] text-th-muted">Shown on the review screen for any cut that has no brief of its own. Not visible on share links.</p>
+      </div>
+    </div>
+  )
 }
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
@@ -438,6 +572,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           {/* Raw Footage */}
           {tab === 'raw-footage' && project?.viewer_is_admin && (
             <RawFootageArchive projectId={params.id} token={token} />
+          )}
+
+          {/* Brief */}
+          {tab === 'brief' && project && (
+            <BriefTab project={project} token={token} onSaved={setProject} />
           )}
 
           {/* Members */}

@@ -3,6 +3,15 @@ import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole } from '@/lib/api-auth'
 import { latestPerGroup } from '@/lib/asset-lineage'
 
+// pg returns `date` columns as a local-midnight Date; hand the client a plain
+// YYYY-MM-DD so it can't shift a day across timezones.
+function normalizeBriefDeadline(row: Record<string, any> | undefined) {
+  if (row?.brief_deadline instanceof Date) {
+    const d = row.brief_deadline
+    row.brief_deadline = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+}
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireAuth(req)
   if ('error' in auth) return auth.error
@@ -10,6 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const projectResult = await migrationDb.query(`SELECT * FROM projects WHERE id = $1`, [params.id])
   const data = projectResult.rows[0]
+  normalizeBriefDeadline(data)
 
   // A soft-deleted project lives only in Trash (restored via /api/projects/trash).
   if (!data || data.deleted_at) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
@@ -106,6 +116,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (field in body) updates[field] = body[field]
   }
 
+  // Project brief: the fallback shown on the review screen for assets with no
+  // brief of their own. Empty strings clear a field.
+  for (const field of ['brief_notes', 'brief_reference', 'brief_deadline', 'brief_drive_link'] as const) {
+    if (!(field in body)) continue
+    const raw = body[field]
+    if (raw !== null && typeof raw !== 'string') {
+      return NextResponse.json({ error: `${field} must be a string` }, { status: 400 })
+    }
+    const value = typeof raw === 'string' ? raw.trim() : ''
+    if (field === 'brief_drive_link' && value && !/^https?:\/\/\S+$/i.test(value)) {
+      return NextResponse.json({ error: 'Drive link must start with http:// or https://' }, { status: 400 })
+    }
+    if (field === 'brief_deadline' && value && !(/^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value)))) {
+      return NextResponse.json({ error: 'Deadline must be a date (YYYY-MM-DD)' }, { status: 400 })
+    }
+    updates[field] = value || null
+  }
+
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
   }
@@ -119,6 +147,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     [...values, params.id]
   )
 
+  normalizeBriefDeadline(result.rows[0])
   return NextResponse.json({ project: result.rows[0] })
 }
 

@@ -30,6 +30,12 @@ interface Asset {
   notes?: string | null
   reference?: string | null
   deadline?: string | null
+  project_brief?: {
+    notes: string | null
+    reference: string | null
+    deadline: string | null
+    drive_link: string | null
+  }
 }
 
 interface VersionEntry {
@@ -335,7 +341,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   const unfulfilled = !!asset && !asset.mux_upload_id
   const awaitingStream = !!asset && (asset.status === 'processing' || !asset.mux_playback_id)
-  const hasBrief = !!asset && !!(asset.notes || asset.reference || asset.deadline || asset.raw_file_url)
+  const pb = asset?.project_brief
+  const hasBrief = !!asset && !!(
+    asset.notes || asset.reference || asset.deadline || asset.raw_file_url ||
+    pb?.notes || pb?.reference || pb?.deadline || pb?.drive_link
+  )
   // v1 (the lineage's original placeholder, lowest version number in `versions`)
   // must have a real file before a new version can be stacked on top of it -
   // otherwise the placeholder gets orphaned instead of ever being fulfilled.
@@ -616,54 +626,71 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   <p className="text-[14px] font-bold text-th-text leading-snug">{asset.name}</p>
                 </div>
 
-                {asset.notes && (
-                  <div className="px-4 py-3.5">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <StickyNote size={11} className="text-th-muted" />
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Notes</span>
-                    </div>
-                    <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.notes}</p>
-                  </div>
-                )}
+                {(() => {
+                  const fromProject = (
+                    <span className="ml-auto font-mono text-[9px] normal-case tracking-normal text-th-faint">From project brief</span>
+                  )
+                  const notes = asset.notes || pb?.notes
+                  const reference = asset.reference || pb?.reference
+                  const deadline = asset.deadline || pb?.deadline
+                  const link = asset.raw_file_url || pb?.drive_link
+                  return (
+                    <>
+                      {notes && (
+                        <div className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <StickyNote size={11} className="text-th-muted" />
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Notes</span>
+                            {!asset.notes && fromProject}
+                          </div>
+                          <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{notes}</p>
+                        </div>
+                      )}
 
-                {asset.reference && (
-                  <div className="px-4 py-3.5">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Link2 size={11} className="text-th-muted" />
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Reference</span>
-                    </div>
-                    <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{asset.reference}</p>
-                  </div>
-                )}
+                      {reference && (
+                        <div className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <Link2 size={11} className="text-th-muted" />
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Reference</span>
+                            {!asset.reference && fromProject}
+                          </div>
+                          <p className="text-[13px] text-th-text whitespace-pre-wrap leading-relaxed">{reference}</p>
+                        </div>
+                      )}
 
-                {asset.deadline && (
-                  <div className="px-4 py-3.5">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Clock size={11} className="text-th-muted" />
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Deadline</span>
-                    </div>
-                    <p className="text-[13px] text-th-text">
-                      {new Date(asset.deadline).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
-                    </p>
-                  </div>
-                )}
+                      {deadline && (
+                        <div className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <Clock size={11} className="text-th-muted" />
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Deadline</span>
+                            {!asset.deadline && fromProject}
+                          </div>
+                          <p className="text-[13px] text-th-text">
+                            {new Date(asset.deadline ? asset.deadline : `${String(deadline).slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                          </p>
+                        </div>
+                      )}
 
-                {asset.raw_file_url && (
-                  <div className="px-4 py-3.5">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <ExternalLink size={11} className="text-th-muted" />
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Raw Footage Link (external folder)</span>
-                    </div>
-                    <a
-                      href={asset.raw_file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
-                    >
-                      <ExternalLink size={12} /> Open reference link
-                    </a>
-                  </div>
-                )}
+                      {link && (
+                        <div className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <ExternalLink size={11} className="text-th-muted" />
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold">Raw Footage Link (external folder)</span>
+                            {!asset.raw_file_url && fromProject}
+                          </div>
+                          <a
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
+                          >
+                            <ExternalLink size={12} /> Open reference link
+                          </a>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
             )}
           </div>
@@ -682,11 +709,16 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               const versionsRes = await fetch(`/api/assets/${asset.id}/versions`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : undefined,
               })
+              let newest: VersionEntry | null = null
               if (versionsRes.ok) {
                 const { versions: v } = await versionsRes.json()
                 setVersions(v)
+                newest = (v as VersionEntry[]).reduce<VersionEntry | null>((max, x) => (!max || x.version > max.version ? x : max), null)
               }
               showToast('New version uploaded!', 'success')
+              // Land on the new version; if it's still encoding, the existing
+              // processing panel shows for it.
+              if (newest && newest.id !== asset.id) await handleSwitchVersion(newest.id)
             }}
           />
         ) : (
