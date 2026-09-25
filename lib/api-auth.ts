@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from './authOptions'
@@ -125,4 +126,33 @@ export async function requireRole(
     }
   }
   return auth
+}
+
+// Cancel-upload tokens. /api/assets/upload knows whether an upload is filling
+// an existing placeholder (which must be restored on cancel) or created a new
+// asset (which is soft-deleted), and nothing in the assets table records it.
+// It signs that fact, bound to the asset and Mux upload ids, with the NextAuth
+// secret; the cancel route only ever acts on a value it has verified itself.
+function cancelSignature(assetId: string, uploadId: string, fulfilled: boolean): string {
+  const secret = process.env.NEXTAUTH_SECRET
+  if (!secret) throw new Error('NEXTAUTH_SECRET is not configured')
+  return createHmac('sha256', secret)
+    .update(`cancel-upload:${assetId}:${uploadId}:${fulfilled ? 1 : 0}`)
+    .digest('base64url')
+}
+
+export function signCancelToken(assetId: string, uploadId: string, fulfilled: boolean): string {
+  return `${fulfilled ? 1 : 0}.${cancelSignature(assetId, uploadId, fulfilled)}`
+}
+
+// The verified `fulfilled` value, or null for a missing, malformed or tampered token.
+export function verifyCancelToken(token: unknown, assetId: string, uploadId: string): boolean | null {
+  if (typeof token !== 'string' || token.length > 256) return null
+  const [flag, signature, ...rest] = token.split('.')
+  if ((flag !== '0' && flag !== '1') || !signature || rest.length > 0) return null
+  const fulfilled = flag === '1'
+  const expected = Buffer.from(cancelSignature(assetId, uploadId, fulfilled))
+  const actual = Buffer.from(signature)
+  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null
+  return fulfilled
 }

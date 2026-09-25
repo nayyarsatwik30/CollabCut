@@ -4,7 +4,7 @@ import { migrationDb } from '@/lib/migrationDb'
 import { video, getCorsOrigin } from '@/lib/mux'
 import { syncProjectStatus } from '@/lib/project-status'
 import { notifyWorkspaceAdmins } from '@/lib/notifications'
-import { requireAuth, projectMembership, canAccessAsset } from '@/lib/api-auth'
+import { requireAuth, projectMembership, canAccessAsset, signCancelToken } from '@/lib/api-auth'
 
 // Shared context every upload-triggered notification needs - the project's
 // display name/workspace (to fan a notification out to its admins) and the
@@ -119,7 +119,12 @@ export async function POST(req: NextRequest) {
       }, user.id)
     }
 
-    return NextResponse.json({ asset, upload_url: upload.url, upload_id: upload.id }, { status: 201 })
+    // The token lets the cancel flow restore this placeholder instead of
+    // deleting it, without trusting the client to say which case it is.
+    return NextResponse.json({
+      asset, upload_url: upload.url, upload_id: upload.id,
+      cancel_token: signCancelToken(asset.id, upload.id, true),
+    }, { status: 201 })
   }
 
   if (!project_id || !name) {
@@ -271,5 +276,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ asset, upload_url: upload.url, upload_id: upload.id }, { status: 201 })
+  return NextResponse.json({
+    asset, upload_url: upload.url, upload_id: upload.id,
+    cancel_token: signCancelToken(asset.id, upload.id, false),
+  }, { status: 201 })
 }

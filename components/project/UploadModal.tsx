@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { X, Upload, CheckCircle, AlertCircle } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { X, Upload, CheckCircle, AlertCircle, Ban } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import * as UpChunk from '@mux/upchunk'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
@@ -44,6 +44,10 @@ const RETRY_CODES = [0, 408, 429, 500, 502, 503, 504]
 
 const NO_CONNECTION_MESSAGE = 'Upload failed: no internet connection. Check your connection and try again.'
 
+class UploadCancelledError extends Error {
+  constructor() { super('Upload cancelled') }
+}
+
 // Chunked, resumable upload straight to the Mux direct-upload URL. A single
 // raw PUT of the whole file died on any network blip (surfacing in the
 // browser as a misleading CORS error), leaving the asset row stuck in
@@ -56,6 +60,7 @@ export function uploadFileToMux(
   url: string,
   onProgress: (percent: number) => void,
   onStatus: (message: string) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const upload = UpChunk.createUpload({
@@ -92,6 +97,17 @@ export function uploadFileToMux(
     let settled = false
     let offlineTimer: ReturnType<typeof setTimeout> | undefined
     let stallTimer: ReturnType<typeof setTimeout> | undefined
+
+    // Caller-initiated cancel: stop UpChunk and both timers; the caller
+    // decides what the rejection means.
+    signal?.addEventListener('abort', () => {
+      if (settled) return
+      settled = true
+      clearTimeout(offlineTimer)
+      clearTimeout(stallTimer)
+      upload.abort()
+      reject(new UploadCancelledError())
+    })
 
     const finish = (err?: Error) => {
       if (settled) return
@@ -182,6 +198,48 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
 
+  // Cancel bookkeeping. `uploadInfo` is only known once /api/assets/upload
+  // answers, so a cancel during 'requesting' is finished by handleFile when
+  // that response arrives.
+  const abortRef = useRef<AbortController | null>(null)
+  const uploadInfoRef = useRef<{ assetId: string; uploadId: string; cancelToken: string } | null>(null)
+  const cancelledRef = useRef(false)
+
+  const cancelOnServer = async (info: { assetId: string; uploadId: string; cancelToken: string }) => {
+    try {
+      await fetch(`/api/assets/${info.assetId}/cancel-upload`, {
+        method: 'POST',
+        keepalive: true, // still completes if the tab is closed right after cancelling
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ upload_id: info.uploadId, cancel_token: info.cancelToken }),
+      })
+    } catch { /* nothing more to do from here */ }
+  }
+
+  const uploadInProgress = state === 'requesting' || state === 'uploading'
+
+  useEffect(() => {
+    if (!uploadInProgress) return
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = 'Upload in progress, leaving will cancel it'
+      return e.returnValue
+    }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [uploadInProgress])
+
+  const handleCancel = () => {
+    if (!window.confirm('Cancel this upload? The file will not be saved.')) return
+    cancelledRef.current = true
+    abortRef.current?.abort()
+    // Server cleanup (Mux cancel + row update) runs in the background so the
+    // modal closes at once; cancelOnServer swallows its own failures.
+    const info = uploadInfoRef.current
+    if (info) void cancelOnServer(info)
+    onClose()
+  }
+
   const handleFile = async (file: File) => {
     if (!file.type.startsWith('video/')) {
       setError('Please select a video file')
@@ -191,6 +249,9 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
     setFileName(file.name)
     setState('requesting')
     setError('')
+    cancelledRef.current = false
+    uploadInfoRef.current = null
+    abortRef.current = new AbortController()
 
     try {
       if (status !== 'authenticated' || !session) { setError('Not logged in'); setState('error'); return }
@@ -223,17 +284,29 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
         throw new Error(err.error ?? 'Failed to get upload URL')
       }
 
-      const { upload_url } = await res.json()
+      const { asset, upload_url, upload_id, cancel_token } = await res.json()
+      uploadInfoRef.current = {
+        assetId: asset.id,
+        uploadId: upload_id,
+        cancelToken: cancel_token,
+      }
+
+      // Cancelled while the request was in flight: the row exists now, so undo it.
+      if (cancelledRef.current) {
+        await cancelOnServer(uploadInfoRef.current)
+        return
+      }
 
       // Upload directly to Mux
       setState('uploading')
       setProgress(0)
       setUploadStatus('')
-      await uploadFileToMux(file, upload_url, setProgress, setUploadStatus)
+      await uploadFileToMux(file, upload_url, setProgress, setUploadStatus, abortRef.current?.signal)
       // size_bytes was recorded when the row was created - once the bytes
       // actually land, refresh the sidebar/settings storage bar.
       invalidateStorageUsage()
 
+      uploadInfoRef.current = null
       setState('processing')
       setTimeout(() => {
         setState('done')
@@ -241,6 +314,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
       }, 2000)
 
     } catch (err: any) {
+      if (cancelledRef.current || err instanceof UploadCancelledError) return
       setError(err.message ?? 'Upload failed')
       setState('error')
     }
@@ -265,7 +339,8 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-th-border">
           <h2 className="font-bold text-[16px]">Upload cut</h2>
-          <button onClick={onClose} disabled={state === 'uploading'}
+          <button onClick={uploadInProgress ? handleCancel : onClose}
+            aria-label={uploadInProgress ? 'Cancel upload' : 'Close'}
             className="text-th-muted hover:text-th-text transition-colors disabled:opacity-40">
             <X size={16} />
           </button>
@@ -331,6 +406,12 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
               <p className="text-[11px] text-th-muted mt-3 font-mono">
                 Uploading directly to Mux — do not close this window
               </p>
+              <div className="mt-6 flex justify-center">
+                <button onClick={handleCancel}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-th border border-th-border text-[13px] font-semibold text-th-text bg-th-surface-alt hover:bg-th-surface-hov transition-colors btn-press">
+                  <Ban size={13} /> Cancel upload
+                </button>
+              </div>
               {uploadStatus && (
                 <p className="mt-2 flex items-center gap-2 text-[12px] text-th-changes">
                   <AlertCircle size={13} /> {uploadStatus}
@@ -345,6 +426,11 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
               <div className="flex justify-center mb-4"><Orb state="composing" size={64} label="Processing your video" /></div>
               <p className="font-semibold mb-1">Upload complete</p>
               <p className="text-[12px] text-th-muted">Mux is processing your video…</p>
+              <button disabled
+                className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-semibold text-th-muted opacity-40 cursor-not-allowed">
+                <Ban size={13} /> Cancel upload
+              </button>
+              <p className="text-[11px] text-th-faint mt-1">Can&apos;t be cancelled once processing has started</p>
             </div>
           )}
 
