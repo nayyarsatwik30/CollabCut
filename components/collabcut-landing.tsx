@@ -24,7 +24,7 @@ function ParallaxMockup({ children, className = '' }: { children: React.ReactNod
   return <motion.div ref={ref} className={`parallax-mockup ${className}`} style={{ y, rotate }}>{children}</motion.div>
 }
 
-function Logo() {
+export function Logo() {
   // eslint-disable-next-line @next/next/no-img-element -- 28px static mark, nothing for next/image to optimise
   return <Link href="/" className="cc-logo" aria-label="CollabCut home"><img className="cc-logo-mark" src="/collabcut-mark.png" alt="" width={28} height={28} /><span>collabcut</span></Link>
 }
@@ -50,7 +50,7 @@ function SplitMockup() {
   return <ProductChrome label="March campaign / cut_014"><div className="split-header"><div><small>ASSET LIBRARY</small><strong>cut_014.mp4</strong></div><span className="version-pill">v3 latest</span></div><div className="split-tabs"><span className="active">Custom Cut</span><span>Board Cut</span><span>Versions <b>3</b></span></div><div className="split-body"><div className="asset-card internal"><div className="file-icon">◈</div><div><b>cut_014_custom_v3.mp4</b><span>Editor workspace · 384 MB</span></div><span className="lock">Internal</span></div><div className="asset-arrow">→</div><div className="asset-card client"><div className="file-icon">▶</div><div><b>cut_014_board_v3.mp4</b><span>Submitted for review · 384 MB</span></div><span className="share">Client link</span></div></div><div className="versions"><span>v1</span><span>v2</span><span className="selected">v3</span><i>Compare versions side by side</i></div></ProductChrome>
 }
 
-function Footer() {
+export function Footer() {
   return <footer className="cc-footer"><div className="footer-main"><div><Logo /><p>The clear path from first cut<br />to final approval.</p></div><div className="footer-links"><div><b>Product</b><Link href="#workflow">How it works</Link><Link href="#features">Features</Link><Link href="#pricing">Plans</Link></div><div><b>Company</b><Link href="#about">About</Link><Link href="mailto:hello.collabcut@gmail.com">Contact</Link></div><div><b>Legal</b><Link href="/terms">Terms of Service</Link><Link href="/privacy">Privacy Policy</Link></div></div></div><div className="footer-bottom"><span>© 2026 CollabCut. Built for better cuts.</span><span>Made for the people behind the timeline.</span></div></footer>
 }
 
@@ -121,5 +121,5 @@ const PLANS = [
 function Pricing({ agency }: { agency: boolean }) { return <section className={`pricing-section ${agency ? 'agency-pricing' : 'individual-pricing'}`} id="pricing"><Reveal><p className="section-kicker">{agency ? 'BUILT AROUND YOUR OPERATION' : 'PLANS FOR THE PEOPLE MAKING THE CUT'}</p><h2>{agency ? <>A workspace that fits<br /><span>the way you work.</span></> : <>Pick your pace.<br /><span>Keep the notes moving.</span></>}</h2><p className="section-copy">Every workspace starts on Tier 1 with shared storage for the whole team. Move up to Tier 2 when the footage or the team outgrows it.</p></Reveal><Reveal delay={0.15} className="price-plans">{PLANS.map((plan) => <div className="plan-card" key={plan.name}><small>{plan.name}</small><strong>{plan.storage} <i>workspace storage</i></strong><span>{plan.description}</span><p><Check size={14} /> {plan.admins} admins</p><p><Check size={14} /> {plan.editors} editors</p><p><Check size={14} /> {plan.storage} shared across every project</p>{agency ? <><a className="cc-button dark" href="mailto:hello.collabcut@gmail.com">Talk to CollabCut <ArrowUpRight size={15} /></a><Link className="text-link" href="/auth/signup/agency">Already onboarding? Create your workspace</Link></> : <Link className="cc-button dark" href="/auth/signup">Start free trial <ArrowUpRight size={15} /></Link>}</div>)}</Reveal></section> }
 function CTA({ agency }: { agency: boolean }) { return <section className="final-cta" id="start"><Reveal><p className="section-kicker">{agency ? 'READY WHEN YOU ARE' : 'THE NEXT CUT STARTS HERE'}</p><h2>{agency ? <>Make the work<br /><em>legible.</em></> : <>Make feedback<br /><em>feel finished.</em></>}</h2><p>{agency ? 'A clearer production system for the team you already have.' : 'One link is enough to get the right note, on the right frame.'}</p>{agency ? <><a className="cc-button primary" href="mailto:hello.collabcut@gmail.com">Talk to CollabCut <ArrowUpRight size={16} /></a><Link className="text-link" href="/auth/signup/agency">Already onboarding? Create your workspace</Link></> : <Link className="cc-button primary" href="/auth/signup">Try CollabCut <ArrowUpRight size={16} /></Link>}</Reveal></section> }
 
-export { ReviewMockup, BoardMockup, SplitMockup, Footer }
+export { ReviewMockup, BoardMockup, SplitMockup }
 

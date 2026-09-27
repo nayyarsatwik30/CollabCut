@@ -866,3 +866,19 @@ body { background-image: radial-gradient(rgba(243,239,231,.035) .7px, transparen
 .workflow-strip b { display: block; margin-top: 10px; color: var(--cc-ink); font: 700 13px var(--th-font); }
 .workflow-strip em { display: block; margin-top: 5px; color: var(--cc-muted); font: normal 12px/1.45 var(--th-font); }
 @media (max-width: 760px) { .workflow-strip-wrap { margin-top: 50px; } .workflow-strip { grid-template-columns: 1fr; gap: 5px; } }
+
+/* Shared shell for standalone content pages (contact, about) */
+.static-page { min-height: 100vh; display: flex; flex-direction: column; }
+.static-content { flex: 1; width: min(640px, calc(100% - 48px)); margin: 0 auto; padding: 72px 0 140px; }
+.static-content h1 { margin: 0 0 26px; font-family: var(--th-serif); font-weight: 400; letter-spacing: -.03em; line-height: 1.05; font-size: clamp(34px, 5vw, 54px); }
+.static-content h2 { margin: 40px 0 14px; font-family: var(--th-serif); font-weight: 400; font-size: 22px; }
+.static-content > p { margin: 0 0 20px; color: var(--cc-muted); font-size: 16px; line-height: 1.6; }
+.static-card { display: grid; gap: 14px; margin-top: 24px; padding: 27px; border: 1px solid var(--cc-line); border-radius: var(--th-r-sm); background: var(--cc-card); }
+.static-card h2 { margin: 0; font-family: var(--th-serif); font-weight: 400; font-size: 19px; }
+.static-card ul { margin: 0; padding-left: 18px; color: var(--cc-muted); font-size: 14px; line-height: 1.7; }
+.static-card ul li { margin: 4px 0; }
+.static-email { display: block; font-family: var(--th-mono); font-size: 14px; color: var(--cc-ink); }
+.static-email-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.cc-button.secondary { background: transparent; border: 1px solid var(--cc-line); color: var(--cc-ink); }
+.cc-button.secondary:hover { border-color: var(--cc-accent); }
+.static-footnotes { display: grid; gap: 10px; margin-top: 34px; }
