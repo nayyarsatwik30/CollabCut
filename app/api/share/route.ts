@@ -143,12 +143,16 @@ export async function PATCH(req: NextRequest) {
 
 // Public route (no auth) - never hand the password hash to the client, and
 // getPublicShareLink() narrows the asset/versions fields so internal fields
-// (notes, deadline, raw_file_url) never reach an outside reviewer.
+// (notes, deadline, raw_file_url) never reach an outside reviewer. An
+// optional `password` is passed straight through to getPublicShareLink(),
+// which is the only place that checks it - see its own comment for what it
+// gates (currently just project_name).
 export async function GET(req: NextRequest) {
-  const token = new URL(req.url).searchParams.get('token')
+  const url = new URL(req.url)
+  const token = url.searchParams.get('token')
   if (!token) return NextResponse.json({ error: 'token required' }, { status: 400 })
 
-  const result = await getPublicShareLink(token)
+  const result = await getPublicShareLink(token, url.searchParams.get('password'))
 
   if (result.status === 'not_found') return NextResponse.json({ error: 'Invalid link' }, { status: 404 })
   if (result.status === 'expired') return NextResponse.json({ error: 'Link expired' }, { status: 410 })

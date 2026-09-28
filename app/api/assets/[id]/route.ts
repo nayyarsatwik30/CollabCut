@@ -61,16 +61,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   // Project brief: fallback for lineages with no brief of their own. Kept in a
   // separate best-effort query so this endpoint still works on a database
-  // where migration-project-brief.sql hasn't been applied yet.
+  // where migration-project-brief.sql hasn't been applied yet. project_name
+  // rides along on the same row since it's from the same table - used for
+  // the downloaded file's name ("<Project> - <Asset> vX.mp4").
   data.project_brief = { notes: null, reference: null, deadline: null, drive_link: null }
+  data.project_name = null
   try {
     const briefResult = await migrationDb.query(
-      `SELECT brief_notes, brief_reference, brief_deadline::text AS brief_deadline, brief_drive_link
+      `SELECT name, brief_notes, brief_reference, brief_deadline::text AS brief_deadline, brief_drive_link
        FROM projects WHERE id = $1`,
       [data.project_id]
     )
     const b = briefResult.rows[0]
     if (b) {
+      data.project_name = b.name
       data.project_brief = {
         notes: b.brief_notes,
         reference: b.brief_reference,

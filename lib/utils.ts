@@ -66,15 +66,25 @@ export function mockShareToken(): string {
   return Math.random().toString(36).slice(2, 10)
 }
 
-/** Strip characters that are unsafe in filenames on common filesystems */
+/** Strip characters that are unsafe in filenames on common filesystems, and collapse whitespace */
 function sanitizeFilenamePart(value: string): string {
-  return value.replace(/[\\/:*?"<>|\x00-\x1F]+/g, '').trim()
+  return value
+    .replace(/[\\/:*?"<>|\x00-\x1F]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
-/** Build a safe ".mp4" filename from an asset's name and optional version number */
-export function buildDownloadFilename(name: string, version?: number): string {
-  const base = sanitizeFilenamePart(name.replace(/\.[^./\\]+$/, '')) || 'video'
-  return `${base}${version ? ` v${version}` : ''}.mp4`
+/** Build a safe ".mp4" filename as "<Project> - <Asset> vX.mp4" (non-English letters are kept;
+ *  only characters unsafe in filenames are stripped). Falls back to the asset name alone when
+ *  there's no project name. Total length is capped at ~120 chars, truncating the name portion
+ *  rather than dropping the version suffix or extension. */
+export function buildDownloadFilename(projectName: string | null | undefined, assetName: string, version?: number): string {
+  const project = projectName ? sanitizeFilenamePart(projectName) : ''
+  const asset = sanitizeFilenamePart(assetName.replace(/\.[^./\\]+$/, '')) || 'video'
+  const base = project ? `${project} - ${asset}` : asset
+  const suffix = `${version ? ` v${version}` : ''}.mp4`
+  const maxBaseLength = Math.max(1, 120 - suffix.length)
+  return `${base.slice(0, maxBaseLength).trim()}${suffix}`
 }
 
 /** Mux static-rendition MP4 URL for a playback ID (capped-1080p, enabled on every asset via

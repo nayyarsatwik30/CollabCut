@@ -30,6 +30,7 @@ interface ShareLinkData {
   default_version_id: string
   versions: ShareLinkVersion[]
   asset: ShareLinkVersion
+  project_name: string | null
 }
 
 interface PublicComment {
@@ -120,6 +121,19 @@ export default function PublicReviewClient({ token }: { token: string }) {
       if (res.ok && data.valid) {
         setEnteredPassword(passwordInput)
         setUnlocked(true)
+
+        // The initial GET (before any password was known) never receives
+        // project_name - refetch now that it's verified so the download
+        // filename can include it. Best-effort: if this fails, downloads
+        // just fall back to the asset name alone (buildDownloadFilename's
+        // existing behavior for a missing project name).
+        try {
+          const refreshed = await fetch(`/api/share?token=${shareLink.token}&password=${encodeURIComponent(passwordInput)}`)
+          if (refreshed.ok) {
+            const { share_link } = await refreshed.json()
+            setShareLink(share_link)
+          }
+        } catch {}
       } else {
         setPasswordError(res.status === 404 ? 'This link no longer exists' : res.status === 410 ? 'This link has expired' : res.ok ? 'Incorrect password' : 'Something went wrong - try again')
       }
@@ -312,7 +326,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               onTimeUpdate={setCurrentTime}
               approved={asset.is_complete}
               hideDownload={hideDownload}
-              downloadFilename={buildDownloadFilename(asset.name, asset.version)}
+              downloadFilename={buildDownloadFilename(shareLink.project_name, asset.name, asset.version)}
             />
           )}
         </div>
@@ -417,7 +431,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
                         src={v1Src}
                         comments={[]}
                         hideDownload={hideDownload}
-                        downloadFilename={selV1 ? buildDownloadFilename(selV1.name, selV1.version) : undefined}
+                        downloadFilename={selV1 ? buildDownloadFilename(shareLink.project_name, selV1.name, selV1.version) : undefined}
                       />
                     )
                   })()}
@@ -450,7 +464,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
                         src={v2Src}
                         comments={[]}
                         hideDownload={hideDownload}
-                        downloadFilename={selV2 ? buildDownloadFilename(selV2.name, selV2.version) : undefined}
+                        downloadFilename={selV2 ? buildDownloadFilename(shareLink.project_name, selV2.name, selV2.version) : undefined}
                       />
                     )
                   })()}

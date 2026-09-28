@@ -11,6 +11,7 @@ import { StatusBadge, Avatar } from '@/components/ui/Badge'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
+import { buildDownloadFilename } from '@/lib/utils'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 import { Orb } from '@/components/ui/Orb'
 
@@ -24,6 +25,7 @@ interface Asset {
   mux_playback_id: string | null
   mux_upload_id: string | null
   project_id: string
+  project_name?: string | null
   is_complete?: boolean
   cut_type: 'custom' | 'board'
   raw_file_url?: string | null
@@ -568,6 +570,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               onTimeUpdate={setCurrentTime}
               onDurationChange={setDuration}
               approved={!!asset.is_complete}
+              downloadFilename={buildDownloadFilename(asset.project_name, asset.name, asset.version)}
             />
           )}
         </div>
@@ -820,7 +823,13 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       ? `https://stream.mux.com/${selV1.mux_playback_id}.m3u8`
                       : undefined
 
-                    return <VideoPlayer src={v1Src} comments={[]} />
+                    return (
+                      <VideoPlayer
+                        src={v1Src}
+                        comments={[]}
+                        downloadFilename={selV1 ? buildDownloadFilename(asset?.project_name, selV1.name, selV1.version) : undefined}
+                      />
+                    )
                   })()}
                 </div>
               </div>
@@ -847,7 +856,13 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       ? `https://stream.mux.com/${selV2.mux_playback_id}.m3u8`
                       : undefined
 
-                    return <VideoPlayer src={v2Src} comments={[]} />
+                    return (
+                      <VideoPlayer
+                        src={v2Src}
+                        comments={[]}
+                        downloadFilename={selV2 ? buildDownloadFilename(asset?.project_name, selV2.name, selV2.version) : undefined}
+                      />
+                    )
                   })()}
                 </div>
               </div>

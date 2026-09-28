@@ -22,6 +22,8 @@ export interface PublicShareLink {
   default_version_id: string
   versions: PublicShareVersion[]
   asset: PublicShareVersion // = versions.find(v => v.id === default_version_id); kept so generateMetadata() doesn't need to change
+  // null until the password (if any) has been verified - see the `password` param below.
+  project_name: string | null
 }
 
 export type PublicShareLinkResult =
@@ -35,7 +37,12 @@ export type PublicShareLinkResult =
 // safe to expose for a given token. Resolves the whole asset_group_id
 // lineage instead of one pinned asset row, so a link automatically picks up
 // versions uploaded after it was created.
-export async function getPublicShareLink(token: string): Promise<PublicShareLinkResult> {
+//
+// `password` gates only `project_name` (used for the downloaded file's
+// name): it's included when the link has no password, or once `password`
+// verifies against the stored hash - never on the call made before a
+// visitor has entered anything. The hash itself never leaves this function.
+export async function getPublicShareLink(token: string, password?: string | null): Promise<PublicShareLinkResult> {
   const linkResult = await migrationDb.query(
     `SELECT token, expires_at, downloads_disabled, comments_only, password_hash, asset_group_id
      FROM share_links WHERE token = $1`,
@@ -48,7 +55,7 @@ export async function getPublicShareLink(token: string): Promise<PublicShareLink
 
   const versionsResult = await migrationDb.query(
     `SELECT a.id, a.version, a.name, a.status, a.created_at, a.size_bytes, a.mux_playback_id, a.mux_upload_id, a.is_complete, a.deleted_at,
-            p.deleted_at AS project_deleted_at
+            p.name AS project_name, p.deleted_at AS project_deleted_at
      FROM assets a LEFT JOIN projects p ON p.id = a.project_id
      WHERE a.asset_group_id = $1 ORDER BY a.version DESC`,
     [data.asset_group_id]
@@ -58,12 +65,16 @@ export async function getPublicShareLink(token: string): Promise<PublicShareLink
   // A soft-deleted project hides its assets without touching their own
   // deleted_at, so check both - otherwise deleting a project leaves its
   // public share links live.
-  const versions = rows
-    .filter((v) => !v.deleted_at && !v.project_deleted_at)
-    .map(({ deleted_at, project_deleted_at, ...v }) => v)
-  if (versions.length === 0) return { status: 'not_found' } // whole lineage (or its project) soft-deleted
+  const liveRows = rows.filter((v) => !v.deleted_at && !v.project_deleted_at)
+  if (liveRows.length === 0) return { status: 'not_found' } // whole lineage (or its project) soft-deleted
 
+  // Every version in a lineage shares one project, so any live row's name works.
+  const projectName: string | null = liveRows[0].project_name ?? null
+
+  const versions = liveRows.map(({ deleted_at, project_deleted_at, project_name: _pn, ...v }) => v)
   const latest = versions[0] // already ordered desc by version
+
+  const projectNameRevealed = !data.password_hash || (!!password && verifySharePassword(password, data.password_hash))
 
   return {
     status: 'ok',
@@ -76,6 +87,7 @@ export async function getPublicShareLink(token: string): Promise<PublicShareLink
       default_version_id: latest.id,
       versions,
       asset: latest,
+      project_name: projectNameRevealed ? projectName : null,
     },
   }
 }
