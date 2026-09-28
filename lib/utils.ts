@@ -65,3 +65,22 @@ export function clamp(value: number, min: number, max: number): number {
 export function mockShareToken(): string {
   return Math.random().toString(36).slice(2, 10)
 }
+
+/** Strip characters that are unsafe in filenames on common filesystems */
+function sanitizeFilenamePart(value: string): string {
+  return value.replace(/[\\/:*?"<>|\x00-\x1F]+/g, '').trim()
+}
+
+/** Build a safe ".mp4" filename from an asset's name and optional version number */
+export function buildDownloadFilename(name: string, version?: number): string {
+  const base = sanitizeFilenamePart(name.replace(/\.[^./\\]+$/, '')) || 'video'
+  return `${base}${version ? ` v${version}` : ''}.mp4`
+}
+
+/** Mux static-rendition MP4 URL for a playback ID (capped-1080p, enabled on every asset via
+ *  mp4_support). The `download` query param makes Mux respond with Content-Disposition:
+ *  attachment for this filename - that header, not the HTML `download` attribute (which browsers
+ *  ignore cross-origin), is what makes a plain <a href> actually save the file. */
+export function muxDownloadUrl(playbackId: string, filename: string): string {
+  return `https://stream.mux.com/${playbackId}/capped-1080p.mp4?download=${encodeURIComponent(filename)}`
+}

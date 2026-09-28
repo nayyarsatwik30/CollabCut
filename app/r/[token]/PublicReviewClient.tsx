@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Lock, MessageSquare, Send, Layers, ChevronDown, Check, X } from 'lucide-react'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { Avatar } from '@/components/ui/Badge'
-import { formatTimecode } from '@/lib/utils'
+import { formatTimecode, buildDownloadFilename } from '@/lib/utils'
 import { Orb } from '@/components/ui/Orb'
 
 const NAME_STORAGE_KEY = 'dailies_reviewer_name'
@@ -312,6 +312,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               onTimeUpdate={setCurrentTime}
               approved={asset.is_complete}
               hideDownload={hideDownload}
+              downloadFilename={buildDownloadFilename(asset.name, asset.version)}
             />
           )}
         </div>
@@ -411,7 +412,14 @@ export default function PublicReviewClient({ token }: { token: string }) {
                     const v1Src = selV1?.mux_playback_id
                       ? `https://stream.mux.com/${selV1.mux_playback_id}.m3u8`
                       : undefined
-                    return <VideoPlayer src={v1Src} comments={[]} hideDownload={hideDownload} />
+                    return (
+                      <VideoPlayer
+                        src={v1Src}
+                        comments={[]}
+                        hideDownload={hideDownload}
+                        downloadFilename={selV1 ? buildDownloadFilename(selV1.name, selV1.version) : undefined}
+                      />
+                    )
                   })()}
                 </div>
               </div>
@@ -437,7 +445,14 @@ export default function PublicReviewClient({ token }: { token: string }) {
                     const v2Src = selV2?.mux_playback_id
                       ? `https://stream.mux.com/${selV2.mux_playback_id}.m3u8`
                       : undefined
-                    return <VideoPlayer src={v2Src} comments={[]} hideDownload={hideDownload} />
+                    return (
+                      <VideoPlayer
+                        src={v2Src}
+                        comments={[]}
+                        hideDownload={hideDownload}
+                        downloadFilename={selV2 ? buildDownloadFilename(selV2.name, selV2.version) : undefined}
+                      />
+                    )
                   })()}
                 </div>
               </div>

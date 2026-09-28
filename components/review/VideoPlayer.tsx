@@ -4,7 +4,7 @@ import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHand
 import Hls from 'hls.js'
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Download } from 'lucide-react'
 import { Comment } from '@/lib/types'
-import { formatTimecode } from '@/lib/utils'
+import { formatTimecode, muxDownloadUrl } from '@/lib/utils'
 import { FilmScrubber } from './FilmScrubber'
 import { Orb } from '@/components/ui/Orb'
 
@@ -15,6 +15,8 @@ interface VideoPlayerProps {
   onDurationChange?: (dur: number) => void
   approved?: boolean
   hideDownload?: boolean
+  /** Filename for the downloaded MP4; falls back to a generic name when the caller doesn't know the asset's name/version */
+  downloadFilename?: string
 }
 
 export interface VideoPlayerHandle {
@@ -23,9 +25,17 @@ export interface VideoPlayerHandle {
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
-  { src, comments, onTimeUpdate, onDurationChange, approved, hideDownload },
+  { src, comments, onTimeUpdate, onDurationChange, approved, hideDownload, downloadFilename },
   ref
 ) {
+  // `src` is always the Mux HLS playlist (…/<playback_id>.m3u8), never a
+  // downloadable file - the actual MP4 static rendition lives at a different
+  // path under the same playback ID, so the download link is derived here.
+  const downloadPlaybackId = src?.match(/stream\.mux\.com\/([^/?]+)\.m3u8/)?.[1]
+  const downloadUrl = downloadPlaybackId
+    ? muxDownloadUrl(downloadPlaybackId, downloadFilename ?? 'video.mp4')
+    : undefined
+
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [playing, setPlaying] = useState(false)
@@ -316,11 +326,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           <div className="ml-auto flex items-center gap-2">
             {!hideDownload && (
               <a
-                href={src ?? '#'}
-                download
+                href={downloadUrl ?? '#'}
                 className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press"
                 title="Download"
-                onClick={(e) => !src && e.preventDefault()}
+                onClick={(e) => !downloadUrl && e.preventDefault()}
               >
                 <Download size={13} />
               </a>
