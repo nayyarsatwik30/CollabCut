@@ -12,6 +12,7 @@ interface LineageRow {
   version: number
   asset_group_id: string | null
   pipeline_status: string
+  priority: number
   created_at: string
 }
 
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
   const cutsByEditor = new Map<string, LineageRow[]>()
   if (editorIds.length > 0) {
     const { rows: assetRows } = await migrationDb.query(
-      `SELECT ae.editor_id, a.id, a.name, a.version, a.asset_group_id, a.pipeline_status, a.created_at
+      `SELECT ae.editor_id, a.id, a.name, a.version, a.asset_group_id, a.pipeline_status, a.priority, a.created_at
        FROM asset_editors ae
        JOIN assets a ON a.id = ae.asset_id
        JOIN projects p ON p.id = a.project_id
@@ -71,6 +72,7 @@ export async function GET(req: NextRequest) {
         id: cut.id,
         title: cut.name,
         status: cut.pipeline_status,
+        priority: cut.priority,
       })),
     }
   })

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const { user } = auth
 
   const { rows } = await migrationDb.query(
-    `SELECT a.id, a.name, a.status, a.is_complete, a.mux_playback_id,
+    `SELECT a.id, a.name, a.status, a.is_complete, a.mux_playback_id, a.priority,
             p.id AS project_id, p.name AS project_name, p.client AS project_client
      FROM asset_editors ae
      JOIN assets a ON a.id = ae.asset_id
@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
     project_id: asset.project_id ?? null,
     project_name: asset.project_name ?? 'Untitled project',
     project_client: asset.project_client ?? '',
+    priority: asset.priority ?? 3,
   }))
 
   return NextResponse.json({ assets })

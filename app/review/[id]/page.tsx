@@ -8,6 +8,7 @@ import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
 import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
+import { PRIORITY_OPTIONS, priorityMeta } from '@/lib/priority'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
@@ -32,6 +33,7 @@ interface Asset {
   notes?: string | null
   reference?: string | null
   deadline?: string | null
+  priority: number
   project_brief?: {
     notes: string | null
     reference: string | null
@@ -330,6 +332,27 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     setTogglingComplete(false)
   }
 
+  const handlePriorityChange = async (priority: number) => {
+    if (!asset || asset.priority === priority) return
+    const previousPriority = asset.priority
+    setAsset({ ...asset, priority })
+
+    try {
+      const res = await fetch(`/api/assets/${asset.id}/priority`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ priority }),
+      })
+      if (!res.ok) {
+        setAsset((prev) => (prev ? { ...prev, priority: previousPriority } : prev))
+        showToast('Failed to update priority', 'info')
+      }
+    } catch (err) {
+      setAsset((prev) => (prev ? { ...prev, priority: previousPriority } : prev))
+      showToast('Failed to update priority', 'info')
+    }
+  }
+
   const DRAW_TOOLS: { key: AnnotationTool; icon: React.ElementType; label: string }[] = [
     { key: 'line', icon: Minus, label: 'Line' },
     { key: 'rect', icon: Square, label: 'Rectangle' },
@@ -482,6 +505,27 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           )}
 
           <StatusBadge status={asset.status as any} />
+
+          {role === 'admin' ? (
+            <select
+              value={asset.priority}
+              onChange={(e) => handlePriorityChange(Number(e.target.value))}
+              title="Change priority"
+              className="appearance-none text-center font-mono text-[11px] font-bold px-2 py-0.5 rounded-th-full border-0 outline-none cursor-pointer shrink-0"
+              style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
+            >
+              {PRIORITY_OPTIONS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          ) : (
+            <span
+              className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-th-full shrink-0"
+              style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
+            >
+              {priorityMeta(asset.priority).label}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">

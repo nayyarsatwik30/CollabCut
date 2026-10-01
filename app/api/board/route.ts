@@ -13,6 +13,7 @@ interface BoardAsset {
   project_client: string
   editor: { id: string; name: string } | null
   mux_upload_id: string | null
+  priority: number
 }
 
 export async function GET(req: NextRequest) {
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
 
   if (role === 'admin') {
     const { rows: assetRows } = await migrationDb.query(
-      `SELECT a.id, a.name, a.version, a.asset_group_id, a.pipeline_status, a.is_complete, a.project_id, a.mux_upload_id,
+      `SELECT a.id, a.name, a.version, a.asset_group_id, a.pipeline_status, a.is_complete, a.project_id, a.mux_upload_id, a.priority,
               p.name AS project_name, p.client AS project_client
        FROM assets a
        JOIN projects p ON p.id = a.project_id
@@ -83,6 +84,7 @@ export async function GET(req: NextRequest) {
       project_client: row.project_client ?? '',
       editor: editorByGroup.get(row.asset_group_id ?? row.id) ?? null,
       mux_upload_id: row.mux_upload_id ?? null,
+      priority: row.priority ?? 3,
     }))
   } else {
     const { rows: profileRows } = await migrationDb.query(
@@ -109,7 +111,7 @@ export async function GET(req: NextRequest) {
 
     if (assignedGroupIds.length > 0) {
       const { rows: assetRows } = await migrationDb.query(
-        `SELECT a.id, a.name, a.version, a.asset_group_id, a.pipeline_status, a.is_complete, a.project_id, a.mux_upload_id,
+        `SELECT a.id, a.name, a.version, a.asset_group_id, a.pipeline_status, a.is_complete, a.project_id, a.mux_upload_id, a.priority,
                 p.name AS project_name, p.client AS project_client
          FROM assets a
          JOIN projects p ON p.id = a.project_id
@@ -127,6 +129,7 @@ export async function GET(req: NextRequest) {
         project_client: row.project_client ?? '',
         editor: { id: user.id, name: myProfile?.name ?? user.email ?? 'You' },
         mux_upload_id: row.mux_upload_id ?? null,
+        priority: row.priority ?? 3,
       }))
     }
   }

@@ -11,6 +11,7 @@ import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { NewContentModal } from '@/components/board/NewContentModal'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { performLogout } from '@/lib/auth'
+import { priorityMeta } from '@/lib/priority'
 import type { Project } from '@/lib/types'
 
 interface AssignedAsset {
@@ -22,6 +23,7 @@ interface AssignedAsset {
   project_id: string | null
   project_name: string
   project_client: string
+  priority: number
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -322,7 +324,15 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <div className="p-3.5 flex-1 flex flex-col justify-center gap-1.5 min-h-[56px]">
-                          <p className="text-[13px] font-semibold truncate">{a.name}</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[13px] font-semibold truncate">{a.name}</p>
+                            <span
+                              className="shrink-0 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full"
+                              style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
+                            >
+                              {priorityMeta(a.priority).label}
+                            </span>
+                          </div>
                           <p className="text-[11px] text-th-muted truncate">{a.project_client}</p>
                           <span
                             className="self-start flex items-center gap-1.5 h-7 px-2.5 rounded-th text-[11px] font-semibold mt-0.5"

@@ -97,7 +97,8 @@ CREATE TABLE assets (
   raw_file_url text,
   notes text,
   reference text,
-  deadline date
+  deadline date,
+  priority smallint NOT NULL DEFAULT 3 CHECK (priority BETWEEN 1 AND 3)
 );
 
 ALTER TABLE projects ADD CONSTRAINT projects_cover_asset_id_fkey
@@ -185,6 +186,7 @@ CREATE TABLE raw_files (
 CREATE INDEX idx_comments_asset_id ON comments (asset_id);
 CREATE INDEX idx_replies_comment_id ON replies (comment_id);
 CREATE INDEX idx_assets_project_id ON assets (project_id);
+CREATE INDEX idx_assets_asset_group_id ON assets (asset_group_id);
 CREATE INDEX idx_projects_owner_id ON projects (owner_id);
 CREATE INDEX idx_projects_cover_asset_id ON projects (cover_asset_id);
 CREATE INDEX idx_share_links_asset_group_id ON share_links (asset_group_id);

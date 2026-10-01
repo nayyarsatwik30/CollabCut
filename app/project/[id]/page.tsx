@@ -9,6 +9,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { Avatar } from '@/components/ui/Badge'
 import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
 import { useSessionGuard } from '@/lib/useSessionGuard'
+import { priorityMeta } from '@/lib/priority'
 
 type Tab = 'assets' | 'raw-footage' | 'members' | 'brief'
 
@@ -54,6 +55,7 @@ interface Asset {
   created_at: string
   is_complete?: boolean
   cut_type: 'custom' | 'board'
+  priority: number
 }
 
 const BRIEF_LABEL = 'font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold mb-1.5 block'
@@ -434,7 +436,15 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           <span className="thumb-badge font-mono text-[11px] px-1.5 py-0.5 rounded relative z-[1]">{formatDuration(a.duration_sec)}</span>
                         </div>
                         <div className="p-3.5 flex-1 flex flex-col justify-center min-h-[64px]">
-                          <p className="text-[13px] font-semibold truncate mb-2">{a.name}</p>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="text-[13px] font-semibold truncate">{a.name}</p>
+                            <span
+                              className="shrink-0 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full"
+                              style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
+                            >
+                              {priorityMeta(a.priority).label}
+                            </span>
+                          </div>
                           <span className="text-[11px] text-th-faint font-mono">{formatSize(a.size_bytes)}</span>
                         </div>
                       </Link>
@@ -531,7 +541,15 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           </div>
                         )}
                         <div className="p-3.5 flex-1 flex flex-col justify-center min-h-[64px]">
-                          <p className="text-[13px] font-semibold truncate mb-2">{a.name}</p>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="text-[13px] font-semibold truncate">{a.name}</p>
+                            <span
+                              className="shrink-0 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full"
+                              style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
+                            >
+                              {priorityMeta(a.priority).label}
+                            </span>
+                          </div>
                           <div className="flex items-center justify-between text-[11px] text-th-faint font-mono">
                             <span>{formatSize(a.size_bytes)}</span>
                             {isPlaceholder ? (

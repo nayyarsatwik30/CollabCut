@@ -14,6 +14,7 @@ import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { performLogout } from '@/lib/auth'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
+import { priorityMeta } from '@/lib/priority'
 import { Orb } from '@/components/ui/Orb'
 
 type BoardView = 'board' | 'projects' | 'editors'
@@ -194,6 +195,33 @@ export default function BoardPage() {
     }
   }
 
+  // Priority is admin-only to change (editors only ever see the read-only
+  // badge), kept in sync server-side across every version in the lineage -
+  // see PATCH /api/assets/[id]/priority.
+  const updatePriority = async (assetId: string, priority: number) => {
+    const asset = assets.find((a) => a.id === assetId)
+    if (!asset || asset.priority === priority) return
+
+    const previousPriority = asset.priority
+    setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority } : a)))
+
+    beginMutation()
+    try {
+      const res = await fetch(`/api/assets/${assetId}/priority`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ priority }),
+      })
+      if (!res.ok) {
+        setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
+      }
+    } catch (err) {
+      setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
+    } finally {
+      endMutation()
+    }
+  }
+
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>, columnKey: string) => {
     e.preventDefault()
     setDragOverColumn(null)
@@ -306,6 +334,11 @@ export default function BoardPage() {
     for (const asset of assets) {
       const key = map[asset.pipeline_status] ? asset.pipeline_status : 'idea'
       map[key].push(asset)
+    }
+    // P1 first, P3 last. /api/board still has no ORDER BY (see the polling
+    // comment above) - this sort is purely client-side, same as the grouping itself.
+    for (const key of Object.keys(map)) {
+      map[key].sort((a, b) => a.priority - b.priority)
     }
     return map
   }, [assets])
@@ -490,8 +523,12 @@ export default function BoardPage() {
                             const col = COLUMNS.find((c) => c.key === cut.status) ?? COLUMNS[0]
                             return (
                               <div key={cut.id} className="flex items-center gap-1.5 min-w-0">
-                                {/* reserved for a future P1/P2/P3 priority badge */}
-                                <span className="w-1 h-1 shrink-0" />
+                                <span
+                                  className="shrink-0 font-mono text-[8px] font-bold px-1 py-0.5 rounded-th-full"
+                                  style={{ color: priorityMeta(cut.priority).color, background: `color-mix(in srgb, ${priorityMeta(cut.priority).color} 16%, transparent)` }}
+                                >
+                                  {priorityMeta(cut.priority).label}
+                                </span>
                                 <span className="text-[11px] text-th-text truncate flex-1">{cut.title}</span>
                                 <span
                                   className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded-th-full"
@@ -567,6 +604,7 @@ export default function BoardPage() {
                           columns={COLUMNS}
                           onAssign={handleAssign}
                           onStatusChange={updateAssetStatus}
+                          onPriorityChange={updatePriority}
                           onDelete={handleDeleteAsset}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}

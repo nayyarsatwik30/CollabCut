@@ -143,11 +143,11 @@ export async function POST(req: NextRequest) {
   //    that happens to share a filename with an existing Board Cut auto-stacks
   //    onto it, same as before. Requested type 'custom' skips this entirely -
   //    every Custom Cut upload is always its own independent asset.
-  let linkedHead: { id: string; version: number; asset_group_id: string | null; cut_type: string } | null = null
+  let linkedHead: { id: string; version: number; asset_group_id: string | null; cut_type: string; priority: number } | null = null
 
   if (linked_asset_name) {
     const existingResult = await migrationDb.query(
-      `SELECT id, version, asset_group_id, cut_type FROM assets
+      `SELECT id, version, asset_group_id, cut_type, priority FROM assets
        WHERE project_id = $1 AND name = $2 AND deleted_at IS NULL ORDER BY version DESC LIMIT 1`,
       [project_id, linked_asset_name]
     )
@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
     }
   } else if ((cut_type ?? 'board') === 'board') {
     const existingResult = await migrationDb.query(
-      `SELECT id, version, asset_group_id, cut_type FROM assets
+      `SELECT id, version, asset_group_id, cut_type, priority FROM assets
        WHERE project_id = $1 AND name = $2 AND cut_type = 'board' AND deleted_at IS NULL
        ORDER BY version DESC LIMIT 1`,
       [project_id, name]
@@ -213,9 +213,13 @@ export async function POST(req: NextRequest) {
   // own id, generated up front so it can self-reference in one insert).
   const newAssetId = randomUUID()
 
+  // Priority is kept in sync across every version in a lineage (see
+  // PATCH /api/assets/[id]/priority), so a new version just inherits
+  // whatever the lineage already has - same copy-forward as cutType above -
+  // and a brand new lineage starts at the column's own default, 3.
   const insertResult = await migrationDb.query(
-    `INSERT INTO assets (id, project_id, uploaded_by, name, version, status, pipeline_status, cut_type, mux_upload_id, asset_group_id, size_bytes)
-     VALUES ($1,$2,$3,$4,$5,'processing',$6,$7,$8,$9,$10)
+    `INSERT INTO assets (id, project_id, uploaded_by, name, version, status, pipeline_status, cut_type, mux_upload_id, asset_group_id, size_bytes, priority)
+     VALUES ($1,$2,$3,$4,$5,'processing',$6,$7,$8,$9,$10,$11)
      RETURNING *`,
     [
       newAssetId,
@@ -228,6 +232,7 @@ export async function POST(req: NextRequest) {
       upload.id,
       linkedHead ? linkedHead.asset_group_id : newAssetId,
       sizeBytes,
+      linkedHead ? linkedHead.priority : 3,
     ]
   )
   const asset = insertResult.rows[0]

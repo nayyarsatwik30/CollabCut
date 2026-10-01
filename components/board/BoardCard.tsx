@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, ChevronDown, Clock, Film, Trash2, UserPlus } from 'lucide-react'
+import { PRIORITY_OPTIONS, priorityMeta } from '@/lib/priority'
 
 export interface BoardAsset {
   id: string
@@ -14,6 +15,7 @@ export interface BoardAsset {
   project_client: string
   editor: { id: string; name: string } | null
   mux_upload_id: string | null
+  priority: number
 }
 
 export interface BoardEditorOption {
@@ -21,7 +23,7 @@ export interface BoardEditorOption {
   name: string
   email: string
   assetCount?: number
-  cutsPreview?: { id: string; title: string; status: string }[]
+  cutsPreview?: { id: string; title: string; status: string; priority: number }[]
 }
 
 export interface BoardColumnOption {
@@ -37,6 +39,7 @@ interface BoardCardProps {
   columns: BoardColumnOption[]
   onAssign: (assetId: string, editorId: string) => void
   onStatusChange: (assetId: string, status: string) => void
+  onPriorityChange: (assetId: string, priority: number) => void
   onDelete: (assetId: string) => void
   onDragStart: (e: React.DragEvent<HTMLDivElement>, assetId: string) => void
   onDragEnd: () => void
@@ -57,7 +60,7 @@ export function initialsFor(name: string) {
     .toUpperCase() || '?'
 }
 
-export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, onStatusChange, onDelete, onDragStart, onDragEnd }: BoardCardProps) {
+export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, onStatusChange, onPriorityChange, onDelete, onDragStart, onDragEnd }: BoardCardProps) {
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const draggingRef = useRef(false)
@@ -116,6 +119,27 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
             style={{ background: `color-mix(in srgb, ${color} 16%, transparent)` }}
           >
             <Film size={11} style={{ color }} />
+          </span>
+        )}
+        {isAdmin ? (
+          <select
+            value={asset.priority}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => { e.stopPropagation(); onPriorityChange(asset.id, Number(e.target.value)) }}
+            title="Change priority"
+            className="appearance-none text-center font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full border-0 outline-none cursor-pointer shrink-0"
+            style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
+          >
+            {PRIORITY_OPTIONS.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+        ) : (
+          <span
+            className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full shrink-0"
+            style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
+          >
+            {priorityMeta(asset.priority).label}
           </span>
         )}
         {isPlaceholder ? (

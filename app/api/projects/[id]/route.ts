@@ -48,7 +48,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!authorized) return NextResponse.json({ error: 'Not authorized to view this project' }, { status: 403 })
 
   const assetsResult = await migrationDb.query(
-    `SELECT id, name, version, asset_group_id, duration_sec, size_bytes, status, mux_playback_id, mux_upload_id, is_complete, cut_type
+    `SELECT id, name, version, asset_group_id, duration_sec, size_bytes, status, mux_playback_id, mux_upload_id, is_complete, cut_type, priority
      FROM assets WHERE project_id = $1 AND deleted_at IS NULL`,
     [params.id]
   )
