@@ -21,6 +21,7 @@ export interface BoardEditorOption {
   name: string
   email: string
   assetCount?: number
+  cutsPreview?: { id: string; title: string; status: string }[]
 }
 
 export interface BoardColumnOption {

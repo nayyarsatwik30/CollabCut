@@ -459,25 +459,57 @@ export default function BoardPage() {
                 <p className="text-[13px] text-th-muted">No editors in this workspace yet.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
-                {editors.map((ed) => (
-                  <button
-                    key={ed.id}
-                    onClick={() => handleSelectEditor(ed)}
-                    className="flex flex-col items-center text-center gap-2.5 bg-th-surface border border-th-border rounded-th-lg p-5 hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover btn-press"
-                  >
-                    <span
-                      className="w-11 h-11 rounded-full flex items-center justify-center text-[13px] font-extrabold shrink-0"
-                      style={{ background: '#22D3EE', color: '#000' }}
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+                {editors.map((ed) => {
+                  const preview = ed.cutsPreview ?? []
+                  const moreCount = (ed.assetCount ?? 0) - preview.length
+                  return (
+                    <button
+                      key={ed.id}
+                      onClick={() => handleSelectEditor(ed)}
+                      className="flex flex-col gap-3 text-left bg-th-surface border border-th-border rounded-th-lg p-4 hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover btn-press"
                     >
-                      {initialsFor(ed.name)}
-                    </span>
-                    <div>
-                      <p className="text-[13px] font-semibold truncate">{ed.name}</p>
-                      <p className="font-mono text-[10px] text-th-muted">{ed.assetCount ?? 0} assigned</p>
-                    </div>
-                  </button>
-                ))}
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-extrabold shrink-0"
+                          style={{ background: '#22D3EE', color: '#000' }}
+                        >
+                          {initialsFor(ed.name)}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold truncate">{ed.name}</p>
+                          <p className="font-mono text-[10px] text-th-muted">{ed.assetCount ?? 0} active</p>
+                        </div>
+                      </div>
+
+                      {preview.length === 0 ? (
+                        <p className="text-[11px] text-th-faint">No active cuts</p>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          {preview.map((cut) => {
+                            const col = COLUMNS.find((c) => c.key === cut.status) ?? COLUMNS[0]
+                            return (
+                              <div key={cut.id} className="flex items-center gap-1.5 min-w-0">
+                                {/* reserved for a future P1/P2/P3 priority badge */}
+                                <span className="w-1 h-1 shrink-0" />
+                                <span className="text-[11px] text-th-text truncate flex-1">{cut.title}</span>
+                                <span
+                                  className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded-th-full"
+                                  style={{ color: col.color, background: `color-mix(in srgb, ${col.color} 14%, transparent)` }}
+                                >
+                                  {col.label}
+                                </span>
+                              </div>
+                            )
+                          })}
+                          {moreCount > 0 && (
+                            <p className="text-[10px] text-th-muted pl-2.5">+{moreCount} more</p>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
