@@ -4,7 +4,8 @@ import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHand
 import Hls from 'hls.js'
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Download } from 'lucide-react'
 import { Comment } from '@/lib/types'
-import { formatTimecode, muxDownloadUrl } from '@/lib/utils'
+import { formatTimecode } from '@/lib/utils'
+import { startBrowserDownload } from '@/lib/download-client'
 import { FilmScrubber } from './FilmScrubber'
 import { Orb } from '@/components/ui/Orb'
 
@@ -15,8 +16,8 @@ interface VideoPlayerProps {
   onDurationChange?: (dur: number) => void
   approved?: boolean
   hideDownload?: boolean
-  /** Filename for the downloaded MP4; falls back to a generic name when the caller doesn't know the asset's name/version */
-  downloadFilename?: string
+  /** Asks the server for this video's download URL (it enforces access); rejects with a user-facing message. No handler = no Download button. */
+  getDownloadUrl?: () => Promise<string>
 }
 
 export interface VideoPlayerHandle {
@@ -25,16 +26,27 @@ export interface VideoPlayerHandle {
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
-  { src, comments, onTimeUpdate, onDurationChange, approved, hideDownload, downloadFilename },
+  { src, comments, onTimeUpdate, onDurationChange, approved, hideDownload, getDownloadUrl },
   ref
 ) {
-  // `src` is always the Mux HLS playlist (…/<playback_id>.m3u8), never a
-  // downloadable file - the actual MP4 static rendition lives at a different
-  // path under the same playback ID, so the download link is derived here.
-  const downloadPlaybackId = src?.match(/stream\.mux\.com\/([^/?]+)\.m3u8/)?.[1]
-  const downloadUrl = downloadPlaybackId
-    ? muxDownloadUrl(downloadPlaybackId, downloadFilename ?? 'video.mp4')
-    : undefined
+  // `src` is the Mux HLS playlist, never a downloadable file. Download asks
+  // the server, which checks access before handing back a URL - nothing
+  // about the file's location is derived here.
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+  const handleDownload = useCallback(async () => {
+    if (!getDownloadUrl || downloading) return
+    setDownloading(true)
+    setDownloadError(null)
+    try {
+      startBrowserDownload(await getDownloadUrl())
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : 'Download failed')
+      setTimeout(() => setDownloadError(null), 5000)
+    } finally {
+      setDownloading(false)
+    }
+  }, [getDownloadUrl, downloading])
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -324,15 +336,18 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            {!hideDownload && (
-              <a
-                href={downloadUrl ?? '#'}
-                className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press"
-                title="Download"
-                onClick={(e) => !downloadUrl && e.preventDefault()}
+            {downloadError && (
+              <span className="text-[11px] text-th-changes max-w-[220px] truncate" title={downloadError}>{downloadError}</span>
+            )}
+            {!hideDownload && getDownloadUrl && (
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press disabled:opacity-50"
+                title={downloading ? 'Preparing download…' : 'Download'}
               >
                 <Download size={13} />
-              </a>
+              </button>
             )}
             <button onClick={toggleFullscreen}
               className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press"

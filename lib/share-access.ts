@@ -128,3 +128,23 @@ export async function verifyShareAccess(
 
   return true
 }
+
+// verifyShareAccess plus the link's download permission, for the download
+// route only - comment access must keep working on a link with downloads off
+// (comments_only links exist precisely to allow comments and not downloads).
+export async function verifyShareDownloadAccess(
+  assetId: string,
+  token: string,
+  password: string | null,
+): Promise<'ok' | 'invalid' | 'disabled'> {
+  if (!(await verifyShareAccess(assetId, token, password))) return 'invalid'
+
+  const flagsResult = await migrationDb.query(
+    `SELECT downloads_disabled, comments_only FROM share_links WHERE token = $1`,
+    [token]
+  )
+  const flags = flagsResult.rows[0]
+  if (!flags) return 'invalid'
+  if (flags.downloads_disabled || flags.comments_only) return 'disabled'
+  return 'ok'
+}

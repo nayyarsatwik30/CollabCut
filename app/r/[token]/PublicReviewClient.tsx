@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Lock, MessageSquare, Send, Layers, ChevronDown, Check, X } from 'lucide-react'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { Avatar } from '@/components/ui/Badge'
-import { formatTimecode, buildDownloadFilename } from '@/lib/utils'
+import { formatTimecode } from '@/lib/utils'
+import { fetchShareDownloadUrl } from '@/lib/download-client'
 import { Orb } from '@/components/ui/Orb'
 
 const NAME_STORAGE_KEY = 'dailies_reviewer_name'
@@ -326,7 +327,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               onTimeUpdate={setCurrentTime}
               approved={asset.is_complete}
               hideDownload={hideDownload}
-              downloadFilename={buildDownloadFilename(shareLink.project_name, asset.name, asset.version)}
+              getDownloadUrl={() => fetchShareDownloadUrl(shareLink.token, asset.id, enteredPassword || undefined)}
             />
           )}
         </div>
@@ -431,7 +432,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
                         src={v1Src}
                         comments={[]}
                         hideDownload={hideDownload}
-                        downloadFilename={selV1 ? buildDownloadFilename(shareLink.project_name, selV1.name, selV1.version) : undefined}
+                        getDownloadUrl={selV1 ? () => fetchShareDownloadUrl(shareLink.token, selV1.id, enteredPassword || undefined) : undefined}
                       />
                     )
                   })()}
@@ -464,7 +465,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
                         src={v2Src}
                         comments={[]}
                         hideDownload={hideDownload}
-                        downloadFilename={selV2 ? buildDownloadFilename(shareLink.project_name, selV2.name, selV2.version) : undefined}
+                        getDownloadUrl={selV2 ? () => fetchShareDownloadUrl(shareLink.token, selV2.id, enteredPassword || undefined) : undefined}
                       />
                     )
                   })()}

@@ -86,11 +86,3 @@ export function buildDownloadFilename(projectName: string | null | undefined, as
   const maxBaseLength = Math.max(1, 120 - suffix.length)
   return `${base.slice(0, maxBaseLength).trim()}${suffix}`
 }
-
-/** Mux static-rendition MP4 URL for a playback ID (capped-1080p, enabled on every asset via
- *  mp4_support). The `download` query param makes Mux respond with Content-Disposition:
- *  attachment for this filename - that header, not the HTML `download` attribute (which browsers
- *  ignore cross-origin), is what makes a plain <a href> actually save the file. */
-export function muxDownloadUrl(playbackId: string, filename: string): string {
-  return `https://stream.mux.com/${playbackId}/capped-1080p.mp4?download=${encodeURIComponent(filename)}`
-}

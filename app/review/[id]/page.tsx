@@ -12,7 +12,7 @@ import { PRIORITY_OPTIONS, priorityMeta } from '@/lib/priority'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
-import { buildDownloadFilename } from '@/lib/utils'
+import { fetchAssetDownloadUrl } from '@/lib/download-client'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 import { Orb } from '@/components/ui/Orb'
 
@@ -614,7 +614,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               onTimeUpdate={setCurrentTime}
               onDurationChange={setDuration}
               approved={!!asset.is_complete}
-              downloadFilename={buildDownloadFilename(asset.project_name, asset.name, asset.version)}
+              getDownloadUrl={() => fetchAssetDownloadUrl(asset.id)}
             />
           )}
         </div>
@@ -871,7 +871,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       <VideoPlayer
                         src={v1Src}
                         comments={[]}
-                        downloadFilename={selV1 ? buildDownloadFilename(asset?.project_name, selV1.name, selV1.version) : undefined}
+                        getDownloadUrl={selV1 ? () => fetchAssetDownloadUrl(selV1.id) : undefined}
                       />
                     )
                   })()}
@@ -904,7 +904,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       <VideoPlayer
                         src={v2Src}
                         comments={[]}
-                        downloadFilename={selV2 ? buildDownloadFilename(asset?.project_name, selV2.name, selV2.version) : undefined}
+                        getDownloadUrl={selV2 ? () => fetchAssetDownloadUrl(selV2.id) : undefined}
                       />
                     )
                   })()}
