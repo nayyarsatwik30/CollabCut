@@ -8,7 +8,8 @@ import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
 import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
-import { PRIORITY_OPTIONS, priorityMeta } from '@/lib/priority'
+import { priorityMeta } from '@/lib/priority'
+import { PriorityMenu } from '@/components/PriorityMenu'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
@@ -513,17 +514,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           <StatusBadge status={asset.status as any} />
 
           {role === 'admin' ? (
-            <select
-              value={asset.priority}
-              onChange={(e) => handlePriorityChange(Number(e.target.value))}
-              title="Change priority"
-              className="appearance-none text-center font-mono text-[11px] font-bold px-2 py-0.5 rounded-th-full border-0 outline-none cursor-pointer shrink-0"
-              style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)`, colorScheme: 'dark' }}
-            >
-              {PRIORITY_OPTIONS.map((p) => (
-                <option key={p.value} value={p.value} style={{ background: 'var(--th-surface)', color: p.color }}>{p.label}</option>
-              ))}
-            </select>
+            <PriorityMenu value={asset.priority} onChange={handlePriorityChange} />
           ) : (
             <span
               className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-th-full shrink-0"

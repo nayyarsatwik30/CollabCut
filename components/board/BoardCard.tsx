@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, ChevronDown, Clock, Film, Trash2, UserPlus } from 'lucide-react'
-import { PRIORITY_OPTIONS, priorityMeta } from '@/lib/priority'
+import { priorityMeta } from '@/lib/priority'
+import { PriorityMenu } from '@/components/PriorityMenu'
 
 export interface BoardAsset {
   id: string
@@ -122,18 +123,11 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
           </span>
         )}
         {isAdmin ? (
-          <select
+          <PriorityMenu
             value={asset.priority}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { e.stopPropagation(); onPriorityChange(asset.id, Number(e.target.value)) }}
-            title="Change priority"
-            className="appearance-none text-center font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full border-0 outline-none cursor-pointer shrink-0"
-            style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)`, colorScheme: 'dark' }}
-          >
-            {PRIORITY_OPTIONS.map((p) => (
-              <option key={p.value} value={p.value} style={{ background: 'var(--th-surface)', color: p.color }}>{p.label}</option>
-            ))}
-          </select>
+            onChange={(p) => onPriorityChange(asset.id, p)}
+            size="sm"
+          />
         ) : (
           <span
             className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full shrink-0"

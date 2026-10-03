@@ -214,9 +214,11 @@ export default function BoardPage() {
       })
       if (!res.ok) {
         setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
+        showToast('Failed to update priority.', 'error')
       }
     } catch (err) {
       setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
+      showToast('Failed to update priority.', 'error')
     } finally {
       endMutation()
     }
