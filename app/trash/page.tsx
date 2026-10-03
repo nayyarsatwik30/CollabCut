@@ -96,7 +96,7 @@ export default function TrashPage() {
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                 <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center px-6">
-                    <h1 className="text-[15px] font-bold">Recycle Bin</h1>
+                    <h1 className="text-[15px] font-bold m-0">Recycle Bin</h1>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6">

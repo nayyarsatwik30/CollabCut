@@ -361,7 +361,7 @@ export default function BoardPage() {
         <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center justify-between px-6">
           <div className="flex items-center gap-2">
             <LayoutGrid size={15} className="shrink-0" style={{ color: 'var(--th-accent-text)' }} />
-            <h1 className="text-[15px] font-bold leading-none">Board</h1>
+            <h1 className="text-[15px] font-bold leading-none m-0">Board</h1>
           </div>
           <div className="flex items-center gap-3">
             <span className="font-mono text-[11px] text-th-muted">

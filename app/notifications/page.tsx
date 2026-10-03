@@ -101,7 +101,7 @@ export default function NotificationsPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center justify-between px-6">
-          <h1 className="text-[15px] font-bold">Notifications</h1>
+          <h1 className="text-[15px] font-bold m-0">Notifications</h1>
           {notifications.some((n) => !n.read) && (
             <div className="flex items-center gap-3">
               <span className="font-mono text-[11px] text-th-muted">
