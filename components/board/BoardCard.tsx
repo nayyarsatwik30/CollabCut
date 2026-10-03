@@ -128,10 +128,10 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
             onChange={(e) => { e.stopPropagation(); onPriorityChange(asset.id, Number(e.target.value)) }}
             title="Change priority"
             className="appearance-none text-center font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full border-0 outline-none cursor-pointer shrink-0"
-            style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
+            style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)`, colorScheme: 'dark' }}
           >
             {PRIORITY_OPTIONS.map((p) => (
-              <option key={p.value} value={p.value}>{p.label}</option>
+              <option key={p.value} value={p.value} style={{ background: 'var(--th-surface)', color: p.color }}>{p.label}</option>
             ))}
           </select>
         ) : (

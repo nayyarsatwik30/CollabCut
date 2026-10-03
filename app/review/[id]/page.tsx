@@ -66,6 +66,11 @@ interface Comment {
   replies: any[]
 }
 
+// Annotate row is hidden: no tool draws anything yet (drawTool only drives button highlight).
+// Flip to true to restore it; SHOW_DRAW_TOOL separately controls the Draw button.
+const SHOW_ANNOTATE_TOOLBAR = false
+const SHOW_DRAW_TOOL = false
+
 export default function ReviewPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { session, ready } = useSessionGuard()
@@ -357,7 +362,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     { key: 'line', icon: Minus, label: 'Line' },
     { key: 'rect', icon: Square, label: 'Rectangle' },
     { key: 'circle', icon: Circle, label: 'Circle' },
-    { key: 'arrow', icon: Pencil, label: 'Draw' },
+    // Draw is hidden for now; flip SHOW_DRAW_TOOL to true to restore it.
+    ...(SHOW_DRAW_TOOL ? [{ key: 'arrow' as AnnotationTool, icon: Pencil, label: 'Draw' }] : []),
   ]
 
   const muxSrc = asset?.mux_playback_id
@@ -512,10 +518,10 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               onChange={(e) => handlePriorityChange(Number(e.target.value))}
               title="Change priority"
               className="appearance-none text-center font-mono text-[11px] font-bold px-2 py-0.5 rounded-th-full border-0 outline-none cursor-pointer shrink-0"
-              style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
+              style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)`, colorScheme: 'dark' }}
             >
               {PRIORITY_OPTIONS.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
+                <option key={p.value} value={p.value} style={{ background: 'var(--th-surface)', color: p.color }}>{p.label}</option>
               ))}
             </select>
           ) : (
@@ -551,31 +557,33 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         </div>
       </header>
 
-      <div className="h-10 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-2 px-4">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted mr-1">Annotate</span>
-        {DRAW_TOOLS.map(({ key, icon: Icon, label }) => (
-          <button
-            key={String(key)}
-            onClick={() => setDrawTool(drawTool === key ? null : key)}
-            className="flex items-center gap-1.5 h-7 px-3 rounded-th-sm text-[11px] btn-press transition-all"
-            style={{
-              background: drawTool === key ? 'color-mix(in srgb, var(--th-accent) 18%, transparent)' : 'transparent',
-              color: drawTool === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
-              border: `1px solid ${drawTool === key ? 'var(--th-accent)' : 'var(--th-border)'}`,
-            }}
-          >
-            <Icon size={12} /> {label}
-          </button>
-        ))}
-        {hasAnnotations && (
-          <button
-            onClick={() => { setHasAnnotations(false); setDrawTool(null) }}
-            className="flex items-center gap-1.5 h-7 px-3 rounded-th-sm text-[11px] text-th-changes border border-th-changes/40 hover:bg-th-changes/10 transition-colors btn-press ml-1"
-          >
-            <Trash2 size={11} /> Clear
-          </button>
-        )}
-      </div>
+      {SHOW_ANNOTATE_TOOLBAR && (
+        <div className="h-10 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-2 px-4">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted mr-1">Annotate</span>
+          {DRAW_TOOLS.map(({ key, icon: Icon, label }) => (
+            <button
+              key={String(key)}
+              onClick={() => setDrawTool(drawTool === key ? null : key)}
+              className="flex items-center gap-1.5 h-7 px-3 rounded-th-sm text-[11px] btn-press transition-all"
+              style={{
+                background: drawTool === key ? 'color-mix(in srgb, var(--th-accent) 18%, transparent)' : 'transparent',
+                color: drawTool === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
+                border: `1px solid ${drawTool === key ? 'var(--th-accent)' : 'var(--th-border)'}`,
+              }}
+            >
+              <Icon size={12} /> {label}
+            </button>
+          ))}
+          {hasAnnotations && (
+            <button
+              onClick={() => { setHasAnnotations(false); setDrawTool(null) }}
+              className="flex items-center gap-1.5 h-7 px-3 rounded-th-sm text-[11px] text-th-changes border border-th-changes/40 hover:bg-th-changes/10 transition-colors btn-press ml-1"
+            >
+              <Trash2 size={11} /> Clear
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
