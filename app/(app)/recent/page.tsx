@@ -96,7 +96,7 @@ export default function RecentPage() {
                   </div>
                   <p className="text-[13px] text-th-text mb-2 line-clamp-2">{h.text}</p>
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-[10px] px-2 py-0.5 rounded-th-full"
+                    <span className="app-pill font-mono text-[10px]"
                       style={{ color: STATUS_COLOR[h.status], background: `color-mix(in srgb, ${STATUS_COLOR[h.status]} 14%, transparent)` }}>
                       {STATUS_LABEL[h.status] ?? h.status.toUpperCase()}
                     </span>

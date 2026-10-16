@@ -253,7 +253,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
           <button
             onClick={handleUnlock}
             disabled={verifying || !passwordInput.trim()}
-            className="w-full py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="w-full py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50"
           >
             {verifying ? 'Checking…' : 'Unlock'}
           </button>
@@ -398,7 +398,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               <button
                 onClick={handlePostComment}
                 disabled={posting}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50"
               >
                 <Send size={13} /> {posting ? 'Posting…' : `Post note at ${formatTimecode(currentTime)}`}
               </button>

@@ -16,6 +16,9 @@
   --th-radius-button: 999px;
   --th-radius-input: 8px;
   --th-icon-stroke: 1.75;
+  /* One interaction timing for every hover/press transition */
+  --th-dur: 160ms;
+  --th-ease: ease-out;
 
   /* status + per-user colors: not theme-dependent */
   --th-open: #f59e0b;
@@ -46,6 +49,7 @@
   --th-bg-elevated: #f3f4f6;
   --th-bg-sidebar: #fafafa;
   --th-bg-hover: #e9ebef;
+  --th-bg-card-hover: #ffffff;
   --th-surface-alt: #e9ebef;
   --th-surface-hov: #dfe2e8;
   --th-text-primary: #17191f;
@@ -65,6 +69,7 @@
   --th-bg-elevated: #23252f;
   --th-bg-sidebar: #1c1e27;
   --th-bg-hover: #2c2f3b;
+  --th-bg-card-hover: #2a2d38;
   --th-surface-alt: #2c2f3b;
   --th-surface-hov: #363a48;
   --th-text-primary: #f2f2f0;
@@ -252,7 +257,7 @@ h3,
 .comment-card {
   border-left-width: 3px;
   border-left-style: solid;
-  transition: box-shadow 0.15s ease, opacity 0.15s ease;
+  transition: box-shadow var(--th-dur) var(--th-ease), opacity var(--th-dur) var(--th-ease);
 }
 
 .comment-card:hover {
@@ -266,7 +271,7 @@ h3,
 /* ── Buttons ── */
 
 .btn-press {
-  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease;
+  transition: transform 100ms var(--th-ease), box-shadow var(--th-dur) var(--th-ease), background-color var(--th-dur) var(--th-ease), border-color var(--th-dur) var(--th-ease), color var(--th-dur) var(--th-ease);
 }
 
 .btn-press:active {
@@ -361,12 +366,32 @@ textarea:focus {
   border: 1px solid var(--th-border);
   border-radius: var(--th-radius-card);
   box-shadow: var(--th-shadow-card);
-  transition: box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: transform var(--th-dur) var(--th-ease), box-shadow var(--th-dur) var(--th-ease), background-color var(--th-dur) var(--th-ease), border-color var(--th-dur) var(--th-ease);
 }
 
 .app-card:hover {
-  background: var(--th-bg-hover);
+  background: var(--th-bg-card-hover);
   box-shadow: var(--th-shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-card:hover { transform: none; }
+}
+
+/* ── Badges / pills ──
+   One small-pill recipe for status badges, counts and tags. Sizes come from
+   the call site's text-[..] class; padding, weight and radius are fixed here. */
+.app-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--th-radius-button);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 /* ── Avatars ── */

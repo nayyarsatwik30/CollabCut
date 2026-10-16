@@ -130,7 +130,7 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
           />
         ) : (
           <span
-            className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full shrink-0"
+            className="app-pill font-mono text-[10px] shrink-0"
             style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
           >
             {priorityMeta(asset.priority).label}

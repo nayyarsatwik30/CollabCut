@@ -32,7 +32,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
 
   return (
     <span
-      className={cn('inline-flex items-center gap-1 text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-th-full font-mono', className)}
+      className={cn('app-pill text-[10px] font-mono', className)}
       style={{
         color,
         background: `color-mix(in srgb, ${color} 14%, transparent)`,

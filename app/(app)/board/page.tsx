@@ -472,7 +472,7 @@ export default function BoardPage() {
                           <p className="text-[13px] font-semibold leading-snug mb-0.5 line-clamp-2">{a.name}</p>
                           <p className="text-[11px] text-th-muted truncate mb-2.5">{a.project_client}</p>
                           <span
-                            className="w-fit text-[10px] font-medium px-2 py-0.5 rounded-th-full"
+                            className="app-pill w-fit text-[10px]"
                             style={{ color: col.color, background: `color-mix(in srgb, ${col.color} 14%, transparent)` }}
                           >
                             {col.label}
@@ -521,14 +521,14 @@ export default function BoardPage() {
                             return (
                               <div key={cut.id} className="flex items-center gap-1.5 min-w-0">
                                 <span
-                                  className="shrink-0 font-mono text-[8px] font-bold px-1 py-0.5 rounded-th-full"
+                                  className="app-pill shrink-0 font-mono text-[10px]"
                                   style={{ color: priorityMeta(cut.priority).color, background: `color-mix(in srgb, ${priorityMeta(cut.priority).color} 16%, transparent)` }}
                                 >
                                   {priorityMeta(cut.priority).label}
                                 </span>
                                 <span className="text-[11px] text-th-text truncate flex-1">{cut.title}</span>
                                 <span
-                                  className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded-th-full"
+                                  className="app-pill shrink-0 text-[10px]"
                                   style={{ color: col.color, background: `color-mix(in srgb, ${col.color} 14%, transparent)` }}
                                 >
                                   {col.label}

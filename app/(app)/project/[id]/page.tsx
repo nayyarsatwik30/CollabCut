@@ -4,7 +4,7 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { RawFootageArchive } from '@/components/project/RawFootageArchive'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, FolderKanban, Upload, Trash2, Video, Film, CheckCircle2, Clock } from 'lucide-react'
+import { ChevronLeft, FolderKanban, Upload, Trash2, Video, Film, CircleCheck, Clock } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
@@ -175,7 +175,7 @@ function BriefTab({ project, token, onSaved }: {
         </label>
         <div className="flex items-center gap-3">
           <button onClick={save} disabled={saving}
-            className="px-4 py-2 text-[13px] font-semibold bg-th-accent text-th-accent-fg hover:opacity-90 transition-opacity disabled:opacity-50 btn-press"
+            className="px-4 py-2 text-[13px] font-semibold bg-th-accent text-th-accent-fg hover:bg-th-accent-hover transition-colors disabled:opacity-50 btn-press"
             style={{ borderRadius: 0 }}>
             {saving ? 'Saving…' : 'Save'}
           </button>
@@ -399,7 +399,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   </div>
                   <button
                     onClick={() => setShowUploadCustom(true)}
-                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity">
+                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
                     <Upload size={13} /> Upload
                   </button>
                 </div>
@@ -439,7 +439,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <p className="text-[13px] font-semibold truncate">{a.name}</p>
                             <span
-                              className="shrink-0 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full"
+                              className="app-pill shrink-0 font-mono text-[10px]"
                               style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
                             >
                               {priorityMeta(a.priority).label}
@@ -474,7 +474,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   </div>
                   <button
                     onClick={() => setShowUploadBoard(true)}
-                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity">
+                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
                     <Upload size={13} /> Upload
                   </button>
                 </div>
@@ -521,7 +521,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                             <div className="thumb-badge absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-0.5 rounded z-[1]">
                               v{a.version}
                             </div>
-                            <div className="thumb-badge absolute top-2.5 right-2.5 text-[10px] font-bold px-2 py-0.5 rounded-th-full font-mono z-[1]">
+                            <div className="app-pill thumb-badge absolute top-2.5 right-2.5 text-[10px] font-mono z-[1]">
                               <span
                                 className="thumb-badge-dot"
                                 style={{
@@ -539,7 +539,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <p className="text-[13px] font-semibold truncate">{a.name}</p>
                             <span
-                              className="shrink-0 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full"
+                              className="app-pill shrink-0 font-mono text-[10px]"
                               style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
                             >
                               {priorityMeta(a.priority).label}
@@ -548,16 +548,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           <div className="flex items-center justify-between text-[11px] text-th-faint font-mono">
                             <span>{formatSize(a.size_bytes)}</span>
                             {isPlaceholder ? (
-                              <span className="px-2 py-0.5 rounded-th-full font-sans font-semibold text-[10px] bg-th-surface-alt border border-dashed border-th-faint text-th-muted">
+                              <span className="app-pill text-[10px] bg-th-surface-alt border border-dashed border-th-faint text-th-muted">
                                 Requested
                               </span>
                             ) : a.is_complete ? (
-                              <span className="flex items-center gap-1 px-2 py-0.5 rounded-th-full font-sans font-semibold text-[10px]"
+                              <span className="app-pill text-[10px]"
                                 style={{ color: 'var(--th-resolved)', background: 'color-mix(in srgb, var(--th-resolved) 14%, transparent)' }}>
-                                <CheckCircle2 size={11} /> Complete
+                                <CircleCheck size={11} /> Complete
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-th-full font-sans font-semibold text-[10px] bg-th-surface-alt border border-th-border text-th-muted">
+                              <span className="app-pill text-[10px] bg-th-surface-alt border border-th-border text-th-muted">
                                 Pending
                               </span>
                             )}
@@ -603,7 +603,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                       <p className="text-[13px] font-semibold">{project.owner.name}</p>
                       <p className="text-[11px] text-th-muted">{project.owner.email}</p>
                     </div>
-                    <span className="text-[11px] px-2.5 py-0.5 rounded-th-full bg-th-surface-alt border border-th-border text-th-muted">Owner</span>
+                    <span className="app-pill text-[10px] bg-th-surface-alt border border-th-border text-th-muted">Owner</span>
                   </div>
                 )}
 
@@ -614,7 +614,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                       <p className="text-[13px] font-semibold">{member.name}</p>
                       <p className="text-[11px] text-th-muted">{member.email}</p>
                     </div>
-                    <span className="text-[11px] px-2.5 py-0.5 rounded-th-full bg-th-surface-alt border border-th-border text-th-muted">Editor</span>
+                    <span className="app-pill text-[10px] bg-th-surface-alt border border-th-border text-th-muted">Editor</span>
                   </div>
                 ))}
 

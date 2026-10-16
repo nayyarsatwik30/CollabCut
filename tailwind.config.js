@@ -52,6 +52,8 @@ module.exports = {
         slideUp: { from: { opacity: '0', transform: 'translateY(6px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
         toastIn: { from: { opacity: '0', transform: 'translateX(-50%) translateY(12px)' }, to: { opacity: '1', transform: 'translateX(-50%) translateY(0)' } },
       },
+      transitionDuration: { DEFAULT: '160ms' },
+      transitionTimingFunction: { DEFAULT: 'ease-out' },
       width: { '85': '340px' },
       height: { '13': '52px' },
     },

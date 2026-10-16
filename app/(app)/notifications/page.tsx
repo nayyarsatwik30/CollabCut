@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, MessageSquare, UserPlus, Upload, CheckCircle2, Check, CheckCheck } from 'lucide-react'
+import { Bell, MessageSquare, UserPlus, Upload, CircleCheck, Check, CheckCheck } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
@@ -23,7 +23,7 @@ const TYPE_ICON: Record<string, React.ElementType> = {
   cut_uploaded: Upload,
   comment_added: MessageSquare,
   comment_reply: MessageSquare,
-  version_ready: CheckCircle2,
+  version_ready: CircleCheck,
 }
 
 export default function NotificationsPage() {

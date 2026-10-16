@@ -133,7 +133,7 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
             className="flex-1 px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors font-display"
           />
           <button onClick={submitReply}
-            className="px-3 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[12px] font-semibold btn-press hover:opacity-90 transition-opacity">
+            className="px-3 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[12px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
             Send
           </button>
         </div>

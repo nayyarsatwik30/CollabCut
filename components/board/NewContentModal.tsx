@@ -152,7 +152,7 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
           <button
             onClick={handleSubmit}
             disabled={submitting || !title.trim()}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50"
           >
             <Plus size={14} /> {submitting ? 'Creating…' : 'Create'}
           </button>

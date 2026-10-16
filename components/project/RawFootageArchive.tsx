@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Archive, UploadCloud, AlertCircle, File as FileIcon, Trash2 } from 'lucide-react'
+import { Archive, CloudUpload, CircleAlert, File as FileIcon, Trash2 } from 'lucide-react'
 import { MAX_RAW_FILE_BYTES } from '@/lib/raw-files'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
 import { useConfirm, ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -289,7 +289,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
           onClick={() => fileRef.current?.click()}
           disabled={state === 'uploading'}
           className="flex items-center gap-1.5 h-7 px-3 rounded-th-full border border-th-border text-[12px] font-semibold btn-press hover:border-th-accent transition-colors disabled:opacity-50">
-          <UploadCloud size={12} /> {state === 'uploading' ? `Uploading… ${progress}%` : 'Upload Raw Footage'}
+          <CloudUpload size={12} /> {state === 'uploading' ? `Uploading… ${progress}%` : 'Upload Raw Footage'}
         </button>
         <input ref={fileRef} type="file" className="hidden" onChange={handleFileInput} />
       </div>
@@ -300,7 +300,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
 
       {error && (
         <div className="mb-3 flex items-center gap-2 text-[12px] text-th-changes">
-          <AlertCircle size={13} /> {error}
+          <CircleAlert size={13} /> {error}
         </div>
       )}
 

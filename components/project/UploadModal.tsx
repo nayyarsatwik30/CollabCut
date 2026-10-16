@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Upload, CheckCircle, AlertCircle, Ban } from 'lucide-react'
+import { X, Upload, CircleCheck, CircleAlert, Ban } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import * as UpChunk from '@mux/upchunk'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
@@ -375,7 +375,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
               />
               {error && (
                 <div className="mt-3 flex items-center gap-2 text-[12px] text-th-changes">
-                  <AlertCircle size={13} /> {error}
+                  <CircleAlert size={13} /> {error}
                 </div>
               )}
             </>
@@ -414,7 +414,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
               </div>
               {uploadStatus && (
                 <p className="mt-2 flex items-center gap-2 text-[12px] text-th-changes">
-                  <AlertCircle size={13} /> {uploadStatus}
+                  <CircleAlert size={13} /> {uploadStatus}
                 </p>
               )}
             </div>
@@ -437,7 +437,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
           {/* Done */}
           {state === 'done' && (
             <div className="py-8 text-center">
-              <CheckCircle size={36} className="mx-auto mb-3" style={{ color: 'var(--th-resolved)' }} />
+              <CircleCheck size={36} className="mx-auto mb-3" style={{ color: 'var(--th-resolved)' }} />
               <p className="font-semibold mb-1">Video uploaded!</p>
               <p className="text-[12px] text-th-muted mb-5">
                 It will be ready to review in 1–2 minutes while Mux transcodes it.

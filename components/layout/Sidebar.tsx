@@ -4,15 +4,15 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Grid3X3, Kanban, Clock, Bell, Settings, ChevronDown, Trash2 } from 'lucide-react'
+import { LayoutGrid, SquareKanban, Clock, Bell, Settings, ChevronDown, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStorageUsage } from '@/lib/useStorageUsage'
 import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
 import { usePolling } from '@/lib/usePolling'
 
 const NAV_ITEMS = [
-  { href: '/board', icon: Kanban, label: 'Board' },
-  { href: '/dashboard', icon: Grid3X3, label: 'Projects' },
+  { href: '/board', icon: SquareKanban, label: 'Board' },
+  { href: '/dashboard', icon: LayoutGrid, label: 'Projects' },
   { href: '/recent', icon: Clock, label: 'Recent' },
   { href: '/notifications', icon: Bell, label: 'Notifications' },
 ]

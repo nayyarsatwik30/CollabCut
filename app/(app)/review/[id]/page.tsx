@@ -521,7 +521,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             <PriorityMenu value={asset.priority} onChange={handlePriorityChange} />
           ) : (
             <span
-              className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-th-full shrink-0"
+              className="app-pill font-mono text-[10px] shrink-0"
               style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
             >
               {priorityMeta(asset.priority).label}
@@ -588,7 +588,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 <p className="text-white/50 text-[11px] mb-4">Upload a cut to fulfill this content request</p>
                 <button
                   onClick={() => setShowFulfillModal(true)}
-                  className="flex items-center gap-1.5 mx-auto px-4 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
+                  className="flex items-center gap-1.5 mx-auto px-4 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
                 >
                   <Upload size={13} /> Upload cut
                 </button>

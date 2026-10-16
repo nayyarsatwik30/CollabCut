@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Grid3X3, List, Plus, Upload, LogOut, Film, Check, FolderKanban } from 'lucide-react'
+import { Search, LayoutGrid, List, Plus, Upload, LogOut, Film, Check, FolderKanban } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
@@ -189,7 +189,7 @@ export default function DashboardPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
-        <TopBar title="Projects" icon={Grid3X3}>
+        <TopBar title="Projects" icon={LayoutGrid}>
           <div className="w-56 relative hidden md:block">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-th-muted pointer-events-none" />
             <input
@@ -202,7 +202,7 @@ export default function DashboardPage() {
 
           {role !== 'editor' && (
             <div className="flex items-center gap-0.5 p-0.5 rounded-th-sm bg-th-surface-alt border border-th-border">
-              {([['grid', Grid3X3], ['list', List]] as const).map(([v, Icon]) => (
+              {([['grid', LayoutGrid], ['list', List]] as const).map(([v, Icon]) => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
@@ -310,7 +310,7 @@ export default function DashboardPage() {
                             <Film size={36} style={{ color: 'var(--th-accent-text)' }} />
                           )}
                           <span
-                            className="absolute top-2.5 right-2.5 font-mono text-[10px] px-2 py-0.5 rounded-th-full"
+                            className="app-pill absolute top-2.5 right-2.5 font-mono text-[10px]"
                             style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}
                           >
                             {label}
@@ -320,7 +320,7 @@ export default function DashboardPage() {
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-[13px] font-semibold truncate">{a.name}</p>
                             <span
-                              className="shrink-0 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-th-full"
+                              className="app-pill shrink-0 font-mono text-[10px]"
                               style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
                             >
                               {priorityMeta(a.priority).label}
