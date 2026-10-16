@@ -85,7 +85,7 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Wedding Promo — Singh & Mehta"
               autoFocus
-              className="w-full px-3.5 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
             />
           </div>
 
@@ -95,7 +95,7 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
               value={client}
               onChange={(e) => setClient(e.target.value)}
               placeholder="Private Client"
-              className="w-full px-3.5 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
             />
           </div>
 
@@ -105,7 +105,7 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
               value={rawFileUrl}
               onChange={(e) => setRawFileUrl(e.target.value)}
               placeholder="Paste external folder link (Drive, etc.)"
-              className="w-full px-3.5 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
             />
           </div>
 
@@ -116,7 +116,7 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="Instructions for the editor…"
-              className="w-full px-3.5 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors resize-none"
+              className="w-full px-3.5 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors resize-none"
             />
           </div>
 
@@ -126,7 +126,7 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               placeholder="Style reference, link, or note"
-              className="w-full px-3.5 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
             />
           </div>
 
@@ -136,7 +136,7 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[14px] text-th-text outline-none focus:border-th-accent transition-colors [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:rounded [&::-webkit-calendar-picker-indicator]:p-1.5 [&::-webkit-calendar-picker-indicator]:scale-125"
+              className="w-full px-3.5 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[14px] text-th-text outline-none focus:border-th-accent transition-colors [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:rounded [&::-webkit-calendar-picker-indicator]:p-1.5 [&::-webkit-calendar-picker-indicator]:scale-125"
             />
           </div>
         </div>

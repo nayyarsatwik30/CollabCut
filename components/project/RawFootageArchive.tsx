@@ -288,7 +288,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
         <button
           onClick={() => fileRef.current?.click()}
           disabled={state === 'uploading'}
-          className="flex items-center gap-1.5 h-7 px-3 rounded-th border border-th-border text-[12px] font-semibold btn-press hover:border-th-accent transition-colors disabled:opacity-50">
+          className="flex items-center gap-1.5 h-7 px-3 rounded-th-full border border-th-border text-[12px] font-semibold btn-press hover:border-th-accent transition-colors disabled:opacity-50">
           <UploadCloud size={12} /> {state === 'uploading' ? `Uploading… ${progress}%` : 'Upload Raw Footage'}
         </button>
         <input ref={fileRef} type="file" className="hidden" onChange={handleFileInput} />

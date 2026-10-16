@@ -167,7 +167,7 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
 
         {/* Link copy + regenerate */}
         <div className="flex gap-2">
-          <div className="flex-1 px-3 py-2 rounded-th-full border border-th-border hover:bg-th-surface-alt font-mono text-[11px] text-th-muted truncate">
+          <div className="flex-1 px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted truncate">
             {loading ? 'Loading link…' : link ?? '—'}
           </div>
           <button
@@ -235,7 +235,7 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
                     value={passwordValue}
                     onChange={(e) => setPasswordValue(e.target.value)}
                     placeholder={serverPasswordProtected ? 'Leave blank to keep current password' : 'Set a password'}
-                    className="w-full px-3 py-2 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+                    className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
                   />
                   {serverPasswordProtected && !passwordValue && (
                     <p className="text-[11px] text-th-faint mt-1.5">
@@ -251,7 +251,7 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
                     type="datetime-local"
                     value={expiryValue}
                     onChange={(e) => setExpiryValue(e.target.value)}
-                    className="w-full px-3 py-2 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text outline-none focus:border-th-accent transition-colors [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:rounded [&::-webkit-calendar-picker-indicator]:p-1.5 [&::-webkit-calendar-picker-indicator]:scale-125"
+                    className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text outline-none focus:border-th-accent transition-colors [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:rounded [&::-webkit-calendar-picker-indicator]:p-1.5 [&::-webkit-calendar-picker-indicator]:scale-125"
                   />
                 </div>
               )}

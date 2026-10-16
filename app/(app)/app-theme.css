@@ -14,6 +14,7 @@
   --th-radius-card: 12px;
   --th-radius-button: 999px;
   --th-radius-input: 8px;
+  --th-icon-stroke: 1.75;
 
   /* status + per-user colors: not theme-dependent */
   --th-open: #f59e0b;
@@ -74,6 +75,11 @@
   --th-accent-text: #2dd4a7;
   --th-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
   --th-shadow-card-hover: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Icons: one thin-line weight for every lucide icon in the app ── */
+.app-root svg.lucide {
+  stroke-width: var(--th-icon-stroke);
 }
 
 /* ── Inputs / selects / textareas ── */

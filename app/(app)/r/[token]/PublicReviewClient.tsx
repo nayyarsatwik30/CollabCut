@@ -7,7 +7,7 @@ import { Avatar } from '@/components/ui/Badge'
 import { formatTimecode } from '@/lib/utils'
 import { fetchShareDownloadUrl } from '@/lib/download-client'
 import { Orb } from '@/components/ui/Orb'
-import { ThemeToggle } from '@/components/layout/ThemeToggle'
+import { TopBar } from '@/components/layout/TopBar'
 
 const NAME_STORAGE_KEY = 'dailies_reviewer_name'
 
@@ -235,7 +235,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
             onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
             placeholder="Enter password"
             autoFocus
-            className="w-full px-3 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[13px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors mb-2"
+            className="w-full px-3 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors mb-2"
           />
           {passwordError && <p className="text-[12px] text-th-changes mb-2">{passwordError}</p>}
           <button
@@ -258,62 +258,66 @@ export default function PublicReviewClient({ token }: { token: string }) {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-th-bg">
-      <header className="h-13 shrink-0 bg-th-bg border-b border-th-border flex items-center gap-2 px-4">
-        <span className="text-[13px] font-semibold truncate">{asset.name}</span>
+      <TopBar
+        title={asset.name}
+        showAccount={false}
+        leading={
+          <div className="flex items-center gap-2 min-w-0">
 
-        {versions.length > 1 && (
-          <div className="relative shrink-0">
+          {versions.length > 1 && (
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setShowVersions(!showVersions)}
+                className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
+              >
+                <Layers size={10} />
+                v{asset.version}
+                <ChevronDown size={10} />
+              </button>
+
+              {showVersions && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowVersions(false)} />
+                  <div className="absolute left-0 top-full mt-1.5 z-50 bg-th-surface border border-th-border rounded-th-lg shadow-panel w-60 overflow-hidden animate-slide-up">
+                    <div className="px-4 py-2.5 border-b border-th-border font-mono text-[10px] text-th-muted uppercase tracking-wider">
+                      Version history
+                    </div>
+                    <div className="max-h-60 overflow-y-auto">
+                      {versions.map((v) => (
+                        <button
+                          key={v.id}
+                          onClick={() => handleSwitchVersion(v.id)}
+                          className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
+                        >
+                          <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-text)' }}>
+                              v{v.version}
+                            </p>
+                            <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
+                          </div>
+                          {v.id === asset.id && <Check size={12} className="text-th-accent-text shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {versions.length >= 2 && (
             <button
-              onClick={() => setShowVersions(!showVersions)}
-              className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
+              onClick={handleOpenCompare}
+              className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
             >
-              <Layers size={10} />
-              v{asset.version}
-              <ChevronDown size={10} />
+              <Layers size={10} className="text-th-accent-text" />
+              Compare versions
             </button>
-
-            {showVersions && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowVersions(false)} />
-                <div className="absolute left-0 top-full mt-1.5 z-50 bg-th-surface border border-th-border rounded-th-lg shadow-panel w-60 overflow-hidden animate-slide-up">
-                  <div className="px-4 py-2.5 border-b border-th-border font-mono text-[10px] text-th-muted uppercase tracking-wider">
-                    Version history
-                  </div>
-                  <div className="max-h-60 overflow-y-auto">
-                    {versions.map((v) => (
-                      <button
-                        key={v.id}
-                        onClick={() => handleSwitchVersion(v.id)}
-                        className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
-                      >
-                        <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-text)' }}>
-                            v{v.version}
-                          </p>
-                          <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
-                        </div>
-                        {v.id === asset.id && <Check size={12} className="text-th-accent-text shrink-0" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+          )}
           </div>
-        )}
-
-        {versions.length >= 2 && (
-          <button
-            onClick={handleOpenCompare}
-            className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
-          >
-            <Layers size={10} className="text-th-accent-text" />
-            Compare versions
-          </button>
-        )}
-        <div className="ml-auto"><ThemeToggle /></div>
-      </header>
+        }
+      />
 
       <div className="flex flex-col flex-1 overflow-hidden min-h-0 sm:flex-row">
         <div className="w-full h-[38vh] shrink-0 flex flex-col overflow-hidden sm:w-auto sm:h-auto sm:flex-1 sm:min-w-0">
@@ -368,7 +372,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               value={reviewerName}
               onChange={(e) => setReviewerName(e.target.value)}
               placeholder="Your name"
-              className="w-full px-3 py-2 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+              className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
             />
             <textarea
               value={commentText}
@@ -376,7 +380,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePostComment() } }}
               placeholder={`Note this frame at ${formatTimecode(currentTime)}…`}
               rows={3}
-              className="w-full px-3 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[13px] text-th-text placeholder:text-th-faint outline-none resize-none leading-relaxed transition-colors focus:border-th-accent"
+              className="w-full px-3 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none resize-none leading-relaxed transition-colors focus:border-th-accent"
             />
             {commentText.trim() && (
               <button

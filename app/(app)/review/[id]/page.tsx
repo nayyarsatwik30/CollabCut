@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X, FileText, ExternalLink, StickyNote, Link2 } from 'lucide-react'
-import { ThemeToggle } from '@/components/layout/ThemeToggle'
+import { TopBar } from '@/components/layout/TopBar'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
@@ -412,24 +412,27 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         onCopied={() => showToast('Review link copied!', 'success')}
       />
 
-      <header className="h-13 shrink-0 bg-th-bg border-b border-th-border flex items-center gap-3 px-4 relative z-30">
-        <button
-          onClick={() => {
-            if (typeof window !== 'undefined' && window.history.length > 1) {
-              router.back()
-            } else {
-              router.push(`/project/${asset.project_id}`)
-            }
-          }}
-          className="flex items-center gap-1.5 h-8 px-3 rounded-th-full border border-th-border text-[12px] text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors btn-press shrink-0"
-        >
-          <ChevronLeft size={13} /> Back
-        </button>
-
-        <div className="w-px h-5 bg-th-border shrink-0" />
-
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-[14px] truncate" style={{ fontFamily: 'system-ui, -apple-system, "SF Pro Display", sans-serif', fontWeight: 700, color: 'var(--th-text)' }}>{asset.name}</span>
+      <TopBar
+        title={asset.name}
+        before={
+          <>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.history.length > 1) {
+                  router.back()
+                } else {
+                  router.push(`/project/${asset.project_id}`)
+                }
+              }}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-th-full border border-th-border text-[12px] text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors btn-press shrink-0"
+            >
+              <ChevronLeft size={13} /> Back
+            </button>
+            <div className="w-px h-5 bg-th-border shrink-0" />
+          </>
+        }
+        leading={
+          <div className="flex items-center gap-2 min-w-0">
 
           {asset.cut_type === 'board' ? (
             <>
@@ -524,31 +527,29 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               {priorityMeta(asset.priority).label}
             </span>
           )}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
+          </div>
+        }
+      >
+        <button
+          onClick={() => setShareOpen(true)}
+          className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full border border-th-border text-[13px] text-th-text font-medium btn-press hover:bg-th-surface-alt transition-colors"
+        >
+          <Share2 size={13} /> Share
+        </button>
+        {role === 'admin' && (
           <button
-            onClick={() => setShareOpen(true)}
-            className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full border border-th-border text-[13px] text-th-text font-medium btn-press hover:bg-th-surface-alt transition-colors"
+            onClick={handleToggleComplete}
+            disabled={togglingComplete}
+            className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full text-[13px] font-bold btn-press transition-all approve-glow disabled:opacity-50"
+            style={{
+              background: asset.is_complete ? 'var(--th-resolved)' : 'var(--th-accent)',
+              color: asset.is_complete ? '#fff' : 'var(--th-accent-fg)',
+            }}
           >
-            <Share2 size={13} /> Share
+            {asset.is_complete ? <><Check size={13} /> Approved</> : <><ThumbsUp size={13} /> Approve cut</>}
           </button>
-          {role === 'admin' && (
-            <button
-              onClick={handleToggleComplete}
-              disabled={togglingComplete}
-              className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full text-[13px] font-bold btn-press transition-all approve-glow disabled:opacity-50"
-              style={{
-                background: asset.is_complete ? 'var(--th-resolved)' : 'var(--th-accent)',
-                color: asset.is_complete ? '#fff' : 'var(--th-accent-fg)',
-              }}
-            >
-              {asset.is_complete ? <><Check size={13} /> Approved</> : <><ThumbsUp size={13} /> Approve cut</>}
-            </button>
-          )}
-          <ThemeToggle />
-        </div>
-      </header>
+        )}
+      </TopBar>
 
       {SHOW_ANNOTATE_TOOLBAR && (
         <div className="h-10 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-2 px-4">
@@ -557,7 +558,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             <button
               key={String(key)}
               onClick={() => setDrawTool(drawTool === key ? null : key)}
-              className="flex items-center gap-1.5 h-7 px-3 rounded-th-sm text-[11px] btn-press transition-all"
+              className="flex items-center gap-1.5 h-7 px-3 rounded-th-full text-[11px] btn-press transition-all"
               style={{
                 background: drawTool === key ? 'color-mix(in srgb, var(--th-accent) 18%, transparent)' : 'transparent',
                 color: drawTool === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
@@ -570,7 +571,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           {hasAnnotations && (
             <button
               onClick={() => { setHasAnnotations(false); setDrawTool(null) }}
-              className="flex items-center gap-1.5 h-7 px-3 rounded-th-sm text-[11px] text-th-changes border border-th-changes/40 hover:bg-th-changes/10 transition-colors btn-press ml-1"
+              className="flex items-center gap-1.5 h-7 px-3 rounded-th-full text-[11px] text-th-changes border border-th-changes/40 hover:bg-th-changes/10 transition-colors btn-press ml-1"
             >
               <Trash2 size={11} /> Clear
             </button>
