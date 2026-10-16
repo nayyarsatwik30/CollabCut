@@ -8,6 +8,7 @@ import { formatTimecode } from '@/lib/utils'
 import { fetchShareDownloadUrl } from '@/lib/download-client'
 import { Orb } from '@/components/ui/Orb'
 import { TopBar } from '@/components/layout/TopBar'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 
 const NAME_STORAGE_KEY = 'dailies_reviewer_name'
 
@@ -43,6 +44,17 @@ interface PublicComment {
 }
 
 type LoadState = 'loading' | 'not_found' | 'expired' | 'ready'
+
+// Full-screen shell for the pre-content states (loading, invalid, expired,
+// password gate): just a corner theme toggle, no top bar.
+function GateShell({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`relative flex h-screen items-center justify-center bg-th-bg px-6 ${className}`}>
+      <div className="absolute top-4 right-4"><ThemeToggle /></div>
+      {children}
+    </div>
+  )
+}
 
 export default function PublicReviewClient({ token }: { token: string }) {
   const [state, setState] = useState<LoadState>('loading')
@@ -191,31 +203,31 @@ export default function PublicReviewClient({ token }: { token: string }) {
 
   if (state === 'loading') {
     return (
-      <div className="flex h-screen items-center justify-center bg-th-bg">
+      <GateShell>
         <Orb state="composing" size={64} label="Loading" />
-      </div>
+      </GateShell>
     )
   }
 
   if (state === 'not_found') {
     return (
-      <div className="flex h-screen items-center justify-center bg-th-bg text-center px-6">
+      <GateShell className="text-center">
         <div>
           <p className="text-[15px] font-semibold mb-1">This link isn't valid</p>
           <p className="text-[13px] text-th-muted">Double-check the URL, or ask for a new share link.</p>
         </div>
-      </div>
+      </GateShell>
     )
   }
 
   if (state === 'expired') {
     return (
-      <div className="flex h-screen items-center justify-center bg-th-bg text-center px-6">
+      <GateShell className="text-center">
         <div>
           <p className="text-[15px] font-semibold mb-1">This link has expired</p>
           <p className="text-[13px] text-th-muted">Ask the project owner for a new share link.</p>
         </div>
-      </div>
+      </GateShell>
     )
   }
 
@@ -223,7 +235,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
 
   if (!unlocked) {
     return (
-      <div className="flex h-screen items-center justify-center bg-th-bg px-6">
+      <GateShell>
         <div className="w-full max-w-sm text-center">
           <Lock size={22} className="mx-auto mb-3 text-th-muted" />
           <p className="text-[15px] font-semibold mb-1">Password required</p>
@@ -246,7 +258,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
             {verifying ? 'Checking…' : 'Unlock'}
           </button>
         </div>
-      </div>
+      </GateShell>
     )
   }
 
