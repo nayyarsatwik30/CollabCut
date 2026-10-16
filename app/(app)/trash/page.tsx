@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { TopBar } from '@/components/layout/TopBar'
 import { Trash2, RotateCcw, X, FolderKanban, Film } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { Orb } from '@/components/ui/Orb'
 
@@ -95,9 +97,7 @@ export default function TrashPage() {
         <div className="flex h-screen overflow-hidden bg-th-bg">
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-                <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center px-6">
-                    <h1 className="text-[15px] font-bold m-0">Recycle Bin</h1>
-                </div>
+                <TopBar title="Recycle Bin" icon={Trash2} />
 
                 <div className="flex-1 overflow-y-auto p-6">
                     {loading ? (
@@ -105,11 +105,7 @@ export default function TrashPage() {
                             <Orb state="composing" size={64} label="Loading" />
                         </div>
                     ) : projects.length === 0 && assets.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-                            <Trash2 size={28} className="text-th-faint" />
-                            <p className="font-semibold">Recycle bin is empty</p>
-                            <p className="text-[13px] text-th-muted">Deleted projects and assets will show up here.</p>
-                        </div>
+                        <EmptyState icon={Trash2} title="Recycle bin is empty" sub="Deleted projects and assets will show up here." />
                     ) : (
                         <div className="max-w-2xl flex flex-col gap-6">
                             {projects.length > 0 && (
@@ -124,7 +120,7 @@ export default function TrashPage() {
                                                     <p className="text-[11px] text-th-muted">Deleted {new Date(p.deleted_at).toLocaleDateString()}</p>
                                                 </div>
                                                 <button onClick={() => restore(p.id)}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text btn-press hover:bg-th-surface-hov transition-colors">
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text btn-press hover:bg-th-surface-hov transition-colors">
                                                     <RotateCcw size={12} /> Restore
                                                 </button>
                                                 <button onClick={() => permanentDelete(p.id)}
@@ -149,7 +145,7 @@ export default function TrashPage() {
                                                     <p className="text-[11px] text-th-muted">{a.project_name} · Deleted {new Date(a.deleted_at).toLocaleDateString()}</p>
                                                 </div>
                                                 <button onClick={() => restoreAsset(a.id)}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text btn-press hover:bg-th-surface-hov transition-colors">
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text btn-press hover:bg-th-surface-hov transition-colors">
                                                     <RotateCcw size={12} /> Restore
                                                 </button>
                                                 <button onClick={() => permanentDeleteAsset(a.id)}

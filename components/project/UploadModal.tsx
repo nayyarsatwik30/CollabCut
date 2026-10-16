@@ -443,7 +443,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
                 It will be ready to review in 1–2 minutes while Mux transcodes it.
               </p>
               <button onClick={onClose}
-                className="px-6 py-2.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press">
+                className="px-6 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press">
                 Done
               </button>
             </div>

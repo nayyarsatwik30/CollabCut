@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogOut, Copy } from 'lucide-react'
+import { LogOut, Copy, Settings } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { TopBar } from '@/components/layout/TopBar'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { useSession } from 'next-auth/react'
 import { performLogout } from '@/lib/auth'
@@ -117,9 +118,7 @@ export default function SettingsPage() {
     <div className="flex h-screen overflow-hidden bg-th-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center justify-between px-6">
-          <h1 className="text-[15px] font-bold m-0">Settings</h1>
-        </div>
+        <TopBar title="Settings" icon={Settings} />
 
         <div className="flex flex-1 overflow-hidden min-h-0">
           <div className="w-48 shrink-0 border-r border-th-border p-3 space-y-0.5 flex flex-col">
@@ -153,8 +152,7 @@ export default function SettingsPage() {
                     <p className="text-[13px] text-th-muted">How you appear to collaborators.</p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full flex items-center justify-center text-[18px] font-extrabold"
-                      style={{ background: '#4CAF7D', color: '#000' }}>
+                    <div className="app-avatar w-14 h-14 text-[18px]">
                       {name?.[0]?.toUpperCase() ?? email[0]?.toUpperCase() ?? 'U'}
                     </div>
                   </div>
@@ -166,7 +164,7 @@ export default function SettingsPage() {
                   <div>
                     <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Email</label>
                     <input value={email} disabled
-                      className="w-full px-3.5 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[14px] text-th-muted outline-none cursor-not-allowed" />
+                      className="w-full px-3.5 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[14px] text-th-muted outline-none cursor-not-allowed" />
                   </div>
                   <button onClick={saveChanges}
                     className="px-5 py-2.5 rounded-th text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
@@ -222,7 +220,7 @@ export default function SettingsPage() {
                             readOnly
                             value={adminWorkspace.invite_code}
                             onFocus={e => e.target.select()}
-                            className="flex-1 px-3.5 py-2 rounded-th bg-th-surface-alt border border-th-border text-[14px] font-mono uppercase tracking-widest text-th-text outline-none"
+                            className="flex-1 px-3.5 py-2 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[14px] font-mono uppercase tracking-widest text-th-text outline-none"
                           />
                           <button
                             onClick={() => navigator.clipboard.writeText(adminWorkspace.invite_code)}

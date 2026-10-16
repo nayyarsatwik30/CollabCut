@@ -4,8 +4,10 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { RawFootageArchive } from '@/components/project/RawFootageArchive'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Upload, Trash2, Video, Film, CheckCircle2, Clock } from 'lucide-react'
+import { ChevronLeft, FolderKanban, Upload, Trash2, Video, Film, CheckCircle2, Clock } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { TopBar } from '@/components/layout/TopBar'
 import { Avatar } from '@/components/ui/Badge'
 import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
 import { useSessionGuard } from '@/lib/useSessionGuard'
@@ -355,16 +357,14 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         )}
 
         {/* Top bar */}
-        <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-2 px-5">
-          <Link href="/dashboard" className="text-[13px] text-th-muted hover:text-th-text transition-colors">
-            Projects
-          </Link>
-          <ChevronRight size={13} className="text-th-faint" />
-          <span className="text-[13px] font-semibold truncate">{project?.name ?? 'Project'}</span>
+        <TopBar title={project?.name ?? 'Project'} icon={FolderKanban}>
           {project?.client && (
-            <span className="text-[12px] text-th-muted">— {project.client}</span>
+            <span className="text-[12px] text-th-muted hidden md:inline">{project.client}</span>
           )}
-        </div>
+          <Link href="/dashboard" className="flex items-center gap-1 text-[12px] text-th-muted hover:text-th-text transition-colors">
+            <ChevronLeft size={13} /> Projects
+          </Link>
+        </TopBar>
 
         {/* Tabs */}
         <div className="shrink-0 bg-th-surface border-b border-th-border px-5 flex gap-0">
@@ -399,7 +399,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   </div>
                   <button
                     onClick={() => setShowUploadCustom(true)}
-                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity">
+                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity">
                     <Upload size={13} /> Upload
                   </button>
                 </div>
@@ -409,7 +409,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     <p className="text-[13px] text-th-muted">No custom cuts yet.</p>
                     <button
                       onClick={() => setShowUploadCustom(true)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-th bg-th-accent text-th-accent-fg text-[12px] font-semibold btn-press">
+                      className="flex items-center gap-2 px-4 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[12px] font-semibold btn-press">
                       <Upload size={13} /> Upload first cut
                     </button>
                   </div>
@@ -420,7 +420,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                         className="group relative flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover">
                         <button
                           onClick={(e) => handleDeleteAsset(e, a.id)}
-                          className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes z-20">
+                          className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg border border-th-border opacity-0 group-hover:opacity-100 transition-opacity text-th-muted hover:text-th-changes z-20">
                           <Trash2 size={13} />
                         </button>
                         <div className="aspect-video shrink-0 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
@@ -474,24 +474,19 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   </div>
                   <button
                     onClick={() => setShowUploadBoard(true)}
-                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity">
+                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity">
                     <Upload size={13} /> Upload
                   </button>
                 </div>
 
                 {boardAssets.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                    <div className="text-5xl"><Video size={48} style={{ color: 'var(--th-accent-text)' }} /></div>
-                    <div>
-                      <p className="font-semibold mb-1">No assets yet</p>
-                      <p className="text-[13px] text-th-muted">Upload your first cut to start reviewing.</p>
-                    </div>
+                  <EmptyState icon={Video} title="No assets yet" sub="Upload your first cut to start reviewing.">
                     <button
                       onClick={() => setShowUploadBoard(true)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press">
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
                       <Upload size={14} /> Upload first cut
                     </button>
-                  </div>
+                  </EmptyState>
                 ) : (
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                     {boardAssets.map((a) => {
@@ -502,7 +497,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                         {!isPlaceholder && (
                           <button
                             onClick={(e) => handleDeleteAsset(e, a.id)}
-                            className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes z-20">
+                            className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg border border-th-border opacity-0 group-hover:opacity-100 transition-opacity text-th-muted hover:text-th-changes z-20">
                             <Trash2 size={13} />
                           </button>
                         )}

@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell, MessageSquare, UserPlus, Upload, CheckCircle2, Check, CheckCheck } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { TopBar } from '@/components/layout/TopBar'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { Orb } from '@/components/ui/Orb'
 
@@ -100,32 +102,29 @@ export default function NotificationsPage() {
     <div className="flex h-screen overflow-hidden bg-th-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center justify-between px-6">
-          <h1 className="text-[15px] font-bold m-0">Notifications</h1>
+        <TopBar title="Notifications" icon={Bell}>
           {notifications.some((n) => !n.read) && (
-            <div className="flex items-center gap-3">
+            <>
               <span className="font-mono text-[11px] text-th-muted">
                 {notifications.filter((n) => !n.read).length} unread
               </span>
               <button
                 onClick={markAllAsRead}
-                className="flex items-center gap-1.5 h-7 px-3 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-muted hover:text-th-text hover:border-th-accent transition-colors btn-press"
+                className="flex items-center gap-1.5 h-7 px-3 rounded-th-full border border-th-border text-[12px] text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors btn-press"
               >
                 <CheckCheck size={13} /> Mark all as read
               </button>
-            </div>
+            </>
           )}
-        </div>
+        </TopBar>
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
             <Orb state="composing" size={64} label="Loading" />
           </div>
         ) : notifications.length === 0 ? (
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center gap-3 text-center">
-            <Bell size={28} className="text-th-faint" />
-            <p className="font-semibold">No notifications yet</p>
-            <p className="text-[13px] text-th-muted">You'll be notified when someone comments or approves a cut.</p>
+          <div className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
+            <EmptyState icon={Bell} title="No notifications yet" sub="You'll be notified when someone comments or approves a cut." />
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto">

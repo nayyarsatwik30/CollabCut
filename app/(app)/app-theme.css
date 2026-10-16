@@ -1,0 +1,210 @@
+/* Authenticated-app theme. Scoped to `.app-root` (see layout.tsx) so the
+   marketing/auth pages, which keep the global :root tokens in globals.css,
+   are never affected. `data-theme` on .app-root switches light/dark.
+
+   The legacy names (--th-surface, --th-text, --th-muted ...) are re-pointed
+   at the new tokens here because shared Tailwind utilities (bg-th-surface,
+   text-th-muted ...) resolve through them; inside the app they now render
+   the new palette. */
+
+.app-root {
+  /* shared across both modes */
+  --th-accent: #2dd4a7;
+  --th-accent-fg: #06231c;
+  --th-radius-card: 12px;
+  --th-radius-button: 999px;
+  --th-radius-input: 8px;
+
+  /* status + per-user colors: not theme-dependent */
+  --th-open: #f59e0b;
+  --th-resolved: #10b981;
+  --th-changes: #ef6c4d;
+  --th-info: #3b82f6;
+  --th-avatar-bg: #0f9d7a;
+  --th-avatar-fg: #ffffff;
+
+  /* legacy names -> new tokens */
+  --th-surface: var(--th-bg-elevated);
+  --th-text: var(--th-text-primary);
+  --th-muted: var(--th-text-secondary);
+  --th-r: var(--th-radius-input);
+  --th-r-sm: var(--th-radius-input);
+  --th-r-lg: var(--th-radius-card);
+  --th-r-full: var(--th-radius-button);
+
+  background: var(--th-bg);
+  color: var(--th-text-primary);
+}
+
+.app-root[data-theme='light'] {
+  color-scheme: light;
+  --th-bg: #ffffff;
+  --th-bg-elevated: #f3f4f6;
+  --th-bg-sidebar: #fafafa;
+  --th-bg-hover: #e9ebef;
+  --th-surface-alt: #e9ebef;
+  --th-surface-hov: #dfe2e8;
+  --th-text-primary: #17191f;
+  --th-text-secondary: #6b7280;
+  --th-faint: #9ca3af;
+  --th-border: #e5e7eb;
+  --th-border-lt: #eef0f3;
+  --th-accent-hover: #22b78f;
+  --th-accent-hov: #22b78f;
+  --th-accent-text: #0b8a6a;
+  --th-shadow-card: 0 1px 2px rgba(23, 25, 31, 0.06);
+  --th-shadow-card-hover: 0 6px 18px rgba(23, 25, 31, 0.1);
+}
+
+.app-root[data-theme='dark'] {
+  color-scheme: dark;
+  --th-bg: #17191f;
+  --th-bg-elevated: #23252f;
+  --th-bg-sidebar: #1c1e27;
+  --th-bg-hover: #2c2f3b;
+  --th-surface-alt: #2c2f3b;
+  --th-surface-hov: #363a48;
+  --th-text-primary: #f2f2f0;
+  --th-text-secondary: #8b8d98;
+  --th-faint: #5f6270;
+  --th-border: #31343f;
+  --th-border-lt: #272a34;
+  --th-accent-hover: #5eead4;
+  --th-accent-hov: #5eead4;
+  --th-accent-text: #2dd4a7;
+  --th-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --th-shadow-card-hover: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Inputs / selects / textareas ── */
+.app-root input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+.app-root select,
+.app-root textarea {
+  background: var(--th-bg-elevated);
+  border: 1px solid var(--th-border);
+  border-radius: var(--th-radius-input);
+  color: var(--th-text-primary);
+}
+
+.app-root input::placeholder,
+.app-root textarea::placeholder {
+  color: var(--th-faint);
+}
+
+.app-root input:focus,
+.app-root select:focus,
+.app-root textarea:focus {
+  outline: none;
+  border-color: var(--th-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--th-accent) 30%, transparent);
+}
+
+/* ── Cards ── */
+.app-card {
+  background: var(--th-bg-elevated);
+  border: 1px solid var(--th-border);
+  border-radius: var(--th-radius-card);
+  box-shadow: var(--th-shadow-card);
+  transition: box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.app-card:hover {
+  background: var(--th-bg-hover);
+  box-shadow: var(--th-shadow-card-hover);
+}
+
+/* ── Buttons ── */
+.app-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--th-accent);
+  color: var(--th-accent-fg);
+  border-radius: var(--th-radius-button);
+  font-weight: 600;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.app-btn-primary:hover:not(:disabled) {
+  background: var(--th-accent-hover);
+}
+
+.app-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--th-text-primary);
+  border: 1px solid var(--th-border);
+  border-radius: var(--th-radius-button);
+  font-weight: 500;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.app-btn-secondary:hover:not(:disabled) {
+  background: var(--th-bg-hover);
+}
+
+/* ── Avatars (own-user, consistent in both modes) ── */
+.app-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--th-avatar-bg);
+  color: var(--th-avatar-fg);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── Empty state ── */
+.app-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+  padding: 64px 16px;
+}
+
+.app-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--th-text-primary);
+}
+
+.app-empty-sub {
+  font-size: 13px;
+  color: var(--th-text-secondary);
+  max-width: 320px;
+}
+
+.app-empty-link {
+  font-size: 13px;
+  color: var(--th-accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Surfaces that were hard-coded dark ── */
+.app-root .glass,
+.app-root .card-elevated {
+  background: var(--th-bg-elevated);
+  backdrop-filter: none;
+}
+
+/* ── Tinted utilities ──
+   Tailwind doesn't emit opacity-modified classes for CSS-variable colors, so
+   the ones the app relies on are defined here, scoped to the app root (the
+   marketing/auth pages that reference the same names are left as they were). */
+.app-root .bg-th-accent\/10 { background-color: color-mix(in srgb, var(--th-accent) 10%, transparent); }
+.app-root .bg-th-changes\/10,
+.app-root .hover\:bg-th-changes\/10:hover { background-color: color-mix(in srgb, var(--th-changes) 10%, transparent); }
+.app-root .bg-th-surface-alt\/40 { background-color: color-mix(in srgb, var(--th-surface-alt) 40%, transparent); }
+.app-root .bg-th-surface-alt\/50 { background-color: color-mix(in srgb, var(--th-surface-alt) 50%, transparent); }
+.app-root .border-th-accent\/30 { border-color: color-mix(in srgb, var(--th-accent) 30%, transparent); }
+.app-root .border-th-changes\/40 { border-color: color-mix(in srgb, var(--th-changes) 40%, transparent); }
+.app-root .border-th-open\/40 { border-color: color-mix(in srgb, var(--th-open) 40%, transparent); }

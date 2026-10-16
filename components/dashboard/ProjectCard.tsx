@@ -81,7 +81,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
     <div className="relative group h-full">
       <Link
         href={`/project/${project.id}`}
-        className="flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
+        className="flex flex-col h-full app-card overflow-hidden hover:border-th-accent"
       >
         <div className="aspect-video shrink-0 bg-th-surface-alt flex items-center justify-center relative">
           {project.cover_playback_id ? (
@@ -109,7 +109,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
       {onDelete && (
         <button
           onClick={handleDelete}
-          className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes"
+          className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg border border-th-border opacity-0 group-hover:opacity-100 transition-opacity text-th-muted hover:text-th-changes"
         >
           <Trash2 size={13} />
         </button>

@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/Badge'
 import { formatTimecode } from '@/lib/utils'
 import { fetchShareDownloadUrl } from '@/lib/download-client'
 import { Orb } from '@/components/ui/Orb'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 
 const NAME_STORAGE_KEY = 'dailies_reviewer_name'
 
@@ -234,13 +235,13 @@ export default function PublicReviewClient({ token }: { token: string }) {
             onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
             placeholder="Enter password"
             autoFocus
-            className="w-full px-3 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors mb-2"
+            className="w-full px-3 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[13px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors mb-2"
           />
           {passwordError && <p className="text-[12px] text-th-changes mb-2">{passwordError}</p>}
           <button
             onClick={handleUnlock}
             disabled={verifying || !passwordInput.trim()}
-            className="w-full py-2.5 rounded-th-sm bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="w-full py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {verifying ? 'Checking…' : 'Unlock'}
           </button>
@@ -257,7 +258,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-th-bg">
-      <header className="h-12 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-2 px-4">
+      <header className="h-13 shrink-0 bg-th-bg border-b border-th-border flex items-center gap-2 px-4">
         <span className="text-[13px] font-semibold truncate">{asset.name}</span>
 
         {versions.length > 1 && (
@@ -311,6 +312,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
             Compare versions
           </button>
         )}
+        <div className="ml-auto"><ThemeToggle /></div>
       </header>
 
       <div className="flex flex-col flex-1 overflow-hidden min-h-0 sm:flex-row">
@@ -366,7 +368,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               value={reviewerName}
               onChange={(e) => setReviewerName(e.target.value)}
               placeholder="Your name"
-              className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+              className="w-full px-3 py-2 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
             />
             <textarea
               value={commentText}
@@ -374,13 +376,13 @@ export default function PublicReviewClient({ token }: { token: string }) {
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePostComment() } }}
               placeholder={`Note this frame at ${formatTimecode(currentTime)}…`}
               rows={3}
-              className="w-full px-3 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none resize-none leading-relaxed transition-colors focus:border-th-accent"
+              className="w-full px-3 py-2.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[13px] text-th-text placeholder:text-th-faint outline-none resize-none leading-relaxed transition-colors focus:border-th-accent"
             />
             {commentText.trim() && (
               <button
                 onClick={handlePostComment}
                 disabled={posting}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 <Send size={13} /> {posting ? 'Posting…' : `Post note at ${formatTimecode(currentTime)}`}
               </button>

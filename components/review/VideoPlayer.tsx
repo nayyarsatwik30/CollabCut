@@ -268,7 +268,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
         {src && !videoReady && !videoError && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/30">
-            <Orb state="composing" size={64} label="Loading video" />
+            <Orb theme="dark" state="composing" size={64} label="Loading video" />
           </div>
         )}
 

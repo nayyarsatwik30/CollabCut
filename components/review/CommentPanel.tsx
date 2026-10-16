@@ -137,7 +137,7 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
         {draftText.trim() && (
           <button
             onClick={handleSubmit}
-            className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:opacity-90 transition-opacity animate-fade-in"
+            className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:opacity-90 transition-opacity animate-fade-in"
             style={{ boxShadow: '0 4px 14px color-mix(in srgb, var(--th-accent) 40%, transparent)' }}
           >
             <Plus size={14} /> Post note at {formatTimecode(currentTime)}

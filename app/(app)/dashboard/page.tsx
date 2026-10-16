@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Grid3X3, List, Plus, Upload, LogOut, Film, Check, FolderKanban } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { TopBar } from '@/components/layout/TopBar'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
@@ -187,15 +189,14 @@ export default function DashboardPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
-        {/* Top bar */}
-        <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-3 px-6">
-          <div className="flex-1 max-w-sm relative">
+        <TopBar title="Projects" icon={Grid3X3}>
+          <div className="w-56 relative hidden md:block">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-th-muted pointer-events-none" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={role === 'editor' ? (dashTab === 'assigned' ? 'Search your assets…' : 'Search your projects…') : 'Search projects…'}
-              className="w-full pl-8 pr-3 py-1.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+              className="w-full pl-8 pr-3 py-1.5 text-[13px] text-th-text placeholder:text-th-faint transition-colors"
             />
           </div>
 
@@ -217,26 +218,24 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="ml-auto flex items-center gap-2.5">
             <button
               onClick={async () => {
                 const ok = await confirm({ title: 'Log out of CollabCut?', confirmLabel: 'Yes, log out' })
                 if (ok) handleLogout()
               }}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-muted btn-press hover:text-th-changes transition-colors"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-th-full border border-th-border text-[13px] text-th-muted btn-press hover:text-th-changes hover:bg-th-surface-alt transition-colors"
             >
               <LogOut size={13} /> Logout
             </button>
             {role !== 'editor' && (
               <button
                 onClick={() => setShowNew(true)}
-                className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
+                className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
               >
                 <Plus size={14} /> New project
               </button>
             )}
-          </div>
-        </div>
+        </TopBar>
 
         {role === 'editor' && (
           <div className="shrink-0 bg-th-surface border-b border-th-border px-6 flex gap-1">
@@ -283,13 +282,7 @@ export default function DashboardPage() {
               loading ? (
                 <CardGridSkeleton count={8} minWidth={240} />
               ) : filteredAssigned.length === 0 && !search ? (
-                <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                  <div className="text-5xl"><Film size={48} style={{ color: 'var(--th-accent-text)' }} /></div>
-                  <div>
-                    <p className="font-semibold mb-1">No assets assigned yet</p>
-                    <p className="text-[13px] text-th-muted">An admin needs to assign you to an asset first.</p>
-                  </div>
-                </div>
+                <EmptyState icon={Film} title="No assets assigned yet" sub="An admin needs to assign you to an asset first." />
               ) : filteredAssigned.length === 0 && search ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
                   <p className="font-semibold">No results for "{search}"</p>
@@ -351,13 +344,7 @@ export default function DashboardPage() {
               ) : myProjectsLoading ? (
                 <CardGridSkeleton count={8} minWidth={240} />
               ) : filteredMyProjects.length === 0 && !search ? (
-                <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                  <FolderKanban size={48} style={{ color: 'var(--th-accent-text)' }} />
-                  <div>
-                    <p className="font-semibold mb-1">No projects yet</p>
-                    <p className="text-[13px] text-th-muted">Projects with work assigned to you will show up here.</p>
-                  </div>
-                </div>
+                <EmptyState icon={FolderKanban} title="No projects yet" sub="Projects with work assigned to you will show up here." />
               ) : filteredMyProjects.length === 0 && search ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
                   <p className="font-semibold">No results for "{search}"</p>
@@ -381,19 +368,14 @@ export default function DashboardPage() {
               {loading ? (
                 <CardGridSkeleton count={8} minWidth={240} />
               ) : filtered.length === 0 && !search ? (
-                <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                  <div className="text-5xl"><Film size={48} style={{ color: 'var(--th-accent-text)' }} /></div>
-                  <div>
-                    <p className="font-semibold mb-1">No projects yet</p>
-                    <p className="text-[13px] text-th-muted">Create your first project to get started.</p>
-                  </div>
+                <EmptyState icon={Film} title="No projects yet" sub="Create your first project to get started.">
                   <button
                     onClick={() => setShowNew(true)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
                   >
                     <Plus size={14} /> Create first project
                   </button>
-                </div>
+                </EmptyState>
               ) : filtered.length === 0 && search ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
                   <p className="font-semibold">No results for "{search}"</p>

@@ -70,7 +70,7 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
           <div className={`ml-auto flex items-center gap-1.5 transition-opacity duration-100 ${showActions ? 'opacity-100' : 'opacity-0'}`}>
             <button
               onClick={() => setReplying(!replying)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-sm bg-th-surface-alt border border-th-border text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
             >
               <MessageSquare size={11} />
               Reply
@@ -130,10 +130,10 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
             onChange={(e) => setReplyText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitReply() } if (e.key === 'Escape') { setReplying(false); setReplyText('') } }}
             placeholder="Write a reply… (Enter to send)"
-            className="flex-1 px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors font-display"
+            className="flex-1 px-3 py-2 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors font-display"
           />
           <button onClick={submitReply}
-            className="px-3 py-2 rounded-th-sm bg-th-accent text-th-accent-fg text-[12px] font-semibold btn-press hover:opacity-90 transition-opacity">
+            className="px-3 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[12px] font-semibold btn-press hover:opacity-90 transition-opacity">
             Send
           </button>
         </div>

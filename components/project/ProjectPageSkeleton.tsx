@@ -6,7 +6,7 @@ import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 export function ProjectPageSkeleton() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-      <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-2 px-5">
+      <div className="h-13 shrink-0 bg-th-bg border-b border-th-border flex items-center gap-2 px-5">
         <Skeleton className="h-3.5 w-14 rounded-th-sm" />
         <Skeleton className="h-3.5 w-36 rounded-th-sm" />
       </div>

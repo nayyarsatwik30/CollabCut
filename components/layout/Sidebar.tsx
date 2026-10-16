@@ -15,6 +15,9 @@ const NAV_ITEMS = [
   { href: '/dashboard', icon: Grid3X3, label: 'Projects' },
   { href: '/recent', icon: Clock, label: 'Recent' },
   { href: '/notifications', icon: Bell, label: 'Notifications' },
+]
+
+const SECONDARY_ITEMS = [
   { href: '/trash', icon: Trash2, label: 'Recycle Bin' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ]
@@ -59,8 +62,33 @@ export function Sidebar() {
     ? name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
     : email[0]?.toUpperCase() ?? 'U'
 
+  const renderItem = ({ href, icon: Icon, label }: (typeof NAV_ITEMS)[number]) => {
+    const active = pathname.startsWith(href)
+    return (
+      <Link
+        key={href}
+        href={href}
+        className={cn(
+          'relative flex items-center gap-2.5 px-3 py-2 rounded-th-sm text-[13px] transition-colors',
+          active
+            ? 'bg-th-accent/10 text-th-accent-text font-semibold'
+            : 'text-th-muted hover:text-th-text hover:bg-th-surface-alt',
+        )}
+      >
+        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-th-accent" />}
+        <Icon size={16} strokeWidth={1.75} className={active ? 'text-th-accent' : ''} />
+        <span className="flex-1">{label}</span>
+        {href === '/notifications' && unreadCount > 0 && (
+          <span className="min-w-[16px] h-4 px-1 rounded-th-full flex items-center justify-center text-[9px] font-bold shrink-0 bg-th-accent text-th-accent-fg">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </Link>
+    )
+  }
+
   return (
-    <aside className="w-[220px] h-full flex flex-col shrink-0 bg-th-surface border-r border-th-border">
+    <aside className="w-[220px] h-full flex flex-col shrink-0 bg-th-sidebar border-r border-th-border">
       {/* Logo */}
       <div className="h-13 flex items-center px-5 border-b border-th-border shrink-0">
         <Link href="/board" className="flex items-center gap-2.5">
@@ -70,50 +98,27 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto p-2.5 space-y-0.5">
-        {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
-          const active = pathname.startsWith(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'flex items-center gap-2.5 px-3 py-2 rounded-th-sm text-[13px] transition-colors',
-                active
-                  ? 'bg-th-surface-alt text-th-text font-semibold'
-                  : 'text-th-muted hover:text-th-text hover:bg-th-surface-alt',
-              )}
-            >
-              <Icon size={15} className={active ? 'text-th-accent-text' : ''} />
-              <span className="flex-1">{label}</span>
-              {href === '/notifications' && unreadCount > 0 && (
-                <span
-                  className="min-w-[16px] h-4 px-1 rounded-th-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                  style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)' }}
-                >
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </Link>
-          )
-        })}
+      <nav className="flex-1 overflow-y-auto p-2.5">
+        <p className="px-3 pt-2 pb-2 text-[10px] font-semibold tracking-[0.14em] text-th-faint">MENU</p>
+        <div className="space-y-0.5">
+          {NAV_ITEMS.map((item) => renderItem(item))}
+        </div>
+        <div className="my-3 border-t border-th-border" />
+        <div className="space-y-0.5">
+          {SECONDARY_ITEMS.map((item) => renderItem(item))}
+        </div>
       </nav>
 
       {/* User profile */}
       <div className="p-3 border-t border-th-border shrink-0 space-y-3">
         <StorageUsageBar usedBytes={usedBytes} loading={usageLoading} variant="compact" workspacePlan={workspacePlan} />
         <Link href="/settings" className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-th-sm hover:bg-th-surface-alt transition-colors text-left">
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-extrabold shrink-0"
-            style={{ background: '#22D3EE', color: '#000' }}
-          >
-            {initials}
-          </div>
+          <div className="app-avatar w-7 h-7 text-[11px]">{initials}</div>
           <div className="flex-1 min-w-0">
             <p className="text-[12px] font-semibold truncate">{name || 'Loading…'}</p>
             <p className="text-[10px] text-th-muted font-mono truncate">{email}</p>
           </div>
-          <ChevronDown size={13} className="text-th-muted" />
+          <ChevronDown size={13} strokeWidth={1.75} className="text-th-muted" />
         </Link>
       </div>
     </aside>

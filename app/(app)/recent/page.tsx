@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { TopBar } from '@/components/layout/TopBar'
 import { Clock, MessageSquare } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { Orb } from '@/components/ui/Orb'
 
@@ -68,9 +70,7 @@ export default function RecentPage() {
     <div className="flex h-screen overflow-hidden bg-th-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center px-6">
-          <h1 className="text-[15px] font-bold m-0">Recent Highlights</h1>
-        </div>
+        <TopBar title="Recent Highlights" icon={Clock} />
 
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
@@ -78,11 +78,7 @@ export default function RecentPage() {
               <Orb state="composing" size={64} label="Loading" />
             </div>
           ) : highlights.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
-              <Clock size={28} className="text-th-faint" />
-              <p className="font-semibold">No recent activity</p>
-              <p className="text-[13px] text-th-muted">Notes left across your projects will show up here.</p>
-            </div>
+            <EmptyState icon={Clock} title="No recent activity" sub="Notes left across your projects will show up here." />
           ) : (
             <div className="max-w-2xl space-y-2.5">
               {highlights.map((h) => (

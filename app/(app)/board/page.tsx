@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LayoutGrid, Plus, FolderKanban, Users, ChevronLeft, Film, LogOut } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { TopBar } from '@/components/layout/TopBar'
 import { BoardCard, initialsFor, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
 import { BoardSkeleton } from '@/components/board/BoardSkeleton'
 import { NewContentModal } from '@/components/board/NewContentModal'
@@ -358,31 +359,25 @@ export default function BoardPage() {
     <div className="flex h-screen overflow-hidden bg-th-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <LayoutGrid size={15} className="shrink-0" style={{ color: 'var(--th-accent-text)' }} />
-            <h1 className="text-[15px] font-bold leading-none m-0">Board</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[11px] text-th-muted">
-              {role === 'editor' ? 'Showing assets assigned to you' : 'Showing all workspace assets'}
-            </span>
-            {role === 'admin' && (
-              <button
-                onClick={() => setShowNewContent(true)}
-                className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
-              >
-                <Plus size={13} /> New
-              </button>
-            )}
+        <TopBar title="Board" icon={LayoutGrid}>
+          <span className="font-mono text-[11px] text-th-muted hidden md:inline">
+            {role === 'editor' ? 'Showing assets assigned to you' : 'Showing all workspace assets'}
+          </span>
+          {role === 'admin' && (
             <button
-              onClick={handleLogoutClick}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-muted btn-press hover:text-th-changes transition-colors"
+              onClick={() => setShowNewContent(true)}
+              className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
             >
-              <LogOut size={13} /> Logout
+              <Plus size={13} /> New
             </button>
-          </div>
-        </div>
+          )}
+          <button
+            onClick={handleLogoutClick}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-th-full border border-th-border text-[13px] text-th-muted btn-press hover:text-th-changes hover:bg-th-surface-alt transition-colors"
+          >
+            <LogOut size={13} /> Logout
+          </button>
+        </TopBar>
 
         {role === 'admin' && (
           <div className="shrink-0 bg-th-surface border-b border-th-border px-6 flex gap-1">
@@ -438,14 +433,14 @@ export default function BoardPage() {
               <div>
                 <button
                   onClick={() => { setSelectedEditor(null); setEditorAssets(null) }}
-                  className="flex items-center gap-1.5 mb-4 h-8 px-3 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-muted hover:text-th-text transition-colors btn-press"
+                  className="flex items-center gap-1.5 mb-4 h-8 px-3 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-muted hover:text-th-text transition-colors btn-press"
                 >
                   <ChevronLeft size={13} /> All editors
                 </button>
                 <div className="flex items-center gap-2.5 mb-4">
                   <span
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-extrabold shrink-0"
-                    style={{ background: '#22D3EE', color: '#000' }}
+                    className="app-avatar w-8 h-8 text-[11px]"
+                    
                   >
                     {initialsFor(selectedEditor.name)}
                   </span>
@@ -506,8 +501,8 @@ export default function BoardPage() {
                     >
                       <div className="flex items-center gap-2.5">
                         <span
-                          className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-extrabold shrink-0"
-                          style={{ background: '#22D3EE', color: '#000' }}
+                          className="app-avatar w-9 h-9 text-[12px]"
+                          
                         >
                           {initialsFor(ed.name)}
                         </span>

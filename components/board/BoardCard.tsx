@@ -95,12 +95,12 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
         setTimeout(() => { draggingRef.current = false }, 0)
       }}
       onClick={handleClick}
-      className={`group relative bg-th-surface rounded-th-lg p-3 cursor-pointer hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover ${isPlaceholder ? 'border border-dashed border-th-faint' : 'border border-th-border'}`}
+      className={`group relative app-card p-3 cursor-pointer hover:border-th-accent ${isPlaceholder ? 'border border-dashed border-th-faint' : 'border border-th-border'}`}
     >
       {!isPlaceholder && (
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(asset.id) }}
-          className="absolute top-2.5 right-2.5 p-1.5 rounded-th-sm bg-th-bg/70 opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-th-changes z-20"
+          className="absolute top-2.5 right-2.5 p-1.5 rounded-th-sm bg-th-bg border border-th-border opacity-0 group-hover:opacity-100 transition-opacity text-th-muted hover:text-th-changes z-20"
           title="Delete"
         >
           <Trash2 size={13} />
@@ -172,8 +172,7 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
         {asset.editor ? (
           <div className="flex items-center gap-1.5 min-w-0" title={asset.editor.name}>
             <span
-              className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-extrabold shrink-0"
-              style={{ background: '#22D3EE', color: '#000' }}
+              className="app-avatar w-5 h-5 text-[9px]"
             >
               {initialsFor(asset.editor.name)}
             </span>
@@ -210,8 +209,7 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
                       className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-[12px] hover:bg-th-surface-alt transition-colors"
                     >
                       <span
-                        className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-extrabold shrink-0"
-                        style={{ background: '#22D3EE', color: '#000' }}
+                        className="app-avatar w-4 h-4 text-[8px]"
                       >
                         {initialsFor(ed.name)}
                       </span>

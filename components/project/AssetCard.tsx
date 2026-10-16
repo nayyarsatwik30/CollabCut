@@ -14,7 +14,7 @@ export function AssetCard({ asset, projectId }: AssetCardProps) {
   return (
     <Link
       href={`/review/${asset.id}`}
-      className="block bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors group shadow-card hover:shadow-card-hover"
+      className="block app-card overflow-hidden hover:border-th-accent group"
     >
       {/* Thumbnail */}
       <div className="h-28 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
@@ -32,7 +32,7 @@ export function AssetCard({ asset, projectId }: AssetCardProps) {
           {asset.duration}
         </div>
         {/* Version badge */}
-        <div className="absolute top-2.5 left-2.5 font-mono text-[10px] px-1.5 py-px rounded bg-th-bg/70 text-th-muted border border-th-border">
+        <div className="absolute top-2.5 left-2.5 font-mono text-[10px] px-1.5 py-px rounded bg-th-bg text-th-muted border border-th-border">
           v{asset.version}
         </div>
         <div className="absolute top-2.5 right-2.5">

@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 export function BoardSkeleton() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-      <div className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center justify-between px-6">
+      <div className="h-13 shrink-0 bg-th-bg border-b border-th-border flex items-center justify-between px-6">
         <Skeleton className="h-4 w-16 rounded-th-sm" />
         <div className="flex items-center gap-3">
           <Skeleton className="h-3 w-36 rounded-th-sm" />

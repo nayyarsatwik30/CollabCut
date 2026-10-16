@@ -192,7 +192,7 @@ h3,
 .film-strip-played {
   position: absolute;
   inset: 0;
-  background: rgba(141, 48, 68, 0.18);
+  background: color-mix(in srgb, var(--th-accent) 18%, transparent);
   pointer-events: none;
 }
 

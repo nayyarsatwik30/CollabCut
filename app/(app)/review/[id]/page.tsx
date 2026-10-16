@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X, FileText, ExternalLink, StickyNote, Link2 } from 'lucide-react'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
@@ -411,7 +412,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         onCopied={() => showToast('Review link copied!', 'success')}
       />
 
-      <header className="h-13 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-3 px-4 relative z-30">
+      <header className="h-13 shrink-0 bg-th-bg border-b border-th-border flex items-center gap-3 px-4 relative z-30">
         <button
           onClick={() => {
             if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -420,7 +421,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               router.push(`/project/${asset.project_id}`)
             }
           }}
-          className="flex items-center gap-1.5 h-8 px-3 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-muted hover:text-th-text hover:bg-th-surface-hov transition-colors btn-press shrink-0"
+          className="flex items-center gap-1.5 h-8 px-3 rounded-th-full border border-th-border text-[12px] text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors btn-press shrink-0"
         >
           <ChevronLeft size={13} /> Back
         </button>
@@ -528,7 +529,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShareOpen(true)}
-            className="flex items-center gap-1.5 h-8 px-3.5 rounded-th bg-th-surface-alt border border-th-border text-[13px] text-th-text font-medium btn-press hover:bg-th-surface-hov transition-colors"
+            className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full border border-th-border text-[13px] text-th-text font-medium btn-press hover:bg-th-surface-alt transition-colors"
           >
             <Share2 size={13} /> Share
           </button>
@@ -536,7 +537,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             <button
               onClick={handleToggleComplete}
               disabled={togglingComplete}
-              className="flex items-center gap-1.5 h-8 px-3.5 rounded-th text-[13px] font-bold btn-press transition-all approve-glow disabled:opacity-50"
+              className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full text-[13px] font-bold btn-press transition-all approve-glow disabled:opacity-50"
               style={{
                 background: asset.is_complete ? 'var(--th-resolved)' : 'var(--th-accent)',
                 color: asset.is_complete ? '#fff' : 'var(--th-accent-fg)',
@@ -545,6 +546,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               {asset.is_complete ? <><Check size={13} /> Approved</> : <><ThumbsUp size={13} /> Approve cut</>}
             </button>
           )}
+          <ThemeToggle />
         </div>
       </header>
 
@@ -585,7 +587,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 <p className="text-white/50 text-[11px] mb-4">Upload a cut to fulfill this content request</p>
                 <button
                   onClick={() => setShowFulfillModal(true)}
-                  className="flex items-center gap-1.5 mx-auto px-4 py-2 rounded-th bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
+                  className="flex items-center gap-1.5 mx-auto px-4 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
                 >
                   <Upload size={13} /> Upload cut
                 </button>
@@ -594,7 +596,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           ) : awaitingStream ? (
             <div className="flex-1 flex items-center justify-center bg-black">
               <div className="text-center">
-                <Orb state="composing" size={64} label="Processing your video" className="mx-auto mb-4" />
+                <Orb theme="dark" state="composing" size={64} label="Processing your video" className="mx-auto mb-4" />
                 <p className="text-white text-[13px]">Mux is still processing this video…</p>
                 <p className="text-white/50 text-[11px] mt-1">This updates automatically once it's ready</p>
               </div>
@@ -728,7 +730,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                             href={rawLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
+                            className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
                           >
                             <ExternalLink size={12} /> Open reference link
                           </a>
@@ -746,7 +748,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                             href={projectLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th bg-th-surface-alt border border-th-border text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
+                            className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
                           >
                             <ExternalLink size={12} /> Open project drive link
                           </a>
