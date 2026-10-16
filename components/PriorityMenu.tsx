@@ -173,8 +173,7 @@ export function PriorityMenu({ value, onChange, size = 'md' }: PriorityMenuProps
             )
           })}
         </div>,
-        // Portal into the themed app root, not <body>, so it inherits data-theme tokens.
-        document.querySelector('.app-root') ?? document.body
+        document.body
       )}
     </span>
   )

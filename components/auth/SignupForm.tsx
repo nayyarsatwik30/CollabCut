@@ -136,7 +136,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
           </div>
           <button
             onClick={() => router.push('/board')}
-            className="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-th bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
+            className="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors"
           >
             <span>Continue to board</span> <ArrowRight size={14} />
           </button>
@@ -223,7 +223,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
           </div>
 
           <button onClick={handleSubmit} disabled={loading}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-th bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:opacity-90 transition-opacity disabled:opacity-50">
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50">
             {loading ? 'Creating account…' : <><span>Create free account</span> <ArrowRight size={14} /></>}
           </button>
         </div>

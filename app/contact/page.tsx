@@ -42,4 +42,4 @@ export const metadata = {
   description: 'Get in touch with CollabCut to set up a production workspace for your agency.',
 }
 
-export const viewport = { themeColor: '#1a1416' }
+export const viewport = { themeColor: [{ media: '(prefers-color-scheme: light)', color: '#ffffff' }, { media: '(prefers-color-scheme: dark)', color: '#17191f' }] }

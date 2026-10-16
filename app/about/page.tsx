@@ -21,4 +21,4 @@ export const metadata = {
   description: 'What CollabCut is and who it is built for.',
 }
 
-export const viewport = { themeColor: '#1a1416' }
+export const viewport = { themeColor: [{ media: '(prefers-color-scheme: light)', color: '#ffffff' }, { media: '(prefers-color-scheme: dark)', color: '#17191f' }] }

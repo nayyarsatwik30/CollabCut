@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Instrument_Sans, Newsreader, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/layout/AuthProvider'
+import { THEME_BOOT_SCRIPT } from '@/components/layout/theme-boot'
 
 const sans = Instrument_Sans({ subsets: ['latin'], variable: '--font-sans', display: 'swap' })
 const serif = Newsreader({ subsets: ['latin'], variable: '--font-serif', display: 'swap' })
@@ -18,7 +19,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable} ${mono.variable}`}>
+    <html lang="en" data-theme="light" className={`${sans.variable} ${serif.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Sets data-theme from localStorage / OS preference before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
       <body>
         <AuthProvider>
           {children}

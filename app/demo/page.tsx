@@ -3,10 +3,11 @@
 import React, { useState } from "react";
 import { Component } from "@/components/ui/gradient-bars-background";
 import { Settings, X } from "lucide-react";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export default function Demo() {
   const [numBars, setNumBars] = useState(7);
-  const [gradientColor, setGradientColor] = useState("#ff3c00");
+  const [gradientColor, setGradientColor] = useState("#2dd4a7");
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // Ensure only odd numbers
@@ -21,7 +22,7 @@ export default function Demo() {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
       ? `rgb(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)})`
-      : "rgb(255, 60, 0)";
+      : "rgb(45, 212, 167)";
   };
 
   return (
@@ -166,8 +167,9 @@ export default function Demo() {
         gradientFrom={hexToRgb(gradientColor)}
         gradientTo="transparent"
         animationDuration={2}
-        backgroundColor="rgb(10, 10, 10)"
+        backgroundColor="var(--th-bg)"
       >
+        <div className="fixed top-4 left-4 z-50"><ThemeToggle /></div>
         {/* Toggle Button */}
         <button
           onClick={() => setIsPanelOpen(!isPanelOpen)}
@@ -224,7 +226,7 @@ export default function Demo() {
             <label className="control-label mb-2">Presets</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                "#ff3c00", // Orange
+                "#2dd4a7", // Teal
                 "#ff006e", // Pink
                 "#8338ec", // Purple
                 "#3a86ff", // Blue
@@ -245,10 +247,10 @@ export default function Demo() {
 
         {/* Center Info */}
         <div className="text-center font-modern">
-          <h1 className="text-white text-5xl md:text-7xl font-bold mb-4 tracking-tight">
+          <h1 className="text-th-text text-5xl md:text-7xl font-bold mb-4 tracking-tight">
             Gradient Bars
           </h1>
-          <p className="text-gray-400 text-lg md:text-xl font-medium">
+          <p className="text-th-muted text-lg md:text-xl font-medium">
             {isPanelOpen ? "Customize using the panel" : "Click the settings icon to customize"}
           </p>
         </div>

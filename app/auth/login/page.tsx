@@ -1,5 +1,6 @@
 'use client'
 
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -53,6 +54,7 @@ export default function LoginPage() {
           <img src="/collabcut-mark.png" alt="CollabCut" className="w-6 h-6 object-contain shrink-0" />
           <span className="text-[17px] font-extrabold tracking-tight">COLLABCUT</span>
         </Link>
+        <ThemeToggle />
       </header>
 
       <div className="flex-1 flex items-center justify-center px-6 py-12">
@@ -94,7 +96,7 @@ export default function LoginPage() {
             </div>
 
             <button onClick={handleSubmit} disabled={loading}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-th bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:opacity-90 transition-opacity disabled:opacity-50">
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50">
               {loading ? 'Logging in…' : <><span>Log in</span> <ArrowRight size={14} /></>}
             </button>
           </div>

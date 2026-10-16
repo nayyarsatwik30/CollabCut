@@ -1,5 +1,6 @@
 'use client'
 
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import Link from 'next/link'
 import { ChevronLeft, Play, ArrowRight, MessageSquare } from 'lucide-react'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
@@ -15,7 +16,7 @@ const MOCK_COMMENTS = [
   {
     id: '1',
     author: 'Priya',
-    color: '#b36a75',
+    color: '#5b8def',
     time: '00:12',
     status: 'open' as const,
     text: 'Can we hold on this frame a beat longer before the cut? Feels rushed.',
@@ -31,7 +32,7 @@ const MOCK_COMMENTS = [
   {
     id: '3',
     author: 'Priya',
-    color: '#b36a75',
+    color: '#5b8def',
     time: '01:23',
     status: 'resolved' as const,
     text: 'Approved on my end ✅',
@@ -54,19 +55,22 @@ export default function DemoReviewPage() {
             Sample review — no sign-in needed
           </span>
         </div>
+        <div className="flex items-center gap-3">
+        <ThemeToggle />
         <Link
           href="/auth/signup/agency"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-th-full bg-gradient-cta text-white text-[13px] font-semibold btn-press hover:opacity-90 transition-opacity"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
         >
           Start free trial <ArrowRight size={13} />
         </Link>
+        </div>
       </header>
 
       <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
         <div>
           <div
             className="relative aspect-video rounded-th-lg overflow-hidden flex items-center justify-center"
-            style={{ background: 'var(--gradient-brand)' }}
+            style={{ background: 'linear-gradient(135deg, #17324a, #1d6b66 55%, #2dd4a7)' }}
           >
             <button className="w-16 h-16 rounded-full bg-black/30 backdrop-blur flex items-center justify-center hover:bg-black/40 transition-colors">
               <Play size={26} className="text-white ml-1" fill="white" />
@@ -96,7 +100,7 @@ export default function DemoReviewPage() {
 
           <div className="space-y-4">
             {MOCK_COMMENTS.map((c) => (
-              <div key={c.id} className="pb-4 border-b border-th-border-lt last:border-0 last:pb-0">
+              <div key={c.id} className="pb-4 border-b border-th-border last:border-0 last:pb-0">
                 <div className="flex items-center gap-2 mb-1.5">
                   <Avatar initials={c.author[0]} color={c.color} size="sm" />
                   <span className="text-[13px] font-semibold">{c.author}</span>
@@ -118,7 +122,7 @@ export default function DemoReviewPage() {
           </p>
           <Link
             href="/auth/signup/agency"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full bg-gradient-cta text-white font-bold text-[14px] btn-press hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors"
           >
             Start your free trial <ArrowRight size={14} />
           </Link>

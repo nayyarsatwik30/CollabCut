@@ -1,5 +1,6 @@
 'use client'
 
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
@@ -14,6 +15,7 @@ export default function ResetPasswordPage() {
           <img src="/collabcut-mark.png" alt="CollabCut" className="w-6 h-6 object-contain shrink-0" />
           <span className="text-[17px] font-extrabold tracking-tight">COLLABCUT</span>
         </Link>
+        <ThemeToggle />
       </header>
 
       <div className="flex-1 flex items-center justify-center px-6 py-12">
@@ -23,7 +25,7 @@ export default function ResetPasswordPage() {
             Email password reset is temporarily unavailable, so this link can't be used. Please contact your workspace admin or CollabCut support and we'll help you get back into your account.
           </p>
           <Link href="/auth/login"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-th bg-th-surface-alt border border-th-border text-th-text font-semibold text-[14px] btn-press hover:bg-th-surface-hov transition-colors">
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-th-full border border-th-border text-th-text font-semibold text-[14px] btn-press hover:bg-th-surface-alt transition-colors">
             <ArrowLeft size={14} /> Back to login
           </Link>
         </div>

@@ -5,6 +5,7 @@ import { useRef } from 'react'
 import { ArrowDown, ArrowUpRight, Check, ChevronRight, CirclePlay, Clock3, Layers3, MessageSquare, ShieldCheck, Users2 } from 'lucide-react'
 import Link from 'next/link'
 import { LandingScrollUnlock } from './collabcut-landing-scroll-unlock'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 
 const ease = [0.22, 1, 0.36, 1] as const
 
@@ -30,7 +31,7 @@ export function Logo() {
 }
 
 function Header({ agency = false }: { agency?: boolean }) {
-  return <header className="cc-header"><Logo /><nav className="cc-nav" aria-label="Main navigation">{agency ? <Link href="/auth/login">Sign in</Link> : <Link href="/agencies">For agencies</Link>}<a href="#workflow">How it works</a><a href="#pricing">Plans</a></nav><Link className="cc-header-cta" href={agency ? '/contact' : '/auth/signup'}>{agency ? 'Talk to us' : 'Start free trial'} <ArrowUpRight size={15} /></Link></header>
+  return <header className="cc-header"><Logo /><nav className="cc-nav" aria-label="Main navigation">{agency ? <Link href="/auth/login">Sign in</Link> : <Link href="/agencies">For agencies</Link>}<a href="#workflow">How it works</a><a href="#pricing">Plans</a></nav><div className="cc-header-actions"><ThemeToggle /><Link className="cc-header-cta" href={agency ? '/contact' : '/auth/signup'}>{agency ? 'Talk to us' : 'Start free trial'} <ArrowUpRight size={15} /></Link></div></header>
 }
 
 function ProductChrome({ children, label = 'CollabCut workspace' }: { children: React.ReactNode; label?: string }) {

@@ -9,4 +9,4 @@ export const metadata = {
   description: 'A clear production workspace for agencies managing clients, editors, and every cut.',
 }
 
-export const viewport = { themeColor: '#1a1416' }
+export const viewport = { themeColor: [{ media: '(prefers-color-scheme: light)', color: '#ffffff' }, { media: '(prefers-color-scheme: dark)', color: '#17191f' }] }

@@ -1,42 +1,25 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { THEME_KEY } from '@/components/layout/theme-boot'
 
 type Theme = 'light' | 'dark'
 
-function appRoot(): HTMLElement | null {
-  return document.querySelector<HTMLElement>('.app-root')
-}
-
-// The boot script only runs on a full page load; on a client-side navigation
-// into the app (e.g. login -> board) React inserts it without executing it, so
-// apply the stored/OS theme here before paint as well.
-export function ThemeInit() {
-  useLayoutEffect(() => {
-    const root = appRoot()
-    if (!root) return
-    let t: string | null = null
-    try { t = localStorage.getItem(THEME_KEY) } catch {}
-    if (t !== 'light' && t !== 'dark') {
-      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    }
-    root.setAttribute('data-theme', t)
-  }, [])
-  return null
+function themeRoot(): HTMLElement {
+  return document.documentElement
 }
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme | null>(null)
 
   useEffect(() => {
-    setTheme(appRoot()?.getAttribute('data-theme') === 'dark' ? 'dark' : 'light')
+    setTheme(themeRoot().getAttribute('data-theme') === 'dark' ? 'dark' : 'light')
   }, [])
 
   const toggle = () => {
     const next: Theme = theme === 'dark' ? 'light' : 'dark'
-    appRoot()?.setAttribute('data-theme', next)
+    themeRoot().setAttribute('data-theme', next)
     try { localStorage.setItem(THEME_KEY, next) } catch {}
     setTheme(next)
   }

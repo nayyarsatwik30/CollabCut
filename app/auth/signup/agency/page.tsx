@@ -1,5 +1,6 @@
 'use client'
 
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { SignupForm } from '@/components/auth/SignupForm'
@@ -12,6 +13,7 @@ export default function AgencySignupPage() {
           <img src="/collabcut-mark.png" alt="CollabCut" className="w-6 h-6 object-contain shrink-0" />
           <span className="text-[17px] font-extrabold tracking-tight">COLLABCUT</span>
         </Link>
+        <ThemeToggle />
       </header>
 
       <Suspense fallback={<div className="p-10 text-center text-th-muted">Loading…</div>}>
