@@ -157,6 +157,22 @@ aside.chrome ~ * > .chrome-top > .topbar-seam {
   background: radial-gradient(circle at 100% 100%, transparent calc(var(--th-seam-r) - 0.5px), var(--th-chrome-seam) var(--th-seam-r));
 }
 
+/* Bottom mirror of the above: a concave corner at the content pane's
+   bottom-left. Rendered inside the sidebar (so it only exists where a sidebar
+   does, and follows its width as it collapses), hanging off its right edge.
+   Mirror math: box anchored at the bottom instead of the top, and the circle
+   centre moves from the box's bottom-right (100% 100%) to its top-right
+   (100% 0%), leaving the bottom-left corner filled with the chrome colour. */
+.sidebar-seam-bottom {
+  position: absolute;
+  left: 100%;
+  bottom: 0;
+  width: var(--th-seam-r);
+  height: var(--th-seam-r);
+  pointer-events: none;
+  background: radial-gradient(circle at 100% 0%, transparent calc(var(--th-seam-r) - 0.5px), var(--th-chrome-seam) var(--th-seam-r));
+}
+
 
 :root,
 :root[data-theme='light'] {
