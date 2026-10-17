@@ -116,7 +116,7 @@ export function Sidebar() {
 
   return (
     <>
-    <aside className="w-[220px] h-full flex flex-col shrink-0 chrome border-r border-th-border">
+    <aside className="w-[220px] h-full flex flex-col shrink-0 chrome">
       {/* Logo */}
       <div className="h-13 flex items-center px-5 border-b border-th-border shrink-0">
         <Link href="/board" className="flex items-center gap-2.5">

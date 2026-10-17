@@ -17,7 +17,8 @@ interface TopBarProps {
 
 export function TopBar({ title, icon: Icon, before, leading, children }: TopBarProps) {
   return (
-    <div className="h-13 shrink-0 chrome border-b border-th-border flex items-center gap-3 px-6 relative z-30">
+    <div className="h-13 shrink-0 chrome chrome-top flex items-center gap-3 px-6 relative z-30">
+      <span aria-hidden className="topbar-seam" />
       <div className="flex items-center gap-3 flex-1 min-w-0">
         {before}
         <div className="flex items-center gap-2 min-w-0">
