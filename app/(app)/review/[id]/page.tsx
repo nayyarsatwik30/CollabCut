@@ -579,10 +579,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden min-h-0">
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      {/* Two cards on the page background: the always-dark player panel and the notes panel. */}
+      <div className="flex flex-1 overflow-hidden min-h-0 gap-3 p-3">
+        <div className="player-panel flex-1 flex flex-col overflow-hidden min-w-0">
           {unfulfilled ? (
-            <div className="flex-1 flex items-center justify-center bg-black">
+            <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <p className="text-white text-[13px] font-medium mb-1">No file uploaded yet</p>
                 <p className="text-white/50 text-[11px] mb-4">Upload a cut to fulfill this content request</p>
@@ -595,7 +596,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               </div>
             </div>
           ) : awaitingStream ? (
-            <div className="flex-1 flex items-center justify-center bg-black">
+            <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <Orb theme="dark" state="composing" size={64} label="Processing your video" className="mx-auto mb-4" />
                 <p className="text-white text-[13px]">Mux is still processing this video…</p>
@@ -621,7 +622,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        <aside className="w-85 shrink-0 bg-th-surface border-l border-th-border flex flex-col overflow-hidden">
+        <aside className="w-85 shrink-0 bg-th-surface border border-th-border rounded-th-lg flex flex-col overflow-hidden">
           <div className="flex shrink-0 border-b border-th-border">
             {([
               { key: 'notes', icon: MessageSquare, label: `Notes (${comments.length})` },

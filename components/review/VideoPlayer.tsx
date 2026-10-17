@@ -210,7 +210,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     <div ref={containerRef} className="flex flex-col h-full overflow-hidden">
       <div
         className="flex-1 flex items-center justify-center relative overflow-hidden min-h-0 cursor-pointer"
-        style={{ background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 0 }}
+        style={{ background: 'var(--player-canvas, rgba(0,0,0,0.6))', padding: 'var(--player-pad, 0px)', border: 'none', borderRadius: 0 }}
         onClick={togglePlay}
       >
         {src ? (
