@@ -537,10 +537,10 @@ export default function BoardPage() {
                 className="inline-flex items-center flex-wrap max-w-full"
                 style={{
                   padding: 6,
-                  background: 'var(--th-surface-alt)',
+                  // Recessed strip: a hair off the page colour, no shadow.
+                  background: 'color-mix(in srgb, var(--th-text) 3%, var(--th-bg))',
                   border: '1px solid var(--th-border)',
                   borderRadius: 16,
-                  boxShadow: 'var(--th-shadow-card)',
                 }}
               >
                 <div className="flex items-center" style={{ gap: 8, padding: '9px 16px' }}>

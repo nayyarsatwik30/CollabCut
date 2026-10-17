@@ -95,7 +95,7 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
         setTimeout(() => { draggingRef.current = false }, 0)
       }}
       onClick={handleClick}
-      className={`group relative app-card p-3 cursor-pointer hover:border-th-accent ${isPlaceholder ? 'border border-dashed border-th-faint' : 'border border-th-border'}`}
+      className={`group relative app-card p-3 cursor-pointer ${isPlaceholder ? 'border border-dashed border-th-faint' : 'border border-th-border'}`}
     >
       {!isPlaceholder && (
         <button
