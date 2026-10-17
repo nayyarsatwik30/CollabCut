@@ -100,13 +100,13 @@
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
-/* Edge facing the content: a faint inner highlight plus a soft drop shadow. */
+/* Edge facing the content: soft drop shadow only, no hairline. */
 aside.chrome { z-index: 20; }
 aside.chrome::after {
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.2), 6px 0 24px rgba(0, 0, 0, 0.16);
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.12);
 }
 .chrome-top::after {
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.16), 0 6px 22px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.1);
 }
 
 /* Rounded seam: a concave corner under the top bar's left end, so the content
@@ -128,37 +128,37 @@ aside.chrome ~ * > .chrome-top > .topbar-seam {
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
-  --th-bg: #ffffff;
-  --th-bg-elevated: #f3f4f6;
-  --th-bg-sidebar: #fafafa;
-  --th-bg-hover: #e9ebef;
+  --th-bg: #f7f5f0;
+  --th-bg-elevated: #fdfcf8;
+  --th-bg-sidebar: #f1eee7;
+  --th-bg-hover: #ece8df;
   --th-bg-card-hover: #ffffff;
-  --th-surface-alt: #e9ebef;
-  --th-surface-hov: #dfe2e8;
-  --th-text-primary: #17191f;
-  --th-text-secondary: #6b7280;
-  --th-faint: #9ca3af;
-  --th-border: #e5e7eb;
+  --th-surface-alt: #ece8df;
+  --th-surface-hov: #e3dfd4;
+  --th-text-primary: #1a1f1d;
+  --th-text-secondary: #5f665f;
+  --th-faint: #8f958d;
+  --th-border: #e3ded2;
   --th-accent-hover: #22b78f;
-  --th-accent-text: #0b8a6a;
-  --th-shadow-card: 0 1px 2px rgba(23, 25, 31, 0.06);
-  --th-shadow-card-hover: 0 6px 18px rgba(23, 25, 31, 0.1);
-  --th-shadow-window: 0 24px 70px rgba(23, 25, 31, 0.12);
+  --th-accent-text: #0a7a5e;
+  --th-shadow-card: 0 1px 2px rgba(40, 36, 20, 0.07);
+  --th-shadow-card-hover: 0 6px 18px rgba(40, 36, 20, 0.11);
+  --th-shadow-window: 0 24px 70px rgba(40, 36, 20, 0.12);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --th-bg: #17191f;
-  --th-bg-elevated: #23252f;
-  --th-bg-sidebar: #1c1e27;
-  --th-bg-hover: #2c2f3b;
-  --th-bg-card-hover: #2a2d38;
-  --th-surface-alt: #2c2f3b;
-  --th-surface-hov: #363a48;
-  --th-text-primary: #f2f2f0;
-  --th-text-secondary: #8b8d98;
-  --th-faint: #5f6270;
-  --th-border: #31343f;
+  --th-bg: #0d1f1c;
+  --th-bg-elevated: #162b27;
+  --th-bg-sidebar: #112420;
+  --th-bg-hover: #1d3732;
+  --th-bg-card-hover: #1b332e;
+  --th-surface-alt: #1d3732;
+  --th-surface-hov: #26443e;
+  --th-text-primary: #eef3f1;
+  --th-text-secondary: #94ada6;
+  --th-faint: #5f7a73;
+  --th-border: #254039;
   --th-accent-hover: #5eead4;
   --th-accent-text: #2dd4a7;
   --th-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);

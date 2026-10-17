@@ -118,7 +118,7 @@ export function Sidebar() {
     <>
     <aside className="w-[220px] h-full flex flex-col shrink-0 chrome">
       {/* Logo */}
-      <div className="h-13 flex items-center px-5 border-b border-th-border shrink-0">
+      <div className="h-13 flex items-center px-5 shrink-0">
         <Link href="/board" className="flex items-center gap-2.5">
           <span className="w-8 h-8 rounded-th-sm bg-white flex items-center justify-center shrink-0">
             <img src="/collabcut-mark.png" alt="CollabCut" className="w-6 h-6 object-contain" />
