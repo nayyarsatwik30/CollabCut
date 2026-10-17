@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { LayoutGrid, SquareKanban, Clock, Bell, Settings, ChevronDown, Trash2 } from 'lucide-react'
+import { LayoutGrid, SquareKanban, Clock, Bell, Settings, ChevronDown, Trash2, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStorageUsage } from '@/lib/useStorageUsage'
 import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
 import { usePolling } from '@/lib/usePolling'
+import { performLogout } from '@/lib/auth'
+import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 
 const NAV_ITEMS = [
   { href: '/board', icon: SquareKanban, label: 'Board' },
@@ -24,6 +26,10 @@ const SECONDARY_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
   const { data: session, status } = useSession()
   const [unreadCount, setUnreadCount] = useState(0)
   const { usedBytes, workspacePlan, loading: usageLoading } = useStorageUsage()
@@ -57,6 +63,27 @@ export function Sidebar() {
   // Badge picks up new notifications (e.g. a collaborator's comment) while
   // the user sits on any sidebar page - pauses when the tab is hidden.
   usePolling(fetchUnreadCount, 8000, status === 'authenticated')
+
+  // Close the account menu on outside click or Escape.
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
+
+  const handleLogoutClick = async () => {
+    setMenuOpen(false)
+    const ok = await confirm({ title: 'Log out of CollabCut?', confirmLabel: 'Yes, log out' })
+    if (ok) await performLogout(router)
+  }
 
   const initials = name
     ? name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
@@ -112,15 +139,37 @@ export function Sidebar() {
       {/* User profile */}
       <div className="p-3 border-t border-th-border shrink-0 space-y-3">
         <StorageUsageBar usedBytes={usedBytes} loading={usageLoading} variant="compact" workspacePlan={workspacePlan} />
-        <Link href="/settings" className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-th-sm hover:bg-th-surface-alt transition-colors text-left">
-          <div className="app-avatar w-7 h-7 text-[11px]">{initials}</div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-semibold truncate">{name || 'Loading…'}</p>
-            <p className="text-[10px] text-th-muted font-mono truncate">{email}</p>
-          </div>
-          <ChevronDown size={13} strokeWidth={1.75} className="text-th-muted" />
-        </Link>
+        <div ref={menuRef} className="relative">
+          {menuOpen && (
+            <div
+              role="menu"
+              className="absolute bottom-full left-0 right-0 mb-1.5 p-1 rounded-th-sm border border-th-border bg-th-surface shadow-lg z-40"
+            >
+              <button
+                role="menuitem"
+                onClick={handleLogoutClick}
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-th-sm text-[13px] text-th-muted hover:text-th-changes hover:bg-th-surface-alt transition-colors text-left"
+              >
+                <LogOut size={14} strokeWidth={1.75} /> Logout
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-th-sm hover:bg-th-surface-alt transition-colors text-left"
+          >
+            <div className="app-avatar w-7 h-7 text-[11px]">{initials}</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold truncate">{name || 'Loading…'}</p>
+              <p className="text-[10px] text-th-muted font-mono truncate">{email}</p>
+            </div>
+            <ChevronDown size={13} strokeWidth={1.75} className={cn('text-th-muted transition-transform', menuOpen && 'rotate-180')} />
+          </button>
+        </div>
       </div>
+      <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
     </aside>
   )
 }

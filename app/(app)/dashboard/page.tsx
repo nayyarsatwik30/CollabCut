@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, LayoutGrid, List, Plus, Upload, LogOut, Film, Check, FolderKanban } from 'lucide-react'
+import { Search, LayoutGrid, List, Plus, Upload, Film, Check, FolderKanban } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
@@ -12,7 +11,6 @@ import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { NewContentModal } from '@/components/board/NewContentModal'
 import { useSessionGuard } from '@/lib/useSessionGuard'
-import { performLogout } from '@/lib/auth'
 import { priorityMeta } from '@/lib/priority'
 import type { Project } from '@/lib/types'
 
@@ -43,7 +41,6 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
   const { session, ready } = useSessionGuard()
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
   const [view, setView] = useState<'grid' | 'list'>('grid')
@@ -152,10 +149,6 @@ export default function DashboardPage() {
     }
   }
 
-  const handleLogout = async () => {
-    await performLogout(router)
-  }
-
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.client ?? '').toLowerCase().includes(search.toLowerCase())
@@ -218,15 +211,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-            <button
-              onClick={async () => {
-                const ok = await confirm({ title: 'Log out of CollabCut?', confirmLabel: 'Yes, log out' })
-                if (ok) handleLogout()
-              }}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-th-full border border-th-border text-[13px] text-th-muted btn-press hover:text-th-changes hover:bg-th-surface-alt transition-colors"
-            >
-              <LogOut size={13} /> Logout
-            </button>
             {role !== 'editor' && (
               <button
                 onClick={() => setShowNew(true)}

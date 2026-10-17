@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { LayoutGrid, Plus, FolderKanban, Users, ChevronLeft, Film, LogOut } from 'lucide-react'
+import { LayoutGrid, Plus, FolderKanban, Users, ChevronLeft, Film } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { BoardCard, initialsFor, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
@@ -12,7 +11,6 @@ import { NewContentModal } from '@/components/board/NewContentModal'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
-import { performLogout } from '@/lib/auth'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import { priorityMeta } from '@/lib/priority'
@@ -49,7 +47,6 @@ const COLUMNS: Column[] = [
 const RESTRICTED_TO_ADMIN = ['revision', 'approved']
 
 export default function BoardPage() {
-  const router = useRouter()
   const { session, ready } = useSessionGuard()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -148,15 +145,6 @@ export default function BoardPage() {
   const handleDragEnd = () => {
     mutationRef.current.dragging = false
     setDragOverColumn(null)
-  }
-
-  const handleLogout = async () => {
-    await performLogout(router)
-  }
-
-  const handleLogoutClick = async () => {
-    const ok = await confirm({ title: 'Log out of CollabCut?', confirmLabel: 'Yes, log out' })
-    if (ok) handleLogout()
   }
 
   // Single source of truth for changing an asset's column - both drag-and-drop
@@ -371,12 +359,6 @@ export default function BoardPage() {
               <Plus size={13} /> New
             </button>
           )}
-          <button
-            onClick={handleLogoutClick}
-            className="flex items-center gap-1.5 h-8 px-3 rounded-th-full border border-th-border text-[13px] text-th-muted btn-press hover:text-th-changes hover:bg-th-surface-alt transition-colors"
-          >
-            <LogOut size={13} /> Logout
-          </button>
         </TopBar>
 
         {role === 'admin' && (

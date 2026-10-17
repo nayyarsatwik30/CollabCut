@@ -1,8 +1,5 @@
 'use client'
 
-import Link from 'next/link'
-import { useSession } from 'next-auth/react'
-import { Bell } from 'lucide-react'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 
 interface TopBarProps {
@@ -12,19 +9,13 @@ interface TopBarProps {
   before?: React.ReactNode
   /** Rendered right after the title, filling the free space (e.g. version/status chips). */
   leading?: React.ReactNode
-  /** Page-specific actions, rendered left of the shared icon cluster. */
+  /** Page-specific actions, rendered left of the theme toggle. */
   children?: React.ReactNode
-  /** false on unauthenticated pages: hides the notifications and account links. */
+  /** @deprecated No-op: account and notification controls now live in the sidebar. */
   showAccount?: boolean
 }
 
-export function TopBar({ title, icon: Icon, before, leading, children, showAccount = true }: TopBarProps) {
-  const { data: session } = useSession()
-  const name = session?.user?.name ?? session?.user?.email ?? ''
-  const initials = name
-    ? name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
-    : 'U'
-
+export function TopBar({ title, icon: Icon, before, leading, children }: TopBarProps) {
   return (
     <div className="h-13 shrink-0 bg-th-bg border-b border-th-border flex items-center gap-3 px-6 relative z-30">
       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -37,21 +28,7 @@ export function TopBar({ title, icon: Icon, before, leading, children, showAccou
       </div>
       <div className="flex items-center gap-3 shrink-0">
         {children}
-        {showAccount && (
-          <Link
-            href="/notifications"
-            aria-label="Notifications"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors"
-          >
-            <Bell size={16} strokeWidth={1.75} />
-          </Link>
-        )}
         <ThemeToggle />
-        {showAccount && (
-          <Link href="/settings" aria-label="Account settings" className="app-avatar w-8 h-8 text-[11px]">
-            {initials}
-          </Link>
-        )}
       </div>
     </div>
   )
