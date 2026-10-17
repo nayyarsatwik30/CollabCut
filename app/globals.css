@@ -117,6 +117,31 @@ aside.chrome::before {
     transparent);
 }
 
+/* Review player: an always-dark surface (video review wants a neutral dark
+   surround in both themes). Re-points the th-* tokens to the dark palette for
+   everything inside - including the already-resolved --th-surface/-text/-muted
+   aliases - so the player and transport follow it without edits. The canvas
+   and padding vars are read by VideoPlayer (defaults keep other pages as-is). */
+.player-panel {
+  color-scheme: dark;
+  background: #0a1614;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--th-radius-card);
+  --player-canvas: transparent;
+  --player-pad: 16px;
+  --th-bg: #0a1614;
+  --th-surface: #0a1614;
+  --th-surface-alt: rgba(255, 255, 255, 0.07);
+  --th-surface-hov: rgba(255, 255, 255, 0.12);
+  --th-text: #eef3f1;
+  --th-text-primary: #eef3f1;
+  --th-muted: #94ada6;
+  --th-faint: #5f7a73;
+  --th-border: rgba(255, 255, 255, 0.08);
+  --th-accent-text: #2dd4a7;
+  --th-accent-hover: #5eead4;
+}
+
 /* Rounded seam: a concave corner under the top bar's left end, so the content
    pane's top-left curves into the chrome. Only shown when a sidebar sits to
    the left; sidebar-less pages (review, public share) hide it. */
