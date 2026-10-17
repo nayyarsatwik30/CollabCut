@@ -98,12 +98,12 @@ export function Sidebar() {
         className={cn(
           'relative flex items-center gap-2.5 px-3 py-2 rounded-th-sm text-[13px] transition-colors',
           active
-            ? 'bg-th-accent/10 text-th-accent-text font-semibold'
-            : 'text-th-muted hover:text-th-text hover:bg-th-surface-alt',
+            ? 'bg-[var(--th-chrome-active)] text-white font-semibold'
+            : 'text-th-muted hover:text-white hover:bg-[var(--th-chrome-hover)]',
         )}
       >
-        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-th-accent" />}
-        <Icon size={16} strokeWidth={1.75} className={active ? 'text-th-accent' : ''} />
+        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-white" />}
+        <Icon size={16} strokeWidth={1.75} className={active ? 'text-white' : ''} />
         <span className="flex-1">{label}</span>
         {href === '/notifications' && unreadCount > 0 && (
           <span className="min-w-[16px] h-4 px-1 rounded-th-full flex items-center justify-center text-[9px] font-bold shrink-0 bg-th-accent text-th-accent-fg">
@@ -115,11 +115,14 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-[220px] h-full flex flex-col shrink-0 bg-th-sidebar border-r border-th-border">
+    <>
+    <aside className="w-[220px] h-full flex flex-col shrink-0 chrome border-r border-th-border">
       {/* Logo */}
       <div className="h-13 flex items-center px-5 border-b border-th-border shrink-0">
         <Link href="/board" className="flex items-center gap-2.5">
-          <img src="/collabcut-mark.png" alt="CollabCut" className="w-6 h-6 object-contain shrink-0" />
+          <span className="w-8 h-8 rounded-th-sm bg-white flex items-center justify-center shrink-0">
+            <img src="/collabcut-mark.png" alt="CollabCut" className="w-6 h-6 object-contain" />
+          </span>
           <span className="text-[17px] font-extrabold tracking-tight font-display">COLLABCUT</span>
         </Link>
       </div>
@@ -143,12 +146,12 @@ export function Sidebar() {
           {menuOpen && (
             <div
               role="menu"
-              className="absolute bottom-full left-0 right-0 mb-1.5 p-1 rounded-th-sm border border-th-border bg-th-surface shadow-lg z-40"
+              className="absolute bottom-full left-0 right-0 mb-1.5 p-1 rounded-th-sm border border-th-border bg-th-chrome-raised shadow-lg z-40"
             >
               <button
                 role="menuitem"
                 onClick={handleLogoutClick}
-                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-th-sm text-[13px] text-th-muted hover:text-th-changes hover:bg-th-surface-alt transition-colors text-left"
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-th-sm text-[13px] text-th-muted hover:text-th-changes hover:bg-[var(--th-chrome-hover)] transition-colors text-left"
               >
                 <LogOut size={14} strokeWidth={1.75} /> Logout
               </button>
@@ -158,7 +161,7 @@ export function Sidebar() {
             onClick={() => setMenuOpen((o) => !o)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-th-sm hover:bg-th-surface-alt transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-th-sm hover:bg-[var(--th-chrome-hover)] transition-colors text-left"
           >
             <div className="app-avatar w-7 h-7 text-[11px]">{initials}</div>
             <div className="flex-1 min-w-0">
@@ -169,7 +172,8 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-      <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
     </aside>
+      <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
+    </>
   )
 }

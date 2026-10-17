@@ -13,6 +13,8 @@ module.exports = {
         'th-surface':     'var(--th-surface)',
         'th-surface-alt': 'var(--th-surface-alt)',
         'th-sidebar':     'var(--th-bg-sidebar)',
+        'th-chrome':      'var(--th-chrome-bg)',
+        'th-chrome-raised': 'var(--th-chrome-raised)',
         'th-border':      'var(--th-border)',
         'th-text':        'var(--th-text)',
         'th-muted':       'var(--th-muted)',

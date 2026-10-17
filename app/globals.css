@@ -42,6 +42,35 @@
   --th-mono: var(--font-mono), ui-monospace, monospace;
 }
 
+/* Fixed "chrome" (sidebar + top bar): same teal in light and dark, so it sits
+   outside the toggleable palette. The .chrome class re-points the th-* tokens
+   to light-on-teal values for everything inside it, so existing utilities
+   (text-th-muted, border-th-border, bg-th-surface-alt ...) stay legible
+   without per-component overrides. Never put modals/popovers that should
+   follow the theme inside a .chrome element. */
+:root {
+  --th-chrome-bg: #0f6b5c;
+  --th-chrome-raised: #0b5448;
+  --th-chrome-active: rgba(255, 255, 255, 0.18);
+  --th-chrome-hover: rgba(255, 255, 255, 0.1);
+}
+
+.chrome {
+  background-color: var(--th-chrome-bg);
+  color: #ffffff;
+  --th-text: #ffffff;
+  --th-text-primary: #ffffff;
+  --th-muted: rgba(255, 255, 255, 0.8);
+  --th-faint: rgba(255, 255, 255, 0.68);
+  --th-border: rgba(255, 255, 255, 0.16);
+  --th-surface: var(--th-chrome-raised);
+  --th-surface-alt: rgba(255, 255, 255, 0.12);
+  --th-accent-text: #a7f3d9;
+  --th-changes: #ffb4a2;
+  --th-avatar-bg: #e6fbf5;
+  --th-avatar-fg: #0b5448;
+}
+
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
