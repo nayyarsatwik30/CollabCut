@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { LayoutGrid, Plus, FolderKanban, Users, ChevronLeft, Film } from 'lucide-react'
-import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { BoardCard, initialsFor, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
 import { BoardSkeleton } from '@/components/board/BoardSkeleton'
@@ -336,16 +335,14 @@ export default function BoardPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen overflow-hidden bg-th-bg">
-        <Sidebar />
+      <>
         <BoardSkeleton />
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-th-bg">
-      <Sidebar />
+    <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <TopBar title="Board" icon={LayoutGrid}>
           <span className="font-mono text-[11px] text-th-muted hidden md:inline">
@@ -635,6 +632,6 @@ export default function BoardPage() {
           }}
         />
       )}
-    </div>
+    </>
   )
 }

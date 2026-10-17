@@ -6,7 +6,6 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, FolderKanban, Upload, Trash2, Video, Film, CircleCheck, Clock } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { Avatar } from '@/components/ui/Badge'
 import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
@@ -326,16 +325,14 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
   if (loading) {
     return (
-      <div className="flex h-screen overflow-hidden bg-th-bg">
-        <Sidebar />
+      <>
         <ProjectPageSkeleton />
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-th-bg">
-      <Sidebar />
+    <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* Upload Modals */}
@@ -626,6 +623,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }

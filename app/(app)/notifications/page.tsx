@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell, MessageSquare, UserPlus, Upload, CircleCheck, Check, CheckCheck } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { Orb } from '@/components/ui/Orb'
@@ -99,8 +98,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-th-bg">
-      <Sidebar />
+    <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <TopBar title="Notifications" icon={Bell}>
           {notifications.some((n) => !n.read) && (
@@ -164,6 +162,6 @@ export default function NotificationsPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   )
 }

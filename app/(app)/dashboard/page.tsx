@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Search, LayoutGrid, List, Plus, Upload, Film, Check, FolderKanban } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
@@ -166,20 +165,18 @@ export default function DashboardPage() {
 
   if (authError) {
     return (
-      <div className="flex h-screen overflow-hidden bg-th-bg">
-        <Sidebar />
+      <>
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="max-w-sm px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
             {authError}
           </div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-th-bg">
-      <Sidebar />
+    <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         <TopBar title="Projects" icon={LayoutGrid}>
@@ -399,6 +396,6 @@ export default function DashboardPage() {
         </div>
       </div>
       <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
-    </div>
+    </>
   )
 }

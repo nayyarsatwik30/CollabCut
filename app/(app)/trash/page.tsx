@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { Trash2, RotateCcw, X, FolderKanban, Film } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -94,8 +93,7 @@ export default function TrashPage() {
     }
 
     return (
-        <div className="flex h-screen overflow-hidden bg-th-bg">
-            <Sidebar />
+        <>
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                 <TopBar title="Recycle Bin" icon={Trash2} />
 
@@ -161,6 +159,6 @@ export default function TrashPage() {
                     )}
                 </div>
             </div>
-        </div>
+        </>
     )
 }

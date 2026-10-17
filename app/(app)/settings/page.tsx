@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { LogOut, Copy, Settings } from 'lucide-react'
-import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { useSession } from 'next-auth/react'
@@ -105,18 +104,16 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen overflow-hidden bg-th-bg">
-        <Sidebar />
+      <>
         <div className="flex-1 flex items-center justify-center">
           <Orb state="composing" size={64} label="Loading" />
         </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-th-bg">
-      <Sidebar />
+    <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <TopBar title="Settings" icon={Settings} />
 
@@ -240,7 +237,7 @@ export default function SettingsPage() {
       </div>
 
       <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
-    </div>
+    </>
   )
 }
 

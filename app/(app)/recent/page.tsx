@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { Clock, MessageSquare } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -67,8 +66,7 @@ export default function RecentPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-th-bg">
-      <Sidebar />
+    <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <TopBar title="Recent Highlights" icon={Clock} />
 
@@ -109,6 +107,6 @@ export default function RecentPage() {
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }
