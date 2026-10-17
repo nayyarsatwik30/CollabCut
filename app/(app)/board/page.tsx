@@ -532,23 +532,42 @@ export default function BoardPage() {
         ) : (
           <>
             {/* Stats row */}
-            <div className="shrink-0 px-6 py-4 border-b border-th-border flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-th bg-th-surface border border-th-border">
-                <span className="text-[15px] font-extrabold">{assets.length}</span>
-                <span className="text-[11px] text-th-muted">total</span>
-              </div>
-              <div className="w-px h-6 bg-th-border mx-1" />
-              {COLUMNS.map((col) => (
-                <div
-                  key={col.key}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-full"
-                  style={{ background: `color-mix(in srgb, ${col.color} 10%, transparent)` }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: col.color }} />
-                  <span className="text-[11px] font-medium" style={{ color: col.color }}>{col.label}</span>
-                  <span className="font-mono text-[11px] text-th-muted">{grouped[col.key]?.length ?? 0}</span>
+            <div className="shrink-0 px-6 py-4 border-b border-th-border">
+              <div
+                className="inline-flex items-center flex-wrap max-w-full"
+                style={{
+                  padding: 6,
+                  background: 'var(--th-surface-alt)',
+                  border: '1px solid var(--th-border)',
+                  borderRadius: 16,
+                  boxShadow: 'var(--th-shadow-card)',
+                }}
+              >
+                <div className="flex items-center" style={{ gap: 8, padding: '9px 16px' }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--th-text)' }}>{assets.length}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--th-muted)' }}>total</span>
                 </div>
-              ))}
+                <div style={{ width: 1, height: 20, background: 'var(--th-border)', margin: '0 2px' }} />
+                {COLUMNS.map((col) => (
+                  <div
+                    key={col.key}
+                    className="inline-flex items-center"
+                    style={{
+                      gap: 7,
+                      padding: '8px 14px',
+                      borderRadius: 11,
+                      border: '1px solid transparent',
+                      background: 'transparent',
+                      color: 'var(--th-muted)',
+                      transition: 'background-color 160ms ease, color 160ms ease, border-color 160ms ease',
+                    }}
+                  >
+                    <span className="shrink-0" style={{ width: 7, height: 7, borderRadius: '50%', background: col.color }} />
+                    <span style={{ fontSize: 12.5, fontWeight: 700 }}>{col.label}</span>
+                    <span style={{ fontFamily: 'var(--th-mono)', fontSize: 11, opacity: 0.75 }}>{grouped[col.key]?.length ?? 0}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Columns */}
