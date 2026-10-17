@@ -87,11 +87,34 @@
   backdrop-filter: blur(6px);
 }
 aside.chrome { z-index: 20; }
-aside.chrome::after {
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08), 4px 0 24px rgba(0, 0, 0, var(--th-chrome-shadow-a));
+/* Edge fade: instead of a cast shadow (a dark shadow vanishes on a dark page),
+   a soft tint of the theme's text colour bleeds onto the content next to the
+   chrome - it darkens the ivory page and lifts the dark-teal one. No strokes. */
+aside.chrome::before,
+.chrome-top::before {
+  content: '';
+  position: absolute;
+  pointer-events: none;
 }
-.chrome-top::after {
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08), 0 4px 24px rgba(0, 0, 0, var(--th-chrome-shadow-a));
+aside.chrome::before {
+  left: 100%;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  background: linear-gradient(to right,
+    color-mix(in srgb, var(--th-edge-text) 6%, transparent),
+    color-mix(in srgb, var(--th-edge-text) 2.5%, transparent) 35%,
+    transparent);
+}
+.chrome-top::before {
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 40px;
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--th-edge-text) 6%, transparent),
+    color-mix(in srgb, var(--th-edge-text) 2.5%, transparent) 35%,
+    transparent);
 }
 
 /* Rounded seam: a concave corner under the top bar's left end, so the content
@@ -115,7 +138,7 @@ aside.chrome ~ * > .chrome-top > .topbar-seam {
   color-scheme: light;
   /* Chrome is 92% teal over this theme's page bg; the seam corner matches it. */
   --th-chrome-seam: #227668;
-  --th-chrome-shadow-a: 0.18;
+  --th-edge-text: #1a1f1d;
   --th-bg: #f7f5f0;
   --th-bg-elevated: #fdfcf8;
   --th-bg-sidebar: #f1eee7;
@@ -137,7 +160,7 @@ aside.chrome ~ * > .chrome-top > .topbar-seam {
 :root[data-theme='dark'] {
   color-scheme: dark;
   --th-chrome-seam: #0f6557;
-  --th-chrome-shadow-a: 0.25;
+  --th-edge-text: #eef3f1;
   --th-bg: #0d1f1c;
   --th-bg-elevated: #162b27;
   --th-bg-sidebar: #112420;
