@@ -10,8 +10,9 @@
 
 :root {
   /* shared across both modes */
-  --th-accent: #2dd4a7;
-  --th-accent-fg: #06231c;
+  /* TEMP: neutralized for the white strip-down pass — was teal (#2dd4a7 / #06231c) */
+  --th-accent: #1a1a1a;
+  --th-accent-fg: #ffffff;
   --th-radius-card: 12px;
   --th-radius-button: 999px;
   --th-radius-input: 8px;
@@ -25,7 +26,8 @@
   --th-resolved: #10b981;
   --th-changes: #ef6c4d;
   --th-info: #3b82f6;
-  --th-avatar-bg: #0f9d7a;
+  /* TEMP: avatar was teal (#0f9d7a) */
+  --th-avatar-bg: #6b7280;
   --th-avatar-fg: #ffffff;
 
   /* names the Tailwind utilities resolve through */
@@ -49,10 +51,11 @@
    without per-component overrides. Never put modals/popovers that should
    follow the theme inside a .chrome element. */
 :root {
-  --th-chrome-bg: #0f6b5c;
-  --th-chrome-raised: #0b5448;
-  --th-chrome-active: rgba(255, 255, 255, 0.18);
-  --th-chrome-hover: rgba(255, 255, 255, 0.1);
+  /* TEMP: was teal (#0f6b5c / #0b5448) — neutral light gray for the white strip-down pass */
+  --th-chrome-bg: #ececea;
+  --th-chrome-raised: #e2e2df;
+  --th-chrome-active: rgba(0, 0, 0, 0.08);
+  --th-chrome-hover: rgba(0, 0, 0, 0.05);
   --th-seam-r: 20px;
 }
 
@@ -62,18 +65,19 @@
 .chrome {
   position: relative;
   isolation: isolate;
-  color: #ffffff;
-  --th-text: #ffffff;
-  --th-text-primary: #ffffff;
-  --th-muted: rgba(255, 255, 255, 0.86);
-  --th-faint: rgba(255, 255, 255, 0.68);
-  --th-border: rgba(255, 255, 255, 0.16);
+  /* TEMP: chrome was dark teal with white text; now light neutral gray with dark text */
+  color: #1a1a1a;
+  --th-text: #1a1a1a;
+  --th-text-primary: #1a1a1a;
+  --th-muted: rgba(26, 26, 26, 0.64);
+  --th-faint: rgba(26, 26, 26, 0.45);
+  --th-border: rgba(26, 26, 26, 0.12);
   --th-surface: var(--th-chrome-raised);
-  --th-surface-alt: rgba(255, 255, 255, 0.12);
-  --th-accent-text: #a7f3d9;
-  --th-changes: #ffb4a2;
-  --th-avatar-bg: #e6fbf5;
-  --th-avatar-fg: #0b5448;
+  --th-surface-alt: rgba(26, 26, 26, 0.06);
+  --th-accent-text: #1a1a1a;
+  --th-changes: #ef6c4d;
+  --th-avatar-bg: #6b7280;
+  --th-avatar-fg: #ffffff;
 }
 
 .chrome::after {
@@ -82,9 +86,8 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: rgba(15, 107, 92, 0.92);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  /* TEMP: dropped the glass/blur — solid neutral fill instead of translucent teal */
+  background: var(--th-chrome-bg);
 }
 aside.chrome { z-index: 20; }
 /* Edge fade: instead of a cast shadow (a dark shadow vanishes on a dark page),
@@ -124,22 +127,23 @@ aside.chrome::before {
    and padding vars are read by VideoPlayer (defaults keep other pages as-is). */
 .player-panel {
   color-scheme: dark;
-  background: #0a1614;
+  /* TEMP: was teal-black (#0a1614) with teal accents — neutral charcoal for the strip-down pass */
+  background: #121212;
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--th-radius-card);
   --player-canvas: transparent;
   --player-pad: 16px;
-  --th-bg: #0a1614;
-  --th-surface: #0a1614;
+  --th-bg: #121212;
+  --th-surface: #121212;
   --th-surface-alt: rgba(255, 255, 255, 0.07);
   --th-surface-hov: rgba(255, 255, 255, 0.12);
-  --th-text: #eef3f1;
-  --th-text-primary: #eef3f1;
-  --th-muted: #94ada6;
-  --th-faint: #5f7a73;
+  --th-text: #f0f0f0;
+  --th-text-primary: #f0f0f0;
+  --th-muted: #a3a3a3;
+  --th-faint: #737373;
   --th-border: rgba(255, 255, 255, 0.08);
-  --th-accent-text: #2dd4a7;
-  --th-accent-hover: #5eead4;
+  --th-accent-text: #f0f0f0;
+  --th-accent-hover: #ffffff;
 }
 
 /* Rounded seam: a concave corner under the top bar's left end, so the content
@@ -177,44 +181,49 @@ aside.chrome ~ * > .chrome-top > .topbar-seam {
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
-  /* Chrome is 92% teal over this theme's page bg; the seam corner matches it. */
-  --th-chrome-seam: #227668;
+  /* TEMP: chrome is now solid neutral gray, no opacity blend — seam just matches it */
+  --th-chrome-seam: #ececea;
   --th-edge-text: #1a1f1d;
-  --th-bg: #f7f5f0;
-  --th-bg-elevated: #fdfcf8;
-  --th-bg-sidebar: #f1eee7;
-  --th-bg-hover: #ece8df;
+  /* TEMP: was warm cream (#f7f5f0 / #fdfcf8 / #f1eee7) — flattened to white for the strip-down pass */
+  --th-bg: #ffffff;
+  --th-bg-elevated: #ffffff;
+  --th-bg-sidebar: #f5f5f4;
+  --th-bg-hover: #f0f0ef;
   --th-bg-card-hover: #ffffff;
-  --th-surface-alt: #ece8df;
-  --th-surface-hov: #e3dfd4;
-  --th-text-primary: #1a1f1d;
-  --th-text-secondary: #5f665f;
-  --th-faint: #8f958d;
-  --th-border: #e3ded2;
-  --th-accent-hover: #22b78f;
-  --th-accent-text: #0a7a5e;
-  --th-shadow-card: 0 1px 2px rgba(40, 36, 20, 0.07);
-  --th-shadow-card-hover: 0 6px 18px rgba(40, 36, 20, 0.11);
-  --th-shadow-window: 0 24px 70px rgba(40, 36, 20, 0.12);
+  --th-surface-alt: #f5f5f4;
+  --th-surface-hov: #ececea;
+  --th-text-primary: #1a1a1a;
+  --th-text-secondary: #5f5f5d;
+  --th-faint: #8f8f8c;
+  --th-border: #e3e3e0;
+  /* TEMP: accent hover/text were teal (#22b78f / #0a7a5e) */
+  --th-accent-hover: #3a3a3a;
+  --th-accent-text: #1a1a1a;
+  --th-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.07);
+  --th-shadow-card-hover: 0 6px 18px rgba(0, 0, 0, 0.11);
+  --th-shadow-window: 0 24px 70px rgba(0, 0, 0, 0.12);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --th-chrome-seam: #0f6557;
+  /* TEMP: chrome is now solid neutral gray in both themes — seam matches the light-mode chrome */
+  --th-chrome-seam: #ececea;
   --th-edge-text: #eef3f1;
-  --th-bg: #0d1f1c;
-  --th-bg-elevated: #162b27;
-  --th-bg-sidebar: #112420;
-  --th-bg-hover: #1d3732;
-  --th-bg-card-hover: #1b332e;
-  --th-surface-alt: #1d3732;
-  --th-surface-hov: #26443e;
-  --th-text-primary: #eef3f1;
-  --th-text-secondary: #94ada6;
-  --th-faint: #5f7a73;
-  --th-border: #254039;
-  --th-accent-hover: #5eead4;
-  --th-accent-text: #2dd4a7;
+  /* TEMP: was dark teal-green (#0d1f1c / #162b27 / #112420) — neutral charcoal instead */
+  --th-bg: #141414;
+  --th-bg-elevated: #1e1e1e;
+  --th-bg-sidebar: #181818;
+  --th-bg-hover: #262626;
+  --th-bg-card-hover: #232323;
+  --th-surface-alt: #262626;
+  --th-surface-hov: #2e2e2e;
+  --th-text-primary: #f0f0f0;
+  --th-text-secondary: #a3a3a3;
+  --th-faint: #737373;
+  --th-border: #333333;
+  /* TEMP: accent hover/text were teal (#5eead4 / #2dd4a7) */
+  --th-accent-hover: #d4d4d4;
+  --th-accent-text: #f0f0f0;
   --th-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
   --th-shadow-card-hover: 0 8px 22px rgba(0, 0, 0, 0.4);
   --th-shadow-window: 0 24px 70px rgba(0, 0, 0, 0.4);
