@@ -37,6 +37,7 @@ const buttonVariants = cva(
           'hover:bg-th-changes/10 hover:border-th-changes/60 hover:-translate-y-px',
       },
       size: {
+        xs: 'h-7 px-3 text-[11px] gap-1.5',
         sm: 'h-8 px-3.5 text-[12px]',
         md: 'h-10 px-4.5 text-[14px]',
         lg: 'h-12 px-6 text-[15px]',
