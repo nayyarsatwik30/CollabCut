@@ -119,12 +119,12 @@ export function Sidebar() {
           'relative flex items-center py-2 rounded-th-sm text-[13px] transition-colors',
           collapsed ? 'justify-center px-0' : 'gap-2.5 px-3',
           active
-            ? 'bg-[var(--th-chrome-active)] text-white font-semibold'
-            : 'text-th-muted hover:text-white hover:bg-[var(--th-chrome-hover)]',
+            ? 'bg-[var(--th-chrome-active)] text-[var(--th-chrome-text)] font-semibold'
+            : 'text-th-muted hover:text-[var(--th-chrome-text)] hover:bg-[var(--th-chrome-hover)]',
         )}
       >
-        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-white" />}
-        <Icon size={16} strokeWidth={1.75} className={active ? 'text-white' : ''} />
+        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-[var(--th-chrome-text)]" />}
+        <Icon size={16} strokeWidth={1.75} className={active ? 'text-[var(--th-chrome-text)]' : ''} />
         <span className={cn('overflow-hidden whitespace-nowrap transition-opacity duration-200', collapsed ? 'w-0 opacity-0' : 'flex-1 opacity-100')}>{label}</span>
         {href === '/notifications' && unreadCount > 0 && collapsed && (
           <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-th-accent" />
@@ -155,7 +155,7 @@ export function Sidebar() {
             onClick={toggleCollapsed}
             aria-label="Collapse sidebar"
             title="Collapse sidebar"
-            className="ml-auto w-7 h-7 rounded-th-sm flex items-center justify-center text-th-muted hover:text-white hover:bg-[var(--th-chrome-hover)] transition-colors shrink-0"
+            className="ml-auto w-7 h-7 rounded-th-sm flex items-center justify-center text-th-muted hover:text-[var(--th-chrome-text)] hover:bg-[var(--th-chrome-hover)] transition-colors shrink-0"
           >
             <PanelLeftClose size={16} strokeWidth={1.75} />
           </button>
@@ -169,7 +169,7 @@ export function Sidebar() {
             onClick={toggleCollapsed}
             aria-label="Expand sidebar"
             title="Expand sidebar"
-            className="mb-2 mt-1 w-full h-8 rounded-th-sm flex items-center justify-center text-th-muted hover:text-white hover:bg-[var(--th-chrome-hover)] transition-colors"
+            className="mb-2 mt-1 w-full h-8 rounded-th-sm flex items-center justify-center text-th-muted hover:text-[var(--th-chrome-text)] hover:bg-[var(--th-chrome-hover)] transition-colors"
           >
             <PanelLeftOpen size={16} strokeWidth={1.75} />
           </button>

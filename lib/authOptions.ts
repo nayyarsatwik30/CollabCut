@@ -9,7 +9,7 @@ import { verifyPassword } from './password'
 // login page maps to a "please verify your email" message + resend button.
 export const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED'
 
-type SessionToken = { id?: string; sessionToken?: string; valid?: boolean }
+type SessionToken = { id?: string; sessionToken?: string; valid?: boolean; checkFailed?: boolean }
 
 export const authOptions: AuthOptions = {
   session: { strategy: 'jwt' },
@@ -69,9 +69,11 @@ export const authOptions: AuthOptions = {
       // Runs on every request that reads the session (useSession polling and
       // every requireAuth -> getServerSession), so a login elsewhere
       // invalidates this JWT on its very next request. `valid` is recomputed
-      // each time rather than latched: a transient DB error fails this one
-      // request closed without destroying a session that is still the
-      // current one (throwing here would make next-auth clear the cookie).
+      // each time rather than latched. A DB error is NOT a mismatch: it fails
+      // this one request closed (valid=false) but sets checkFailed, which the
+      // session callback uses to skip the "signed in elsewhere" flag, so a
+      // transient hiccup doesn't sign anyone out. (Throwing here would make
+      // next-auth clear the cookie.)
       // JWTs issued before this check existed have no sessionToken and are
       // rejected, i.e. everyone signs in once more after the deploy.
       try {
@@ -81,9 +83,11 @@ export const authOptions: AuthOptions = {
         )
         const current = result.rows[0]?.current_session_token as string | null | undefined
         t.valid = !!t.sessionToken && !!current && current === t.sessionToken
+        t.checkFailed = false
       } catch (err) {
         console.error('session validity check failed', err)
         t.valid = false
+        t.checkFailed = true
       }
       return t
     },
@@ -91,8 +95,14 @@ export const authOptions: AuthOptions = {
       // A revoked/invalid session is returned without a user and flagged, so
       // requireAuth 401s (with X-Auth-Reason) and AuthProvider sends the
       // client to the login page with the "logged in elsewhere" message.
-      if ((token as SessionToken).valid !== true) {
-        return { expires: session.expires, invalid: true } as typeof session
+      // When the DB check itself failed there's no confirmed revocation:
+      // still no user (this request fails closed), but no `invalid` flag, so
+      // the client doesn't sign out and the next request re-checks.
+      const t = token as SessionToken
+      if (t.valid !== true) {
+        return (t.checkFailed
+          ? { expires: session.expires }
+          : { expires: session.expires, invalid: true }) as typeof session
       }
       if (session.user) (session.user as { id?: string }).id = token.id as string
       return session

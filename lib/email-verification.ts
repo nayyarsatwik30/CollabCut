@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'crypto'
 import nodemailer from 'nodemailer'
+import { waitUntil } from '@vercel/functions'
 
 export const VERIFICATION_TTL_HOURS = 24
 // A resend within this window of the last send is silently skipped, so the
@@ -27,6 +28,16 @@ export function appUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
 }
 
+// Exactly one plain address: no whitespace, list separators (, ;), display-name
+// or quoting characters. Nodemailer treats a "to" string containing commas as
+// several recipients, so anything looser would let a crafted signup email use
+// our Gmail account as a spam relay.
+const SINGLE_ADDRESS = /^[^\s@,;:<>()[\]\\"']+@[^\s@,;:<>()[\]\\"']+\.[^\s@,;:<>()[\]\\"']+$/
+
+export function isValidEmail(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= 254 && SINGLE_ADDRESS.test(value)
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 }
@@ -35,6 +46,8 @@ function escapeHtml(value: string): string {
 // message; callers decide whether that's fatal (signup treats it as
 // recoverable via resend).
 export async function sendVerificationEmail(to: string, name: string, token: string): Promise<void> {
+  if (!isValidEmail(to)) throw new Error('Refusing to send: recipient is not a single plain email address')
+
   const user = process.env.GMAIL_USER
   const pass = process.env.GMAIL_APP_PASSWORD
   if (!user || !pass) throw new Error('GMAIL_USER / GMAIL_APP_PASSWORD are not configured')
@@ -56,4 +69,17 @@ export async function sendVerificationEmail(to: string, name: string, token: str
       `<p style="color:#666;font-size:12px">This link expires in ${VERIFICATION_TTL_HOURS} hours. ` +
       `If you didn't sign up, ignore this email.</p>`,
   })
+}
+
+// Sends without making the caller wait, so a public endpoint's response timing
+// doesn't depend on whether an email was actually sent. Failures are logged,
+// never thrown. waitUntil keeps the serverless invocation alive until the SMTP
+// send finishes (a bare un-awaited promise can be frozen once the response is
+// out); outside Vercel it is a no-op and the promise just runs.
+export function sendVerificationEmailInBackground(to: string, name: string, token: string): void {
+  waitUntil(
+    sendVerificationEmail(to, name, token).catch((err) => {
+      console.error('background verification email failed', err)
+    })
+  )
 }

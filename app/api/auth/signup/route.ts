@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { hashPassword } from '@/lib/password'
 import { DEFAULT_WORKSPACE_PLAN_ID } from '@/lib/storage-config'
-import { createVerificationToken, sendVerificationEmail } from '@/lib/email-verification'
+import { createVerificationToken, isValidEmail, sendVerificationEmail } from '@/lib/email-verification'
 
 // Creates the profile + auth_credentials + workspace role in one CloudClusters
 // transaction, so a failure partway through (bad invite code, duplicate
@@ -29,7 +29,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
   }
 
+  // Validated before any DB write: the address is later used as the mail "to"
+  // field, and a comma-separated value would mail several recipients.
   const normalizedEmail = String(email).trim().toLowerCase()
+  if (!isValidEmail(normalizedEmail)) {
+    return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
+  }
   const client = await migrationDb.connect()
 
   try {

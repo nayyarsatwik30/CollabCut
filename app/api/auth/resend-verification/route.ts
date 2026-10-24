@@ -4,14 +4,16 @@ import {
   RESEND_COOLDOWN_SECONDS,
   VERIFICATION_TTL_HOURS,
   createVerificationToken,
-  sendVerificationEmail,
+  sendVerificationEmailInBackground,
 } from '@/lib/email-verification'
 
 // Public endpoint, so it always answers { ok: true } - whether or not the
 // email exists, is already verified, or was skipped by the cooldown - to avoid
 // leaking which emails have accounts. The cooldown is enforced in SQL: the
 // previous send time is expires - TTL, and the UPDATE only matches (and
-// returns a row to email) once RESEND_COOLDOWN_SECONDS has passed.
+// returns a row to email) once RESEND_COOLDOWN_SECONDS has passed. The email
+// is sent in the background, never awaited, so response timing is the same
+// whether or not an account matched.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
       [email, hash, expires, VERIFICATION_TTL_HOURS, RESEND_COOLDOWN_SECONDS]
     )
     const row = result.rows[0]
-    if (row) await sendVerificationEmail(email, row.name, token)
+    if (row) sendVerificationEmailInBackground(email, row.name, token)
   } catch (err) {
     console.error('resend-verification failed', err)
   }
