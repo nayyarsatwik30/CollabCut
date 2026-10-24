@@ -18,13 +18,14 @@ async function requireAdminWorkspace(userId: string) {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // The editor id comes from the URL, so it's only trusted once it's a
-// well-formed UUID that already holds a membership in the caller's workspace.
+// well-formed UUID that already holds an editor membership in the caller's
+// workspace.
 // Without this, the profile lookup (GET) and the assignment (POST) would work
 // for any user id in the system, in any workspace.
-async function isWorkspaceMember(userId: string, workspaceId: string) {
+async function isWorkspaceEditor(userId: string, workspaceId: string) {
   if (!UUID_RE.test(userId)) return false
   const { rows } = await migrationDb.query(
-    `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 LIMIT 1`,
+    `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 AND role = 'editor' LIMIT 1`,
     [workspaceId, userId]
   )
   return rows.length > 0
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest, { params }: { params: { editorId: st
   const auth = await requireAdminWorkspace(authResult.user.id)
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-  if (!(await isWorkspaceMember(params.editorId, auth.workspaceId))) {
+  if (!(await isWorkspaceEditor(params.editorId, auth.workspaceId))) {
     return NextResponse.json({ error: 'Editor not found in your workspace' }, { status: 404 })
   }
 
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest, { params }: { params: { editorId: s
   const { assetId } = await req.json()
   if (!assetId) return NextResponse.json({ error: 'assetId required' }, { status: 400 })
 
-  if (!(await isWorkspaceMember(params.editorId, auth.workspaceId))) {
+  if (!(await isWorkspaceEditor(params.editorId, auth.workspaceId))) {
     return NextResponse.json({ error: 'Editor not found in your workspace' }, { status: 404 })
   }
 
