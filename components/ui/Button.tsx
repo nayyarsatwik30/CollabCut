@@ -32,6 +32,9 @@ const buttonVariants = cva(
         danger:
           'bg-th-changes text-white shadow-[0_1px_2px_rgba(0,0,0,0.08)] ' +
           'hover:shadow-[0_4px_12px_rgba(0,0,0,0.16)] hover:-translate-y-px hover:brightness-110',
+        dangerOutline:
+          'text-th-changes border border-th-changes/40 ' +
+          'hover:bg-th-changes/10 hover:border-th-changes/60 hover:-translate-y-px',
       },
       size: {
         sm: 'h-8 px-3.5 text-[12px]',
