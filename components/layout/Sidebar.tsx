@@ -140,7 +140,7 @@ export function Sidebar() {
 
   return (
     <>
-    <aside className={cn('h-full flex flex-col shrink-0 chrome transition-[width] duration-200 ease-out', collapsed ? 'w-[68px]' : 'w-[220px]')}>
+    <aside className={cn('h-full flex flex-col shrink-0 chrome border-r border-th-border transition-[width] duration-200 ease-out', collapsed ? 'w-[68px]' : 'w-[220px]')}>
       <span aria-hidden className="sidebar-seam-bottom" />
       {/* Logo + collapse toggle */}
       <div className={cn('h-13 flex items-center shrink-0', collapsed ? 'justify-center px-0' : 'px-5')}>

@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { TopBar } from '@/components/layout/TopBar'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { Orb } from '@/components/ui/Orb'
+import { Button } from '@/components/ui/Button'
 
 interface Notification {
   id: string
@@ -106,12 +107,9 @@ export default function NotificationsPage() {
               <span className="font-mono text-[11px] text-th-muted">
                 {notifications.filter((n) => !n.read).length} unread
               </span>
-              <button
-                onClick={markAllAsRead}
-                className="flex items-center gap-1.5 h-7 px-3 rounded-th-full border border-th-border text-[12px] text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors btn-press"
-              >
+              <Button onClick={markAllAsRead} variant="secondary" size="sm">
                 <CheckCheck size={13} /> Mark all as read
-              </button>
+              </Button>
             </>
           )}
         </TopBar>

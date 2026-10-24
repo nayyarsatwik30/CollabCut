@@ -33,7 +33,7 @@ export function Modal({ open, onClose, title, children, width = '360px', classNa
       onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
 
       {/* Panel */}
       <div

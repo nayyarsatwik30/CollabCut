@@ -14,6 +14,7 @@ import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import { priorityMeta } from '@/lib/priority'
 import { Orb } from '@/components/ui/Orb'
+import { Button, ButtonIcon } from '@/components/ui/Button'
 
 type BoardView = 'board' | 'projects' | 'editors'
 
@@ -349,12 +350,9 @@ export default function BoardPage() {
             {role === 'editor' ? 'Showing assets assigned to you' : 'Showing all workspace assets'}
           </span>
           {role === 'admin' && (
-            <button
-              onClick={() => setShowNewContent(true)}
-              className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
-            >
+            <Button onClick={() => setShowNewContent(true)} size="sm">
               <Plus size={13} /> New
-            </button>
+            </Button>
           )}
         </TopBar>
 
@@ -410,12 +408,14 @@ export default function BoardPage() {
           <div className="flex-1 overflow-y-auto p-6">
             {selectedEditor ? (
               <div>
-                <button
+                <Button
                   onClick={() => { setSelectedEditor(null); setEditorAssets(null) }}
-                  className="flex items-center gap-1.5 mb-4 h-8 px-3 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-muted hover:text-th-text transition-colors btn-press"
+                  variant="secondary" size="sm" className="mb-4"
                 >
-                  <ChevronLeft size={13} /> All editors
-                </button>
+                  <ButtonIcon className="group-hover:-translate-x-0.5 group-hover:translate-y-0 group-active:-translate-x-1">
+                    <ChevronLeft size={13} />
+                  </ButtonIcon> All editors
+                </Button>
                 <div className="flex items-center gap-2.5 mb-4">
                   <span
                     className="app-avatar w-8 h-8 text-[11px]"

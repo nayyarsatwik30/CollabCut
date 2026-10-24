@@ -3,6 +3,7 @@
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { Button, ButtonIcon } from '@/components/ui/Button'
 
 // Email-based password reset used to run entirely through Supabase Auth,
 // which no longer backs login (NextAuth checks auth_credentials in
@@ -25,10 +26,13 @@ export default function ForgotPasswordPage() {
           <p className="text-th-muted text-[13px] mb-8">
             Email password reset is temporarily unavailable. Please contact your workspace admin or CollabCut support and we'll help you get back into your account.
           </p>
-          <Link href="/auth/login"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-th-full border border-th-border text-th-text font-semibold text-[14px] btn-press hover:bg-th-surface-alt transition-colors">
-            <ArrowLeft size={14} /> Back to login
-          </Link>
+          <Button asChild variant="secondary" size="lg" className="w-full">
+            <Link href="/auth/login">
+              <ButtonIcon className="group-hover:-translate-x-0.5 group-hover:translate-y-0 group-active:-translate-x-1">
+                <ArrowLeft size={14} />
+              </ButtonIcon> Back to login
+            </Link>
+          </Button>
         </div>
       </div>
     </div>

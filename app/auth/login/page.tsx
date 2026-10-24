@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { signIn } from 'next-auth/react'
+import { Button, ButtonIcon } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -101,10 +103,9 @@ export default function LoginPage() {
             <div className="mb-4 px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
               {error}
               {unverified && (
-                <button type="button" onClick={resendVerification} disabled={resendState !== 'idle'}
-                  className="block mt-2 text-th-accent-text hover:underline disabled:opacity-60 disabled:no-underline">
+                <Button type="button" variant="secondary" size="xs" onClick={resendVerification} disabled={resendState !== 'idle'} className="mt-2">
                   {resendState === 'sent' ? 'Verification email sent - check your inbox' : resendState === 'sending' ? 'Sending…' : 'Resend verification email'}
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -126,17 +127,18 @@ export default function LoginPage() {
                 <input name="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="••••••••"
                   onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                   className="w-full px-3.5 py-2.5 pr-10 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors" />
-                <button type="button" onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-th-muted hover:text-th-text transition-colors">
+                <IconButton type="button" label={showPass ? 'Hide password' : 'Show password'}
+                  size="sm" variant="ghost"
+                  onClick={() => setShowPass(!showPass)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2">
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
+                </IconButton>
               </div>
             </div>
 
-            <button onClick={handleSubmit} disabled={loading}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50">
-              {loading ? 'Logging in…' : <><span>Log in</span> <ArrowRight size={14} /></>}
-            </button>
+            <Button onClick={handleSubmit} loading={loading} size="lg" className="w-full">
+              {loading ? 'Logging in…' : <><span>Log in</span> <ButtonIcon><ArrowRight size={14} /></ButtonIcon></>}
+            </Button>
           </div>
 
           <div className="mt-6 pt-6 border-t border-th-border text-center">

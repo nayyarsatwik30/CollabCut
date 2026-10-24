@@ -10,8 +10,9 @@
 
 :root {
   /* shared across both modes */
-  --th-accent: #2dd4a7;
-  --th-accent-fg: #06231c;
+  /* TEMP: neutralized for the white strip-down pass — was teal (#2dd4a7 / #06231c) */
+  --th-accent: #1a1a1a;
+  --th-accent-fg: #ffffff;
   --th-radius-card: 12px;
   --th-radius-button: 999px;
   --th-radius-input: 8px;
@@ -25,7 +26,8 @@
   --th-resolved: #10b981;
   --th-changes: #ef6c4d;
   --th-info: #3b82f6;
-  --th-avatar-bg: #0f9d7a;
+  /* TEMP: avatar was teal (#0f9d7a) */
+  --th-avatar-bg: #6b7280;
   --th-avatar-fg: #ffffff;
 
   /* names the Tailwind utilities resolve through */
@@ -42,17 +44,19 @@
   --th-mono: var(--font-mono), ui-monospace, monospace;
 }
 
-/* Fixed "chrome" (sidebar + top bar): same teal in light and dark, so it sits
-   outside the toggleable palette. The .chrome class re-points the th-* tokens
-   to light-on-teal values for everything inside it, so existing utilities
-   (text-th-muted, border-th-border, bg-th-surface-alt ...) stay legible
-   without per-component overrides. Never put modals/popovers that should
-   follow the theme inside a .chrome element. */
+/* Fixed "chrome" (sidebar + top bar). Used to be the same teal in light and
+   dark, sitting outside the toggleable palette - now that it's neutral gray
+   instead of a brand color, that no longer works: a light-gray chrome next
+   to a near-black dark-mode canvas just reads as broken, not distinct. So
+   --th-chrome-* and the .chrome text/border tokens below are theme-aware
+   (set per data-theme block further down) - light gets the original muted
+   gray-on-white, dark gets a raised-charcoal panel that still sits apart
+   from the page the way the light sidebar does. The .chrome class re-points
+   the th-* tokens to those chrome values for everything inside it, so
+   existing utilities (text-th-muted, border-th-border, bg-th-surface-alt...)
+   stay legible without per-component overrides. Never put modals/popovers
+   that should follow the theme inside a .chrome element. */
 :root {
-  --th-chrome-bg: #0f6b5c;
-  --th-chrome-raised: #0b5448;
-  --th-chrome-active: rgba(255, 255, 255, 0.18);
-  --th-chrome-hover: rgba(255, 255, 255, 0.1);
   --th-seam-r: 20px;
 }
 
@@ -62,18 +66,20 @@
 .chrome {
   position: relative;
   isolation: isolate;
-  color: #ffffff;
-  --th-text: #ffffff;
-  --th-text-primary: #ffffff;
-  --th-muted: rgba(255, 255, 255, 0.86);
-  --th-faint: rgba(255, 255, 255, 0.68);
-  --th-border: rgba(255, 255, 255, 0.16);
+  /* Text/border/surface values come from the theme-aware --th-chrome-*
+     tokens set in the data-theme blocks below, not hardcoded here. */
+  color: var(--th-chrome-text);
+  --th-text: var(--th-chrome-text);
+  --th-text-primary: var(--th-chrome-text);
+  --th-muted: var(--th-chrome-muted);
+  --th-faint: var(--th-chrome-faint);
+  --th-border: var(--th-chrome-border);
   --th-surface: var(--th-chrome-raised);
-  --th-surface-alt: rgba(255, 255, 255, 0.12);
-  --th-accent-text: #a7f3d9;
-  --th-changes: #ffb4a2;
-  --th-avatar-bg: #e6fbf5;
-  --th-avatar-fg: #0b5448;
+  --th-surface-alt: var(--th-chrome-surface-alt);
+  --th-accent-text: var(--th-chrome-text);
+  --th-changes: #ef6c4d;
+  --th-avatar-bg: #6b7280;
+  --th-avatar-fg: #ffffff;
 }
 
 .chrome::after {
@@ -82,9 +88,8 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: rgba(15, 107, 92, 0.92);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  /* TEMP: dropped the glass/blur — solid neutral fill instead of translucent teal */
+  background: var(--th-chrome-bg);
 }
 aside.chrome { z-index: 20; }
 /* Edge fade: instead of a cast shadow (a dark shadow vanishes on a dark page),
@@ -124,97 +129,111 @@ aside.chrome::before {
    and padding vars are read by VideoPlayer (defaults keep other pages as-is). */
 .player-panel {
   color-scheme: dark;
-  background: #0a1614;
+  /* TEMP: was teal-black (#0a1614) with teal accents — neutral charcoal for the strip-down pass */
+  background: #121212;
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--th-radius-card);
   --player-canvas: transparent;
   --player-pad: 16px;
-  --th-bg: #0a1614;
-  --th-surface: #0a1614;
+  --th-bg: #121212;
+  --th-surface: #121212;
   --th-surface-alt: rgba(255, 255, 255, 0.07);
   --th-surface-hov: rgba(255, 255, 255, 0.12);
-  --th-text: #eef3f1;
-  --th-text-primary: #eef3f1;
-  --th-muted: #94ada6;
-  --th-faint: #5f7a73;
+  --th-text: #f0f0f0;
+  --th-text-primary: #f0f0f0;
+  --th-muted: #a3a3a3;
+  --th-faint: #737373;
   --th-border: rgba(255, 255, 255, 0.08);
-  --th-accent-text: #2dd4a7;
-  --th-accent-hover: #5eead4;
+  --th-accent-text: #f0f0f0;
+  --th-accent-hover: #ffffff;
 }
 
-/* Rounded seam: a concave corner under the top bar's left end, so the content
-   pane's top-left curves into the chrome. Only shown when a sidebar sits to
-   the left; sidebar-less pages (review, public share) hide it. */
-.topbar-seam { display: none; }
-aside.chrome ~ * > .chrome-top > .topbar-seam {
-  display: block;
-  position: absolute;
-  left: 0;
-  top: 100%;
-  width: var(--th-seam-r);
-  height: var(--th-seam-r);
-  pointer-events: none;
-  background: radial-gradient(circle at 100% 100%, transparent calc(var(--th-seam-r) - 0.5px), var(--th-chrome-seam) var(--th-seam-r));
-}
-
-/* Bottom mirror of the above: a concave corner at the content pane's
-   bottom-left. Rendered inside the sidebar (so it only exists where a sidebar
-   does, and follows its width as it collapses), hanging off its right edge.
-   Mirror math: box anchored at the bottom instead of the top, and the circle
-   centre moves from the box's bottom-right (100% 100%) to its top-right
-   (100% 0%), leaving the bottom-left corner filled with the chrome colour. */
+/* TEMP: the concave-corner "seam" (radial-gradient standing in for a rounded
+   inner corner) depended on strong color contrast between the teal chrome
+   and the page to read as a clean curve. Against the new neutral white/gray
+   theme there's not enough contrast left, so it rendered as a soft, blurry
+   smudge instead. Disabling both corner effects here and relying on a plain
+   straight border (added in Sidebar.tsx and TopBar.tsx) instead - flatter,
+   but crisp at any theme/contrast level. */
+.topbar-seam,
 .sidebar-seam-bottom {
-  position: absolute;
-  left: 100%;
-  bottom: 0;
-  width: var(--th-seam-r);
-  height: var(--th-seam-r);
-  pointer-events: none;
-  background: radial-gradient(circle at 100% 0%, transparent calc(var(--th-seam-r) - 0.5px), var(--th-chrome-seam) var(--th-seam-r));
+  display: none;
 }
 
 
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
-  /* Chrome is 92% teal over this theme's page bg; the seam corner matches it. */
-  --th-chrome-seam: #227668;
+  /* Chrome (sidebar/topbar): muted gray-on-white, distinct from the white canvas */
+  --th-chrome-bg: #ececea;
+  --th-chrome-raised: #e2e2df;
+  --th-chrome-active: rgba(0, 0, 0, 0.08);
+  --th-chrome-hover: rgba(0, 0, 0, 0.05);
+  --th-chrome-text: #1a1a1a;
+  --th-chrome-muted: rgba(26, 26, 26, 0.64);
+  --th-chrome-faint: rgba(26, 26, 26, 0.45);
+  --th-chrome-border: rgba(26, 26, 26, 0.12);
+  --th-chrome-surface-alt: rgba(26, 26, 26, 0.06);
+  /* TEMP: chrome is now solid neutral gray, no opacity blend — seam just matches it */
+  --th-chrome-seam: #ececea;
   --th-edge-text: #1a1f1d;
-  --th-bg: #f7f5f0;
-  --th-bg-elevated: #fdfcf8;
-  --th-bg-sidebar: #f1eee7;
-  --th-bg-hover: #ece8df;
+  /* TEMP: was warm cream (#f7f5f0 / #fdfcf8 / #f1eee7) — flattened to white for the strip-down pass */
+  --th-bg: #ffffff;
+  --th-bg-elevated: #ffffff;
+  --th-bg-sidebar: #f5f5f4;
+  --th-bg-hover: #f0f0ef;
   --th-bg-card-hover: #ffffff;
-  --th-surface-alt: #ece8df;
-  --th-surface-hov: #e3dfd4;
-  --th-text-primary: #1a1f1d;
-  --th-text-secondary: #5f665f;
-  --th-faint: #8f958d;
-  --th-border: #e3ded2;
-  --th-accent-hover: #22b78f;
-  --th-accent-text: #0a7a5e;
-  --th-shadow-card: 0 1px 2px rgba(40, 36, 20, 0.07);
-  --th-shadow-card-hover: 0 6px 18px rgba(40, 36, 20, 0.11);
-  --th-shadow-window: 0 24px 70px rgba(40, 36, 20, 0.12);
+  --th-surface-alt: #f5f5f4;
+  --th-surface-hov: #ececea;
+  --th-text-primary: #1a1a1a;
+  --th-text-secondary: #5f5f5d;
+  --th-faint: #8f8f8c;
+  --th-border: #e3e3e0;
+  /* TEMP: accent hover/text were teal (#22b78f / #0a7a5e) */
+  --th-accent-hover: #3a3a3a;
+  --th-accent-text: #1a1a1a;
+  --th-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.07);
+  --th-shadow-card-hover: 0 6px 18px rgba(0, 0, 0, 0.11);
+  --th-shadow-window: 0 24px 70px rgba(0, 0, 0, 0.12);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --th-chrome-seam: #0f6557;
+  /* Chrome (sidebar/topbar): a raised charcoal panel, lighter than the
+     near-black canvas (--th-bg: #141414) the same way the light chrome
+     (#ececea) reads darker/more muted than its white canvas - so the
+     sidebar still stands apart instead of blending into the page. */
+  --th-chrome-bg: #1c1c1c;
+  --th-chrome-raised: #262626;
+  --th-chrome-active: rgba(255, 255, 255, 0.1);
+  --th-chrome-hover: rgba(255, 255, 255, 0.06);
+  --th-chrome-text: #f0f0f0;
+  --th-chrome-muted: rgba(240, 240, 240, 0.64);
+  --th-chrome-faint: rgba(240, 240, 240, 0.45);
+  --th-chrome-border: rgba(255, 255, 255, 0.1);
+  --th-chrome-surface-alt: rgba(255, 255, 255, 0.06);
+  --th-chrome-seam: #1c1c1c;
   --th-edge-text: #eef3f1;
-  --th-bg: #0d1f1c;
-  --th-bg-elevated: #162b27;
-  --th-bg-sidebar: #112420;
-  --th-bg-hover: #1d3732;
-  --th-bg-card-hover: #1b332e;
-  --th-surface-alt: #1d3732;
-  --th-surface-hov: #26443e;
-  --th-text-primary: #eef3f1;
-  --th-text-secondary: #94ada6;
-  --th-faint: #5f7a73;
-  --th-border: #254039;
-  --th-accent-hover: #5eead4;
-  --th-accent-text: #2dd4a7;
+  /* Primary buttons (bg-th-accent) were hardcoded near-black with white
+     text in both themes - invisible against a near-black dark-mode page.
+     Dark mode gets the inverse: a light button with dark text. */
+  --th-accent: #f0f0f0;
+  --th-accent-fg: #141414;
+  /* TEMP: was dark teal-green (#0d1f1c / #162b27 / #112420) — neutral charcoal instead */
+  --th-bg: #141414;
+  --th-bg-elevated: #1e1e1e;
+  --th-bg-sidebar: #181818;
+  --th-bg-hover: #262626;
+  --th-bg-card-hover: #232323;
+  --th-surface-alt: #262626;
+  --th-surface-hov: #2e2e2e;
+  --th-text-primary: #f0f0f0;
+  --th-text-secondary: #a3a3a3;
+  --th-faint: #737373;
+  --th-border: #333333;
+  /* TEMP: accent hover/text were teal (#5eead4 / #2dd4a7) */
+  --th-accent-hover: #d4d4d4;
+  --th-accent-text: #f0f0f0;
   --th-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
   --th-shadow-card-hover: 0 8px 22px rgba(0, 0, 0, 0.4);
   --th-shadow-window: 0 24px 70px rgba(0, 0, 0, 0.4);

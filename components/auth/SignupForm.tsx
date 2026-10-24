@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight, Check, Copy } from 'lucide-react'
+import { Button, ButtonIcon } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 const PERKS = [
   '14-day free trial, no card needed',
@@ -114,33 +116,26 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
               <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted">Workspace code</span>
               <div className="flex items-center justify-center gap-2">
                 <span className="text-2xl font-extrabold font-mono tracking-widest">{created.inviteCode}</span>
-                <button
-                  type="button"
+                <IconButton
+                  label="Copy workspace code"
+                  size="sm"
+                  variant="subtle"
                   onClick={() => navigator.clipboard.writeText(created.inviteCode)}
-                  className="p-1.5 rounded-th text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors"
                 >
                   <Copy size={14} />
-                </button>
+                </IconButton>
               </div>
               <p className="text-[11px] text-th-faint">
                 Share this with your editors so they can join. You can find it again anytime in Settings &gt; Team.
               </p>
             </div>
           )}
-          <button
-            onClick={() => router.push('/auth/login')}
-            className="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors"
-          >
-            <span>Go to log in</span> <ArrowRight size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={resendVerification}
-            disabled={resent}
-            className="mt-3 text-[12px] text-th-accent-text hover:underline disabled:opacity-60 disabled:no-underline"
-          >
+          <Button onClick={() => router.push('/auth/login')} size="lg" className="mt-6 w-full">
+            <span>Go to log in</span> <ButtonIcon><ArrowRight size={14} /></ButtonIcon>
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={resendVerification} disabled={resent} className="mt-3">
             {resent ? 'Verification email re-sent (if the account is still unverified)' : 'Resend verification email'}
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -216,17 +211,18 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
             <div className="relative">
               <input name="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="Min. 8 characters"
                 className="w-full px-3.5 py-2.5 pr-10 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors" />
-              <button type="button" onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-th-muted hover:text-th-text transition-colors">
+              <IconButton type="button" label={showPass ? 'Hide password' : 'Show password'}
+                size="sm" variant="ghost"
+                onClick={() => setShowPass(!showPass)}
+                className="absolute right-2 top-1/2 -translate-y-1/2">
                 {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
+              </IconButton>
             </div>
           </div>
 
-          <button onClick={handleSubmit} disabled={loading}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50">
-            {loading ? 'Creating account…' : <><span>Create free account</span> <ArrowRight size={14} /></>}
-          </button>
+          <Button onClick={handleSubmit} loading={loading} size="lg" className="w-full">
+            {loading ? 'Creating account…' : <><span>Create free account</span> <ButtonIcon><ArrowRight size={14} /></ButtonIcon></>}
+          </Button>
         </div>
 
         <p className="mt-4 text-center text-[11px] text-th-faint font-mono">
