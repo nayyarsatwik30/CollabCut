@@ -61,7 +61,7 @@ export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-th-surface border border-th-border rounded-th-lg w-full max-w-md shadow-panel animate-slide-up overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-th-border">
           <h2 className="font-bold text-[16px]">New content</h2>

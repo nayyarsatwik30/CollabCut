@@ -333,7 +333,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-th-surface border border-th-border rounded-th-lg w-full max-w-md shadow-panel animate-slide-up overflow-hidden">
 
         {/* Header */}

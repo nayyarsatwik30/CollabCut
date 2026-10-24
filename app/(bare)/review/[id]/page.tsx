@@ -834,8 +834,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       )}
 
       {showCompareModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
-          <div className="glass border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-th-surface border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-th-border flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Layers size={16} className="text-th-accent-text" />
