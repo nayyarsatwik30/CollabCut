@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight, Check, Copy } from 'lucide-react'
 import { signIn } from 'next-auth/react'
+import { Button, ButtonIcon } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 const PERKS = [
   '14-day free trial, no card needed',
@@ -122,24 +124,22 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
             <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted">Workspace code</span>
             <div className="flex items-center justify-center gap-2">
               <span className="text-2xl font-extrabold font-mono tracking-widest">{createdInviteCode}</span>
-              <button
-                type="button"
+              <IconButton
+                label="Copy workspace code"
+                size="sm"
+                variant="subtle"
                 onClick={() => navigator.clipboard.writeText(createdInviteCode)}
-                className="p-1.5 rounded-th text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors"
               >
                 <Copy size={14} />
-              </button>
+              </IconButton>
             </div>
             <p className="text-[11px] text-th-faint">
               You can find this again anytime in Settings &gt; Team.
             </p>
           </div>
-          <button
-            onClick={() => router.push('/board')}
-            className="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors"
-          >
-            <span>Continue to board</span> <ArrowRight size={14} />
-          </button>
+          <Button onClick={() => router.push('/board')} size="lg" className="mt-6 w-full">
+            <span>Continue to board</span> <ButtonIcon><ArrowRight size={14} /></ButtonIcon>
+          </Button>
         </div>
       </div>
     )
@@ -215,17 +215,18 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
             <div className="relative">
               <input name="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="Min. 8 characters"
                 className="w-full px-3.5 py-2.5 pr-10 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors" />
-              <button type="button" onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-th-muted hover:text-th-text transition-colors">
+              <IconButton type="button" label={showPass ? 'Hide password' : 'Show password'}
+                size="sm" variant="ghost"
+                onClick={() => setShowPass(!showPass)}
+                className="absolute right-2 top-1/2 -translate-y-1/2">
                 {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
+              </IconButton>
             </div>
           </div>
 
-          <button onClick={handleSubmit} disabled={loading}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50">
-            {loading ? 'Creating account…' : <><span>Create free account</span> <ArrowRight size={14} /></>}
-          </button>
+          <Button onClick={handleSubmit} loading={loading} size="lg" className="w-full">
+            {loading ? 'Creating account…' : <><span>Create free account</span> <ButtonIcon><ArrowRight size={14} /></ButtonIcon></>}
+          </Button>
         </div>
 
         <p className="mt-4 text-center text-[11px] text-th-faint font-mono">
