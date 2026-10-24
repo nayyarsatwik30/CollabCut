@@ -15,6 +15,21 @@ async function requireAdminWorkspace(userId: string) {
   return { workspaceId: membership.workspace_id as string }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// The editor id comes from the URL, so it's only trusted once it's a
+// well-formed UUID that already holds a membership in the caller's workspace.
+// Without this, the profile lookup (GET) and the assignment (POST) would work
+// for any user id in the system, in any workspace.
+async function isWorkspaceMember(userId: string, workspaceId: string) {
+  if (!UUID_RE.test(userId)) return false
+  const { rows } = await migrationDb.query(
+    `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 LIMIT 1`,
+    [workspaceId, userId]
+  )
+  return rows.length > 0
+}
+
 async function findAssetInWorkspace(assetId: string, workspaceId: string) {
   const { rows } = await migrationDb.query(
     `SELECT a.id, a.asset_group_id
@@ -36,6 +51,10 @@ export async function GET(req: NextRequest, { params }: { params: { editorId: st
 
   const auth = await requireAdminWorkspace(authResult.user.id)
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  if (!(await isWorkspaceMember(params.editorId, auth.workspaceId))) {
+    return NextResponse.json({ error: 'Editor not found in your workspace' }, { status: 404 })
+  }
 
   const { rows: profileRows } = await migrationDb.query(
     `SELECT name, email FROM profiles WHERE id = $1`,
@@ -97,6 +116,10 @@ export async function POST(req: NextRequest, { params }: { params: { editorId: s
 
   const { assetId } = await req.json()
   if (!assetId) return NextResponse.json({ error: 'assetId required' }, { status: 400 })
+
+  if (!(await isWorkspaceMember(params.editorId, auth.workspaceId))) {
+    return NextResponse.json({ error: 'Editor not found in your workspace' }, { status: 404 })
+  }
 
   const asset = await findAssetInWorkspace(assetId, auth.workspaceId)
   if (!asset) return NextResponse.json({ error: 'Asset not found in your workspace' }, { status: 404 })

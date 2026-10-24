@@ -13,6 +13,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Title required' }, { status: 400 })
   }
 
+  // Rendered as <a href> on the review page, so only http(s) may be stored -
+  // a javascript: URL here would run in the viewer's session on click. Same
+  // rule PATCH /api/projects/[id] applies to brief_drive_link.
+  if (raw_file_url !== undefined && raw_file_url !== null && raw_file_url !== '') {
+    if (typeof raw_file_url !== 'string' || !/^https?:\/\/\S+$/i.test(raw_file_url.trim())) {
+      return NextResponse.json({ error: 'Raw footage link must start with http:// or https://' }, { status: 400 })
+    }
+  }
+
   // Same workspace_members lookup used in GET /api/board and POST /api/projects,
   // narrowed to strictly 'admin' since creating New Content is admin-only.
   const membershipsResult = await migrationDb.query(
@@ -46,7 +55,7 @@ export async function POST(req: NextRequest) {
       project.id,
       user.id,
       title.trim(),
-      raw_file_url || null,
+      raw_file_url ? raw_file_url.trim() : null,
       notes || null,
       reference || null,
       deadline || null,
