@@ -11,6 +11,8 @@ import { Avatar } from '@/components/ui/Badge'
 import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { priorityMeta } from '@/lib/priority'
+import { PriorityMenu } from '@/components/PriorityMenu'
+import { Toast, useToast } from '@/components/ui/Toast'
 
 type Tab = 'assets' | 'raw-footage' | 'members' | 'brief'
 
@@ -197,6 +199,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [token, setToken] = useState<string | null>(null)
   const [showUploadCustom, setShowUploadCustom] = useState(false)
   const [showUploadBoard, setShowUploadBoard] = useState(false)
+  const { toast, showToast, dismissToast } = useToast()
 
   useEffect(() => {
     if (ready && session) loadData()
@@ -306,6 +309,49 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     })
     loadData()
   }
+
+  // Priority is admin-only to change (editors only ever see the read-only
+  // pill), kept in sync server-side across every version in the lineage -
+  // see PATCH /api/assets/[id]/priority.
+  const updatePriority = async (assetId: string, priority: number) => {
+    const asset = assets.find((a) => a.id === assetId)
+    if (!asset || asset.priority === priority) return
+
+    const previousPriority = asset.priority
+    setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority } : a)))
+
+    try {
+      const res = await fetch(`/api/assets/${assetId}/priority`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ priority }),
+      })
+      if (!res.ok) {
+        setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
+        showToast('Failed to update priority.', 'error')
+      }
+    } catch (err) {
+      setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
+      showToast('Failed to update priority.', 'error')
+    }
+  }
+
+  // The cards are <Link>s: PriorityMenu stops click propagation (so Board's
+  // card handlers don't fire), which would also skip Link's own preventDefault
+  // and let the anchor navigate. Cancel the default in the capture phase.
+  const renderPriority = (a: Asset) =>
+    project?.viewer_is_admin ? (
+      <span className="inline-flex shrink-0" onClickCapture={(e) => e.preventDefault()}>
+        <PriorityMenu value={a.priority} onChange={(p) => updatePriority(a.id, p)} size="sm" />
+      </span>
+    ) : (
+      <span
+        className="app-pill shrink-0 font-mono text-[10px]"
+        style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
+      >
+        {priorityMeta(a.priority).label}
+      </span>
+    )
 
   const formatSize = (bytes: number) => {
     if (!bytes) return '—'
@@ -435,12 +481,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                         <div className="p-3.5 flex-1 flex flex-col justify-center min-h-[64px]">
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <p className="text-[13px] font-semibold truncate">{a.name}</p>
-                            <span
-                              className="app-pill shrink-0 font-mono text-[10px]"
-                              style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
-                            >
-                              {priorityMeta(a.priority).label}
-                            </span>
+                            {renderPriority(a)}
                           </div>
                           <span className="text-[11px] text-th-faint font-mono">{formatSize(a.size_bytes)}</span>
                         </div>
@@ -535,12 +576,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                         <div className="p-3.5 flex-1 flex flex-col justify-center min-h-[64px]">
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <p className="text-[13px] font-semibold truncate">{a.name}</p>
-                            <span
-                              className="app-pill shrink-0 font-mono text-[10px]"
-                              style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
-                            >
-                              {priorityMeta(a.priority).label}
-                            </span>
+                            {renderPriority(a)}
                           </div>
                           <div className="flex items-center justify-between text-[11px] text-th-faint font-mono">
                             <span>{formatSize(a.size_bytes)}</span>
@@ -623,6 +659,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           )}
         </div>
       </div>
+
+      <Toast toast={toast} onDismiss={dismissToast} />
     </>
   )
 }
