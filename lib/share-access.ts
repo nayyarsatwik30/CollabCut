@@ -38,10 +38,11 @@ export type PublicShareLinkResult =
 // lineage instead of one pinned asset row, so a link automatically picks up
 // versions uploaded after it was created.
 //
-// `password` gates only `project_name` (used for the downloaded file's
-// name): it's included when the link has no password, or once `password`
-// verifies against the stored hash - never on the call made before a
-// visitor has entered anything. The hash itself never leaves this function.
+// `password` gates `project_name` (used for the downloaded file's name) and
+// every version's `mux_playback_id`: they're included when the link has no
+// password, or once `password` verifies against the stored hash - never on
+// the call made before a visitor has entered anything. The hash itself never
+// leaves this function.
 export async function getPublicShareLink(token: string, password?: string | null): Promise<PublicShareLinkResult> {
   const linkResult = await migrationDb.query(
     `SELECT token, expires_at, downloads_disabled, comments_only, password_hash, asset_group_id
@@ -74,7 +75,15 @@ export async function getPublicShareLink(token: string, password?: string | null
   const versions = liveRows.map(({ deleted_at, project_deleted_at, project_name: _pn, ...v }) => v)
   const latest = versions[0] // already ordered desc by version
 
-  const projectNameRevealed = !data.password_hash || (!!password && verifySharePassword(password, data.password_hash))
+  const unlocked = !data.password_hash || (!!password && verifySharePassword(password, data.password_hash))
+
+  // Mux playback IDs are public (playback_policy: 'public'), so the ID alone
+  // is a working stream URL. For a password-protected link it is withheld
+  // until this very request carries the correct password - re-verified
+  // here on every call, never remembered, so replaying the bare token
+  // against GET /api/share yields no way to stream.
+  const lock = <T extends PublicShareVersion>(v: T): T => (unlocked ? v : { ...v, mux_playback_id: null })
+  const lockedVersions = versions.map(lock)
 
   return {
     status: 'ok',
@@ -85,9 +94,9 @@ export async function getPublicShareLink(token: string, password?: string | null
       comments_only: data.comments_only,
       password_protected: !!data.password_hash,
       default_version_id: latest.id,
-      versions,
-      asset: latest,
-      project_name: projectNameRevealed ? projectName : null,
+      versions: lockedVersions,
+      asset: lockedVersions[0],
+      project_name: unlocked ? projectName : null,
     },
   }
 }

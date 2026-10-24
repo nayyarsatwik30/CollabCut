@@ -42,8 +42,20 @@ export async function GET(req: NextRequest) {
     repliesByComment.get(reply.comment_id)!.push(reply)
   }
 
+  // author_id is an internal user UUID; a share-token caller has no use for
+  // it and it would hand a public link holder real user ids.
+  const hideAuthorId = !!shareToken
+  const strip = <T extends { author_id?: unknown }>(row: T): T => {
+    if (!hideAuthorId) return row
+    const { author_id: _authorId, ...rest } = row
+    return rest as T
+  }
+
   return NextResponse.json({
-    comments: comments.map((c) => ({ ...c, replies: repliesByComment.get(c.id) ?? [] })),
+    comments: comments.map((c) => ({
+      ...strip(c),
+      replies: (repliesByComment.get(c.id) ?? []).map((r) => strip(r as { author_id?: unknown })),
+    })),
   })
 }
 
