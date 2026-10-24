@@ -1,7 +1,7 @@
 'use client'
 
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight } from 'lucide-react'
@@ -12,14 +12,41 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false)
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
+  // Success/info banner from redirects: ?verified=1 (verify-email route) and
+  // ?reason=elsewhere (AuthProvider, session replaced by a login elsewhere).
+  const [notice,   setNotice]   = useState('')
+  const [unverified, setUnverified] = useState(false)
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle')
   const [form, setForm] = useState({ email: '', password: '' })
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('verified')) setNotice('Email verified - you can log in now.')
+    else if (params.get('reason') === 'elsewhere') setNotice('You were logged out because your account was signed in on another device.')
+    const verifyError = params.get('verify_error')
+    if (verifyError === 'invalid') setError('That verification link is invalid or has expired. Log in to request a new one.')
+    else if (verifyError) setError('We could not verify your email right now. Please try again.')
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  const resendVerification = async () => {
+    setResendState('sending')
+    await fetch('/api/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: form.email }),
+    }).catch(() => {})
+    setResendState('sent')
+  }
+
   const handleSubmit = async () => {
     setError('')
+    setNotice('')
+    setUnverified(false)
+    setResendState('idle')
     if (!form.email || !form.password) {
       setError('Email and password are required')
       return
@@ -33,16 +60,15 @@ export default function LoginPage() {
     })
 
     if (result?.error) {
-      setError('Invalid email or password')
+      if (result.error === 'EMAIL_NOT_VERIFIED') {
+        setError('Please verify your email before logging in. Check your inbox for the verification link.')
+        setUnverified(true)
+      } else {
+        setError('Invalid email or password')
+      }
       setLoading(false)
       return
     }
-
-    // Best-effort: evicts this account's oldest session(s) past the
-    // concurrent-session limit (self-serve accounts only). Never blocks
-    // or fails login over this - fire and forget. requireAuth reads the
-    // session cookie directly, so no bearer token is needed here.
-    fetch('/api/auth/enforce-session-limit', { method: 'POST' }).catch(() => {})
 
     router.push('/board')
   }
@@ -65,9 +91,21 @@ export default function LoginPage() {
             <Link href="/auth/signup/agency" className="text-th-accent-text hover:underline">Create your workspace</Link>
           </p>
 
+          {notice && (
+            <div className="mb-4 px-4 py-3 rounded-th bg-th-surface border border-th-border text-th-text text-[13px]">
+              {notice}
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
               {error}
+              {unverified && (
+                <button type="button" onClick={resendVerification} disabled={resendState !== 'idle'}
+                  className="block mt-2 text-th-accent-text hover:underline disabled:opacity-60 disabled:no-underline">
+                  {resendState === 'sent' ? 'Verification email sent - check your inbox' : resendState === 'sending' ? 'Sending…' : 'Resend verification email'}
+                </button>
+              )}
             </div>
           )}
 

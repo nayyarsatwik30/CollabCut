@@ -28,7 +28,7 @@ function toGuardSession(
 // For pages that require a session: callers must wait for `ready` before
 // doing anything auth-dependent, so no page can redirect off a too-early
 // read. `ready` mirrors the old contract exactly - true only once a session
-// is confirmed present, never true while redirecting away.
+// is confirmed present (with a user id), never true while redirecting away.
 export function useSessionGuard() {
   const router = useRouter()
   const { data, status } = useSession()
@@ -55,7 +55,10 @@ export function useSessionGuard() {
     [status, userId, userEmail, userName]
   )
 
-  return { session, ready: status === 'authenticated' }
+  // A session revoked by a login elsewhere comes back authenticated-but-
+  // userless (see authOptions' session callback); not ready, so pages wait
+  // while AuthProvider redirects to the login page.
+  return { session, ready: status === 'authenticated' && !!userId }
 }
 
 // The mirror image, for pages that should skip straight past their own
