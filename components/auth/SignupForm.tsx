@@ -126,7 +126,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
                 </IconButton>
               </div>
               <p className="text-[11px] text-th-faint">
-                Share this with your editors so they can join. You can find it again anytime in Settings &gt; Team.
+                Share this with your editors so they can join. After you verify your email and log in, you can find it again in Settings &gt; Team.
               </p>
             </div>
           )}

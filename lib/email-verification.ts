@@ -1,6 +1,5 @@
 import { createHash, randomBytes } from 'crypto'
-import nodemailer from 'nodemailer'
-import { waitUntil } from '@vercel/functions'
+import { appUrl, sendEmail, sendEmailInBackground } from './email'
 
 export const VERIFICATION_TTL_HOURS = 24
 // A resend within this window of the last send is silently skipped, so the
@@ -24,62 +23,28 @@ export function hashVerificationToken(token: string): string {
   return hashToken(token)
 }
 
-export function appUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
-}
-
-// Exactly one plain address: no whitespace, list separators (, ;), display-name
-// or quoting characters. Nodemailer treats a "to" string containing commas as
-// several recipients, so anything looser would let a crafted signup email use
-// our Gmail account as a spam relay.
-const SINGLE_ADDRESS = /^[^\s@,;:<>()[\]\\"']+@[^\s@,;:<>()[\]\\"']+\.[^\s@,;:<>()[\]\\"']+$/
-
-export function isValidEmail(value: unknown): value is string {
-  return typeof value === 'string' && value.length <= 254 && SINGLE_ADDRESS.test(value)
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
-}
-
-// Throws if GMAIL_USER / GMAIL_APP_PASSWORD are unset or SMTP rejects the
-// message; callers decide whether that's fatal (signup treats it as
-// recoverable via resend).
-export async function sendVerificationEmail(to: string, name: string, token: string): Promise<void> {
-  if (!isValidEmail(to)) throw new Error('Refusing to send: recipient is not a single plain email address')
-
-  const user = process.env.GMAIL_USER
-  const pass = process.env.GMAIL_APP_PASSWORD
-  if (!user || !pass) throw new Error('GMAIL_USER / GMAIL_APP_PASSWORD are not configured')
-
-  const link = `${appUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`
-  const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user, pass } })
-
-  await transporter.sendMail({
-    from: `CollabCut <${user}>`,
+// Both wrappers build the verification email through sendEmail, so it gets
+// the shared branded template. sendVerificationEmail throws on failure (signup
+// treats that as recoverable via resend); the InBackground variant never
+// awaits or throws - see sendEmailInBackground in lib/email.ts.
+function verificationEmail(to: string, name: string, token: string) {
+  return {
     to,
     subject: 'Verify your CollabCut email',
-    text:
-      `Hi ${name},\n\nConfirm your email to activate your CollabCut account:\n${link}\n\n` +
-      `This link expires in ${VERIFICATION_TTL_HOURS} hours. If you didn't sign up, ignore this email.`,
-    html:
-      `<p>Hi ${escapeHtml(name)},</p>` +
-      `<p>Confirm your email to activate your CollabCut account:</p>` +
-      `<p><a href="${link}">Verify my email</a></p>` +
-      `<p style="color:#666;font-size:12px">This link expires in ${VERIFICATION_TTL_HOURS} hours. ` +
-      `If you didn't sign up, ignore this email.</p>`,
-  })
+    heading: 'Verify your email',
+    body: `Hi ${name},
+
+Confirm your email to activate your CollabCut account. This link expires in ${VERIFICATION_TTL_HOURS} hours.`,
+    buttonLabel: 'Verify my email',
+    buttonUrl: `${appUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`,
+    footer: "If you didn't sign up for CollabCut, you can safely ignore this email.",
+  }
 }
 
-// Sends without making the caller wait, so a public endpoint's response timing
-// doesn't depend on whether an email was actually sent. Failures are logged,
-// never thrown. waitUntil keeps the serverless invocation alive until the SMTP
-// send finishes (a bare un-awaited promise can be frozen once the response is
-// out); outside Vercel it is a no-op and the promise just runs.
+export function sendVerificationEmail(to: string, name: string, token: string): Promise<void> {
+  return sendEmail(verificationEmail(to, name, token))
+}
+
 export function sendVerificationEmailInBackground(to: string, name: string, token: string): void {
-  waitUntil(
-    sendVerificationEmail(to, name, token).catch((err) => {
-      console.error('background verification email failed', err)
-    })
-  )
+  sendEmailInBackground(verificationEmail(to, name, token))
 }

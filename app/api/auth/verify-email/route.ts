@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
-import { appUrl, hashVerificationToken } from '@/lib/email-verification'
+import { hashVerificationToken } from '@/lib/email-verification'
+import { appUrl } from '@/lib/email'
 
 // Target of the emailed link. Single atomic UPDATE: the token must exist, be
 // unexpired and belong to a still-unverified account, and is cleared in the

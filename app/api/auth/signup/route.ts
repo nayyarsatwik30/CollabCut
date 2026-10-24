@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { hashPassword } from '@/lib/password'
 import { DEFAULT_WORKSPACE_PLAN_ID } from '@/lib/storage-config'
-import { createVerificationToken, isValidEmail, sendVerificationEmail } from '@/lib/email-verification'
+import { createVerificationToken, sendVerificationEmail } from '@/lib/email-verification'
+import { isValidEmail } from '@/lib/email'
 
 // Creates the profile + auth_credentials + workspace role in one CloudClusters
 // transaction, so a failure partway through (bad invite code, duplicate
