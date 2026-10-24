@@ -44,18 +44,19 @@
   --th-mono: var(--font-mono), ui-monospace, monospace;
 }
 
-/* Fixed "chrome" (sidebar + top bar): same teal in light and dark, so it sits
-   outside the toggleable palette. The .chrome class re-points the th-* tokens
-   to light-on-teal values for everything inside it, so existing utilities
-   (text-th-muted, border-th-border, bg-th-surface-alt ...) stay legible
-   without per-component overrides. Never put modals/popovers that should
-   follow the theme inside a .chrome element. */
+/* Fixed "chrome" (sidebar + top bar). Used to be the same teal in light and
+   dark, sitting outside the toggleable palette - now that it's neutral gray
+   instead of a brand color, that no longer works: a light-gray chrome next
+   to a near-black dark-mode canvas just reads as broken, not distinct. So
+   --th-chrome-* and the .chrome text/border tokens below are theme-aware
+   (set per data-theme block further down) - light gets the original muted
+   gray-on-white, dark gets a raised-charcoal panel that still sits apart
+   from the page the way the light sidebar does. The .chrome class re-points
+   the th-* tokens to those chrome values for everything inside it, so
+   existing utilities (text-th-muted, border-th-border, bg-th-surface-alt...)
+   stay legible without per-component overrides. Never put modals/popovers
+   that should follow the theme inside a .chrome element. */
 :root {
-  /* TEMP: was teal (#0f6b5c / #0b5448) — neutral light gray for the white strip-down pass */
-  --th-chrome-bg: #ececea;
-  --th-chrome-raised: #e2e2df;
-  --th-chrome-active: rgba(0, 0, 0, 0.08);
-  --th-chrome-hover: rgba(0, 0, 0, 0.05);
   --th-seam-r: 20px;
 }
 
@@ -65,16 +66,17 @@
 .chrome {
   position: relative;
   isolation: isolate;
-  /* TEMP: chrome was dark teal with white text; now light neutral gray with dark text */
-  color: #1a1a1a;
-  --th-text: #1a1a1a;
-  --th-text-primary: #1a1a1a;
-  --th-muted: rgba(26, 26, 26, 0.64);
-  --th-faint: rgba(26, 26, 26, 0.45);
-  --th-border: rgba(26, 26, 26, 0.12);
+  /* Text/border/surface values come from the theme-aware --th-chrome-*
+     tokens set in the data-theme blocks below, not hardcoded here. */
+  color: var(--th-chrome-text);
+  --th-text: var(--th-chrome-text);
+  --th-text-primary: var(--th-chrome-text);
+  --th-muted: var(--th-chrome-muted);
+  --th-faint: var(--th-chrome-faint);
+  --th-border: var(--th-chrome-border);
   --th-surface: var(--th-chrome-raised);
-  --th-surface-alt: rgba(26, 26, 26, 0.06);
-  --th-accent-text: #1a1a1a;
+  --th-surface-alt: var(--th-chrome-surface-alt);
+  --th-accent-text: var(--th-chrome-text);
   --th-changes: #ef6c4d;
   --th-avatar-bg: #6b7280;
   --th-avatar-fg: #ffffff;
@@ -162,6 +164,16 @@ aside.chrome::before {
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
+  /* Chrome (sidebar/topbar): muted gray-on-white, distinct from the white canvas */
+  --th-chrome-bg: #ececea;
+  --th-chrome-raised: #e2e2df;
+  --th-chrome-active: rgba(0, 0, 0, 0.08);
+  --th-chrome-hover: rgba(0, 0, 0, 0.05);
+  --th-chrome-text: #1a1a1a;
+  --th-chrome-muted: rgba(26, 26, 26, 0.64);
+  --th-chrome-faint: rgba(26, 26, 26, 0.45);
+  --th-chrome-border: rgba(26, 26, 26, 0.12);
+  --th-chrome-surface-alt: rgba(26, 26, 26, 0.06);
   /* TEMP: chrome is now solid neutral gray, no opacity blend — seam just matches it */
   --th-chrome-seam: #ececea;
   --th-edge-text: #1a1f1d;
@@ -187,9 +199,26 @@ aside.chrome::before {
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  /* TEMP: chrome is now solid neutral gray in both themes — seam matches the light-mode chrome */
-  --th-chrome-seam: #ececea;
+  /* Chrome (sidebar/topbar): a raised charcoal panel, lighter than the
+     near-black canvas (--th-bg: #141414) the same way the light chrome
+     (#ececea) reads darker/more muted than its white canvas - so the
+     sidebar still stands apart instead of blending into the page. */
+  --th-chrome-bg: #1c1c1c;
+  --th-chrome-raised: #262626;
+  --th-chrome-active: rgba(255, 255, 255, 0.1);
+  --th-chrome-hover: rgba(255, 255, 255, 0.06);
+  --th-chrome-text: #f0f0f0;
+  --th-chrome-muted: rgba(240, 240, 240, 0.64);
+  --th-chrome-faint: rgba(240, 240, 240, 0.45);
+  --th-chrome-border: rgba(255, 255, 255, 0.1);
+  --th-chrome-surface-alt: rgba(255, 255, 255, 0.06);
+  --th-chrome-seam: #1c1c1c;
   --th-edge-text: #eef3f1;
+  /* Primary buttons (bg-th-accent) were hardcoded near-black with white
+     text in both themes - invisible against a near-black dark-mode page.
+     Dark mode gets the inverse: a light button with dark text. */
+  --th-accent: #f0f0f0;
+  --th-accent-fg: #141414;
   /* TEMP: was dark teal-green (#0d1f1c / #162b27 / #112420) — neutral charcoal instead */
   --th-bg: #141414;
   --th-bg-elevated: #1e1e1e;
