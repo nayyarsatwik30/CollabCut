@@ -3,6 +3,7 @@
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { Button, ButtonIcon } from '@/components/ui/Button'
 
 // Landing page for the old Supabase Auth recovery links. Those tokens can't
 // be honored anymore (login is NextAuth + auth_credentials in CloudClusters),
@@ -24,10 +25,13 @@ export default function ResetPasswordPage() {
           <p className="text-th-muted text-[13px] mb-8">
             Email password reset is temporarily unavailable, so this link can't be used. Please contact your workspace admin or CollabCut support and we'll help you get back into your account.
           </p>
-          <Link href="/auth/login"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-th-full border border-th-border text-th-text font-semibold text-[14px] btn-press hover:bg-th-surface-alt transition-colors">
-            <ArrowLeft size={14} /> Back to login
-          </Link>
+          <Button asChild variant="secondary" size="lg" className="w-full">
+            <Link href="/auth/login">
+              <ButtonIcon className="group-hover:-translate-x-0.5 group-hover:translate-y-0 group-active:-translate-x-1">
+                <ArrowLeft size={14} />
+              </ButtonIcon> Back to login
+            </Link>
+          </Button>
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ import { useStorageUsage } from '@/lib/useStorageUsage'
 import type { WorkspaceStoragePlan } from '@/lib/useStorageUsage'
 import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
 import { Orb } from '@/components/ui/Orb'
+import { Button } from '@/components/ui/Button'
 
 // 'plan' (Plan & billing) is deliberately removed for now: it read the
 // per-user profiles.plan_id / plans system, which disagrees with the
@@ -161,10 +162,9 @@ export default function SettingsPage() {
                     <input value={email} disabled
                       className="w-full px-3.5 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[14px] text-th-muted outline-none cursor-not-allowed" />
                   </div>
-                  <button onClick={saveChanges}
-                    className="px-5 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
+                  <Button onClick={saveChanges} size="md">
                     Save changes
-                  </button>
+                  </Button>
                   <StorageUsageBar usedBytes={usedBytes} loading={usageLoading} variant="full" workspacePlan={workspacePlan} />
                 </>
               )}
@@ -216,12 +216,12 @@ export default function SettingsPage() {
                             onFocus={e => e.target.select()}
                             className="flex-1 px-3.5 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[14px] font-mono uppercase tracking-widest text-th-text outline-none"
                           />
-                          <button
+                          <Button
                             onClick={() => navigator.clipboard.writeText(adminWorkspace.invite_code)}
-                            className="px-3.5 py-2 rounded-th-full text-[12px] font-semibold border border-th-border text-th-text hover:bg-th-surface-alt transition-colors btn-press flex items-center gap-1.5"
+                            variant="secondary" size="sm"
                           >
                             <Copy size={12} /> Copy
-                          </button>
+                          </Button>
                         </div>
                         <p className="mt-2 text-[11px] text-th-faint">
                           Anyone who signs up with this code joins {adminWorkspace.name} as an editor.

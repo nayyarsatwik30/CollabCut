@@ -14,7 +14,18 @@ export type AuthResult = { user: AuthUser } | { error: NextResponse }
 export async function requireAuth(req: NextRequest): Promise<AuthResult> {
   const session = await getServerSession(authOptions)
   const sessionUser = session?.user as { id?: string; email?: string | null } | undefined
-  if (!sessionUser?.id) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  if (!sessionUser?.id) {
+    // authOptions' session callback flags a JWT whose session token no longer
+    // matches the DB (account logged in elsewhere). The header lets the
+    // client's fetch interceptor tell that apart from a plain signed-out 401.
+    const revoked = (session as { invalid?: boolean } | null)?.invalid === true
+    return {
+      error: NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: revoked ? { 'X-Auth-Reason': 'session-invalid' } : undefined },
+      ),
+    }
+  }
 
   return { user: { id: sessionUser.id, email: sessionUser.email ?? '' } }
 }

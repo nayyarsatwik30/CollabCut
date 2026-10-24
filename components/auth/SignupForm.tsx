@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowRight, Check, Copy } from 'lucide-react'
-import { signIn } from 'next-auth/react'
+import { Button, ButtonIcon } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 const PERKS = [
   '14-day free trial, no card needed',
@@ -32,7 +33,10 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
   const [error, setError] = useState('')
   const [role, setRole] = useState<SignupRole>('admin')
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', inviteCode: '' })
-  const [createdInviteCode, setCreatedInviteCode] = useState('')
+  // Set once the account exists; the form is replaced by a "check your email"
+  // screen (accounts can't sign in until the emailed link is clicked).
+  const [created, setCreated] = useState<{ email: string; emailSent: boolean; inviteCode: string } | null>(null)
+  const [resent, setResent] = useState(false)
 
   const planId = searchParams.get('plan') ?? 'basic'
   const billingCycle = searchParams.get('cycle') ?? 'monthly'
@@ -67,6 +71,8 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
         password: form.password,
         role,
         inviteCode: form.inviteCode,
+        plan_id: planId,
+        billing_cycle: billingCycle,
       }),
     })
     const data = await res.json()
@@ -77,69 +83,59 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
       return
     }
 
-    const signInResult = await signIn('credentials', {
-      email: form.email,
-      password: form.password,
-      redirect: false,
-    })
-
-    if (signInResult?.error) {
-      setError('Failed to sign in')
-      setLoading(false)
-      return
-    }
-
-    // Best-effort: evicts this account's oldest session(s) past the
-    // concurrent-session limit (self-serve accounts only). Never blocks
-    // or fails signup over this - fire and forget.
-    fetch('/api/auth/enforce-session-limit', { method: 'POST' }).catch(() => {})
-
-    await fetch('/api/me/plan', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan_id: planId, billing_cycle: billingCycle }),
-    })
-
     setLoading(false)
-
-    if (role === 'admin' && data.workspace?.invite_code) {
-      setCreatedInviteCode(data.workspace.invite_code)
-      return
-    }
-
-    router.push('/board')
+    setCreated({
+      email: form.email.trim().toLowerCase(),
+      emailSent: data.verificationEmailSent !== false,
+      inviteCode: role === 'admin' ? (data.workspace?.invite_code ?? '') : '',
+    })
   }
 
-  if (createdInviteCode) {
+  const resendVerification = async () => {
+    if (!created) return
+    await fetch('/api/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: created.email }),
+    }).catch(() => {})
+    setResent(true)
+  }
+
+  if (created) {
     return (
       <div className="flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm text-center">
-          <h1 className="text-2xl font-extrabold mb-1">Your workspace is ready</h1>
+          <h1 className="text-2xl font-extrabold mb-1">Check your email</h1>
           <p className="text-th-muted text-[13px] mb-8">
-            Share this workspace code with your editors so they can join.
+            {created.emailSent
+              ? <>We sent a verification link to <span className="text-th-text">{created.email}</span>. Click it to activate your account, then log in.</>
+              : <>Your account was created, but we couldn't send the verification email. Request a new one below.</>}
           </p>
-          <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-3">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted">Workspace code</span>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-2xl font-extrabold font-mono tracking-widest">{createdInviteCode}</span>
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(createdInviteCode)}
-                className="p-1.5 rounded-th text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors"
-              >
-                <Copy size={14} />
-              </button>
+          {created.inviteCode && (
+            <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-3">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-th-muted">Workspace code</span>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-2xl font-extrabold font-mono tracking-widest">{created.inviteCode}</span>
+                <IconButton
+                  label="Copy workspace code"
+                  size="sm"
+                  variant="subtle"
+                  onClick={() => navigator.clipboard.writeText(created.inviteCode)}
+                >
+                  <Copy size={14} />
+                </IconButton>
+              </div>
+              <p className="text-[11px] text-th-faint">
+                Share this with your editors so they can join. You can find it again anytime in Settings &gt; Team.
+              </p>
             </div>
-            <p className="text-[11px] text-th-faint">
-              You can find this again anytime in Settings &gt; Team.
-            </p>
-          </div>
-          <button
-            onClick={() => router.push('/board')}
-            className="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors"
-          >
-            <span>Continue to board</span> <ArrowRight size={14} />
-          </button>
+          )}
+          <Button onClick={() => router.push('/auth/login')} size="lg" className="mt-6 w-full">
+            <span>Go to log in</span> <ButtonIcon><ArrowRight size={14} /></ButtonIcon>
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={resendVerification} disabled={resent} className="mt-3">
+            {resent ? 'Verification email re-sent (if the account is still unverified)' : 'Resend verification email'}
+          </Button>
         </div>
       </div>
     )
@@ -215,17 +211,18 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
             <div className="relative">
               <input name="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="Min. 8 characters"
                 className="w-full px-3.5 py-2.5 pr-10 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors" />
-              <button type="button" onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-th-muted hover:text-th-text transition-colors">
+              <IconButton type="button" label={showPass ? 'Hide password' : 'Show password'}
+                size="sm" variant="ghost"
+                onClick={() => setShowPass(!showPass)}
+                className="absolute right-2 top-1/2 -translate-y-1/2">
                 {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
+              </IconButton>
             </div>
           </div>
 
-          <button onClick={handleSubmit} disabled={loading}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-th-full bg-th-accent text-th-accent-fg font-bold text-[14px] btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50">
-            {loading ? 'Creating account…' : <><span>Create free account</span> <ArrowRight size={14} /></>}
-          </button>
+          <Button onClick={handleSubmit} loading={loading} size="lg" className="w-full">
+            {loading ? 'Creating account…' : <><span>Create free account</span> <ButtonIcon><ArrowRight size={14} /></ButtonIcon></>}
+          </Button>
         </div>
 
         <p className="mt-4 text-center text-[11px] text-th-faint font-mono">
