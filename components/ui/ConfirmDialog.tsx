@@ -51,7 +51,7 @@ export function ConfirmDialog({ state, onConfirm, onCancel }: ConfirmDialogProps
   if (!state.open) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
       <div className="bg-th-surface border border-th-border rounded-th-lg max-w-sm w-full shadow-2xl p-5 animate-slide-up">
         <h2 className="text-[15px] font-bold mb-1.5">{state.title}</h2>
         {state.message && <p className="text-[13px] text-th-muted mb-5">{state.message}</p>}

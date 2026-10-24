@@ -274,7 +274,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
         {src && videoReady && !videoError && !playing && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center">
               <Play size={22} className="text-white ml-0.5" />
             </div>
           </div>

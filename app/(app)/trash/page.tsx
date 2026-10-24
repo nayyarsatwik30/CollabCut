@@ -6,6 +6,7 @@ import { Trash2, RotateCcw, X, FolderKanban, Film } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { Orb } from '@/components/ui/Orb'
+import { Button } from '@/components/ui/Button'
 
 interface Project {
     id: string
@@ -117,14 +118,12 @@ export default function TrashPage() {
                                                     <p className="text-[13px] font-semibold truncate">{p.name}</p>
                                                     <p className="text-[11px] text-th-muted">Deleted {new Date(p.deleted_at).toLocaleDateString()}</p>
                                                 </div>
-                                                <button onClick={() => restore(p.id)}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text btn-press transition-colors">
+                                                <Button onClick={() => restore(p.id)} variant="secondary" size="sm">
                                                     <RotateCcw size={12} /> Restore
-                                                </button>
-                                                <button onClick={() => permanentDelete(p.id)}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-th-full text-[12px] text-th-changes border border-th-changes/40 hover:bg-th-changes/10 transition-colors btn-press">
+                                                </Button>
+                                                <Button onClick={() => permanentDelete(p.id)} variant="dangerOutline" size="sm">
                                                     <X size={12} /> Delete forever
-                                                </button>
+                                                </Button>
                                             </div>
                                         ))}
                                     </div>
@@ -142,14 +141,12 @@ export default function TrashPage() {
                                                     <p className="text-[13px] font-semibold truncate">{a.name}</p>
                                                     <p className="text-[11px] text-th-muted">{a.project_name} · Deleted {new Date(a.deleted_at).toLocaleDateString()}</p>
                                                 </div>
-                                                <button onClick={() => restoreAsset(a.id)}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text btn-press transition-colors">
+                                                <Button onClick={() => restoreAsset(a.id)} variant="secondary" size="sm">
                                                     <RotateCcw size={12} /> Restore
-                                                </button>
-                                                <button onClick={() => permanentDeleteAsset(a.id)}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-th-full text-[12px] text-th-changes border border-th-changes/40 hover:bg-th-changes/10 transition-colors btn-press">
+                                                </Button>
+                                                <Button onClick={() => permanentDeleteAsset(a.id)} variant="dangerOutline" size="sm">
                                                     <X size={12} /> Delete forever
-                                                </button>
+                                                </Button>
                                             </div>
                                         ))}
                                     </div>

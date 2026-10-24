@@ -2,14 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { hashPassword } from '@/lib/password'
 import { DEFAULT_WORKSPACE_PLAN_ID } from '@/lib/storage-config'
+import { createVerificationToken, isValidEmail, sendVerificationEmail } from '@/lib/email-verification'
 
 // Creates the profile + auth_credentials + workspace role in one CloudClusters
 // transaction, so a failure partway through (bad invite code, duplicate
 // email, etc.) never leaves behind a created-but-unassigned account. Keeps
 // this route's admin/editor branching and response contract (SignupForm.tsx
 // expects workspace.invite_code for admins).
+//
+// The account is created unverified and is NOT signed in: a verification link
+// is emailed (after COMMIT) and authorize() rejects login until it's clicked.
+// A failed email send doesn't undo the signup - the user can request another
+// from the login page - it's reported as verificationEmailSent: false.
+// plan_id / billing_cycle come from the pricing page choice; they used to be
+// applied by a post-signin PATCH /api/me/plan, which can't run without a session.
 export async function POST(req: NextRequest) {
-  const { name, email, password, role, inviteCode } = await req.json()
+  const { name, email, password, role, inviteCode, plan_id, billing_cycle } = await req.json()
 
   if (!name || !email || !password) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
@@ -21,7 +29,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
   }
 
+  // Validated before any DB write: the address is later used as the mail "to"
+  // field, and a comma-separated value would mail several recipients.
   const normalizedEmail = String(email).trim().toLowerCase()
+  if (!isValidEmail(normalizedEmail)) {
+    return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
+  }
   const client = await migrationDb.connect()
 
   try {
@@ -46,19 +59,30 @@ export async function POST(req: NextRequest) {
       targetWorkspace = workspaceResult.rows[0]
     }
 
+    let planId: string | null = null
+    if (typeof plan_id === 'string' && plan_id) {
+      const planResult = await client.query('SELECT id FROM plans WHERE id = $1', [plan_id])
+      planId = planResult.rows[0]?.id ?? null
+    }
+    const billingCycle = billing_cycle === 'yearly' ? 'yearly' : 'monthly'
+
     const passwordHash = await hashPassword(password)
+    const verification = createVerificationToken()
 
     await client.query('BEGIN')
 
     const profileResult = await client.query(
-      'INSERT INTO profiles (name, email) VALUES ($1, $2) RETURNING id',
-      [name, normalizedEmail]
+      `INSERT INTO profiles (name, email, plan_id, billing_cycle)
+       VALUES ($1, $2, COALESCE($3, 'basic'), $4) RETURNING id`,
+      [name, normalizedEmail, planId, billingCycle]
     )
     const userId = profileResult.rows[0].id
 
     await client.query(
-      'INSERT INTO auth_credentials (id, email, password_hash) VALUES ($1, $2, $3)',
-      [userId, normalizedEmail, passwordHash]
+      `INSERT INTO auth_credentials
+         (id, email, password_hash, email_verification_token_hash, email_verification_expires)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, normalizedEmail, passwordHash, verification.hash, verification.expires]
     )
 
     if (role === 'admin') {
@@ -74,10 +98,12 @@ export async function POST(req: NextRequest) {
       )
 
       await client.query('COMMIT')
+      const verificationEmailSent = await sendVerification(normalizedEmail, name, verification.token)
       return NextResponse.json(
         {
           user: { id: userId, email: normalizedEmail },
           workspace: { id: workspace.id, name: workspace.name, invite_code: workspace.invite_code },
+          verificationEmailSent,
         },
         { status: 201 }
       )
@@ -89,8 +115,13 @@ export async function POST(req: NextRequest) {
     )
 
     await client.query('COMMIT')
+    const verificationEmailSent = await sendVerification(normalizedEmail, name, verification.token)
     return NextResponse.json(
-      { user: { id: userId, email: normalizedEmail }, workspace: { id: targetWorkspace!.id, name: targetWorkspace!.name } },
+      {
+        user: { id: userId, email: normalizedEmail },
+        workspace: { id: targetWorkspace!.id, name: targetWorkspace!.name },
+        verificationEmailSent,
+      },
       { status: 201 }
     )
   } catch (err) {
@@ -99,5 +130,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Signup failed' }, { status: 500 })
   } finally {
     client.release()
+  }
+}
+
+async function sendVerification(email: string, name: string, token: string): Promise<boolean> {
+  try {
+    await sendVerificationEmail(email, name, token)
+    return true
+  } catch (err) {
+    console.error('verification email failed', err)
+    return false
   }
 }

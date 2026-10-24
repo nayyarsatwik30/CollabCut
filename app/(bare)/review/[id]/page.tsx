@@ -17,6 +17,8 @@ import { usePolling, sameData } from '@/lib/usePolling'
 import { fetchAssetDownloadUrl } from '@/lib/download-client'
 import type { CommentStatus, AnnotationTool } from '@/lib/types'
 import { Orb } from '@/components/ui/Orb'
+import { Button, ButtonIcon } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 type SideTab = 'notes' | 'brief'
 
@@ -416,7 +418,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         title={asset.name}
         before={
           <>
-            <button
+            <Button
               onClick={() => {
                 if (typeof window !== 'undefined' && window.history.length > 1) {
                   router.back()
@@ -424,10 +426,12 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   router.push(`/project/${asset.project_id}`)
                 }
               }}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-th-full border border-th-border text-[12px] text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors btn-press shrink-0"
+              variant="secondary" size="sm" className="shrink-0"
             >
-              <ChevronLeft size={13} /> Back
-            </button>
+              <ButtonIcon className="group-hover:-translate-x-0.5 group-hover:translate-y-0 group-active:-translate-x-1">
+                <ChevronLeft size={13} />
+              </ButtonIcon> Back
+            </Button>
             <div className="w-px h-5 bg-th-border shrink-0" />
           </>
         }
@@ -437,14 +441,14 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           {asset.cut_type === 'board' ? (
             <>
               <div className="relative shrink-0">
-                <button
+                <Button
                   onClick={() => setShowVersions(!showVersions)}
-                  className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
+                  variant="secondary" size="xs" className="font-mono"
                 >
                   <Layers size={10} />
                   v{asset.version}
                   <ChevronDown size={10} />
-                </button>
+                </Button>
 
                 {showVersions && (
                   <>
@@ -474,16 +478,16 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
                       <div className="p-2 border-t border-th-border bg-th-surface-alt/50">
                         {v1Fulfilled ? (
-                          <button
+                          <Button
                             onClick={() => {
                               setShowVersions(false)
                               setShowUploadModal(true)
                             }}
-                            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-th text-[12px] font-semibold bg-th-surface border border-th-border text-th-text hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
+                            variant="secondary" size="sm" className="w-full"
                           >
                             <Upload size={13} />
                             Upload new version
-                          </button>
+                          </Button>
                         ) : (
                           <p className="text-center text-[11px] text-th-muted px-2 py-1">
                             Fulfill v1 before adding new versions
@@ -496,23 +500,23 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               </div>
 
               {versions.length >= 2 && (
-                <button
+                <Button
                   onClick={handleOpenCompare}
-                  className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
+                  variant="secondary" size="xs" className="font-mono shrink-0"
                 >
                   <Layers size={10} className="text-th-accent-text" />
                   Compare versions
-                </button>
+                </Button>
               )}
             </>
           ) : (
-            <button
+            <Button
               onClick={() => setShowUploadModal(true)}
-              className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
+              variant="secondary" size="xs" className="font-mono shrink-0"
             >
               <Upload size={10} />
               Upload new file
-            </button>
+            </Button>
           )}
 
           <StatusBadge status={asset.status as any} />
@@ -530,24 +534,22 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           </div>
         }
       >
-        <button
-          onClick={() => setShareOpen(true)}
-          className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full border border-th-border text-[13px] text-th-text font-medium btn-press hover:bg-th-surface-alt transition-colors"
-        >
+        <Button onClick={() => setShareOpen(true)} variant="secondary" size="sm">
           <Share2 size={13} /> Share
-        </button>
+        </Button>
         {role === 'admin' && (
-          <button
+          <Button
             onClick={handleToggleComplete}
-            disabled={togglingComplete}
-            className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full text-[13px] font-bold btn-press transition-all approve-glow disabled:opacity-50"
+            loading={togglingComplete}
+            size="sm"
+            className={`approve-glow font-bold ${asset.is_complete ? 'approved' : ''}`}
             style={{
               background: asset.is_complete ? 'var(--th-resolved)' : 'var(--th-accent)',
               color: asset.is_complete ? '#fff' : 'var(--th-accent-fg)',
             }}
           >
             {asset.is_complete ? <><Check size={13} /> Approved</> : <><ThumbsUp size={13} /> Approve cut</>}
-          </button>
+          </Button>
         )}
       </TopBar>
 
@@ -587,12 +589,12 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               <div className="text-center">
                 <p className="text-white text-[13px] font-medium mb-1">No file uploaded yet</p>
                 <p className="text-white/50 text-[11px] mb-4">Upload a cut to fulfill this content request</p>
-                <button
+                <Button
                   onClick={() => setShowFulfillModal(true)}
-                  className="flex items-center gap-1.5 mx-auto px-4 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
+                  size="sm" className="mx-auto"
                 >
                   <Upload size={13} /> Upload cut
-                </button>
+                </Button>
               </div>
             </div>
           ) : awaitingStream ? (
@@ -832,19 +834,20 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       )}
 
       {showCompareModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6">
-          <div className="glass border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-th-surface border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-th-border flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Layers size={16} className="text-th-accent-text" />
                 <h2 className="font-bold text-[16px]">Compare versions</h2>
               </div>
-              <button
+              <IconButton
                 onClick={() => setShowCompareModal(false)}
-                className="text-th-muted hover:text-th-text transition-colors p-1 rounded-th hover:bg-th-surface-alt"
+                label="Close"
+                size="sm" variant="ghost"
               >
                 <X size={18} />
-              </button>
+              </IconButton>
             </div>
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-6 overflow-hidden min-h-0 bg-black/40">
