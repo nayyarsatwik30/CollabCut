@@ -13,6 +13,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Title required' }, { status: 400 })
   }
 
+  // Rendered as <a href> on the review page, so only http(s) may be stored -
+  // a javascript: URL here would run in the viewer's session on click. Parsed
+  // rather than pattern-matched so the scheme and host are what the URL parser
+  // sees, not what a regex guesses.
+  let rawFileUrl: string | null = null
+  if (raw_file_url !== undefined && raw_file_url !== null && raw_file_url !== '') {
+    const trimmed = typeof raw_file_url === 'string' ? raw_file_url.trim() : ''
+    let parsed: URL | null = null
+    try {
+      parsed = new URL(trimmed)
+    } catch {}
+    if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !parsed.hostname) {
+      return NextResponse.json({ error: 'Raw footage link must start with http:// or https://' }, { status: 400 })
+    }
+    rawFileUrl = trimmed
+  }
+
   // Same workspace_members lookup used in GET /api/board and POST /api/projects,
   // narrowed to strictly 'admin' since creating New Content is admin-only.
   const membershipsResult = await migrationDb.query(
@@ -46,7 +63,7 @@ export async function POST(req: NextRequest) {
       project.id,
       user.id,
       title.trim(),
-      raw_file_url || null,
+      rawFileUrl,
       notes || null,
       reference || null,
       deadline || null,

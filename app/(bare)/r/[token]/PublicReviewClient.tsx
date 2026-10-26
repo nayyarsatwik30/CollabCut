@@ -133,21 +133,19 @@ export default function PublicReviewClient({ token }: { token: string }) {
       })
       const data = await res.json()
       if (res.ok && data.valid) {
+        // The initial GET (before any password was known) never receives
+        // project_name or any mux_playback_id - refetch now that it's
+        // verified. Required, not best-effort: without it there is nothing
+        // to play, so unlock only once it has succeeded.
+        const refreshed = await fetch(`/api/share?token=${shareLink.token}&password=${encodeURIComponent(passwordInput)}`)
+        if (!refreshed.ok) {
+          setPasswordError('Something went wrong - try again')
+          return
+        }
+        const { share_link } = await refreshed.json()
+        setShareLink(share_link)
         setEnteredPassword(passwordInput)
         setUnlocked(true)
-
-        // The initial GET (before any password was known) never receives
-        // project_name - refetch now that it's verified so the download
-        // filename can include it. Best-effort: if this fails, downloads
-        // just fall back to the asset name alone (buildDownloadFilename's
-        // existing behavior for a missing project name).
-        try {
-          const refreshed = await fetch(`/api/share?token=${shareLink.token}&password=${encodeURIComponent(passwordInput)}`)
-          if (refreshed.ok) {
-            const { share_link } = await refreshed.json()
-            setShareLink(share_link)
-          }
-        } catch {}
       } else {
         setPasswordError(res.status === 404 ? 'This link no longer exists' : res.status === 410 ? 'This link has expired' : res.ok ? 'Incorrect password' : 'Something went wrong - try again')
       }
