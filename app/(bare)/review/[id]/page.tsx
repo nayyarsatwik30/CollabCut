@@ -221,6 +221,29 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     setLoading(false)
   }
 
+  const handleDeleteVersion = async (v: VersionEntry) => {
+    if (!asset || !confirm(`Delete v${v.version}? It will be moved to the Recycle Bin.`)) return
+
+    const res = await fetch(`/api/assets/${v.id}/delete?scope=version`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      showToast(data?.error ?? `Failed to delete v${v.version}`, 'error')
+      return
+    }
+
+    const remaining = versions.filter((x) => x.id !== v.id)
+    if (v.id === asset.id && remaining.length > 0) {
+      // Viewing the deleted version - fall back to the newest one left.
+      await handleSwitchVersion(remaining[0].id)
+    } else {
+      setVersions(remaining)
+    }
+    showToast(`v${v.version} moved to the Recycle Bin`)
+  }
+
   const handleOpenCompare = () => {
     if (versions.length >= 2) {
       setCompareV1Id(versions[0].id)
@@ -458,22 +481,42 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                         Version history
                       </div>
                       <div className="max-h-60 overflow-y-auto">
-                        {versions.map((v) => (
-                          <button
-                            key={v.id}
-                            onClick={() => handleSwitchVersion(v.id)}
-                            className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
-                          >
-                            <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-text)' }}>
-                                v{v.version}
-                              </p>
-                              <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
+                        {versions.map((v) => {
+                          // Mirrors the server guards: the last version and the
+                          // origin version (while others exist) can't be deleted.
+                          const canDelete = !!role && versions.length > 1 && v.id !== originVersion?.id
+                          return (
+                            <div
+                              key={v.id}
+                              className="flex items-center border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors"
+                            >
+                              <button
+                                onClick={() => handleSwitchVersion(v.id)}
+                                className="flex-1 min-w-0 flex items-center gap-2.5 pl-4 pr-2 py-3 text-left btn-press"
+                              >
+                                <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-text)' }}>
+                                    v{v.version}
+                                  </p>
+                                  <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
+                                </div>
+                                {v.id === asset.id && <Check size={12} className="text-th-accent-text shrink-0" />}
+                              </button>
+                              {canDelete ? (
+                                <IconButton
+                                  onClick={() => handleDeleteVersion(v)}
+                                  label={`Delete v${v.version}`}
+                                  size="sm" variant="ghost" className="mr-2"
+                                >
+                                  <Trash2 size={12} />
+                                </IconButton>
+                              ) : (
+                                <div className="w-7 mr-2 shrink-0" />
+                              )}
                             </div>
-                            {v.id === asset.id && <Check size={12} className="text-th-accent-text shrink-0" />}
-                          </button>
-                        ))}
+                          )
+                        })}
                       </div>
 
                       <div className="p-2 border-t border-th-border bg-th-surface-alt/50">

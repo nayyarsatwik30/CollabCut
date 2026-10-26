@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   if (adminWorkspaceIds.length > 0) {
     const { rows } = await migrationDb.query(
-      `SELECT a.id, a.name, a.project_id, a.deleted_at, p.name AS project_name
+      `SELECT a.id, a.name, a.version, a.project_id, a.deleted_at, p.name AS project_name
        FROM assets a
        JOIN projects p ON p.id = a.project_id
        WHERE a.deleted_at IS NOT NULL AND p.workspace_id = ANY($1::uuid[])`,
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   if (assignedAssetIds.length > 0) {
     const { rows } = await migrationDb.query(
-      `SELECT a.id, a.name, a.project_id, a.deleted_at, p.name AS project_name
+      `SELECT a.id, a.name, a.version, a.project_id, a.deleted_at, p.name AS project_name
        FROM assets a
        LEFT JOIN projects p ON p.id = a.project_id
        WHERE a.deleted_at IS NOT NULL AND a.id = ANY($1::uuid[])`,
@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
     .map((row) => ({
       id: row.id,
       name: row.name,
+      version: row.version,
       project_id: row.project_id,
       project_name: row.project_name ?? 'Untitled project',
       deleted_at: row.deleted_at,
