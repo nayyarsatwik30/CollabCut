@@ -18,6 +18,7 @@ interface Project {
 interface DeletedAsset {
     id: string
     name: string
+    version: number | null
     project_id: string
     project_name: string
     deleted_at: string
@@ -138,7 +139,7 @@ export default function TrashPage() {
                                             <div key={a.id} className="flex items-center gap-4 px-5 py-3.5 border-b border-th-border last:border-b-0">
                                                 <Film size={16} className="shrink-0 text-th-muted" />
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-[13px] font-semibold truncate">{a.name}</p>
+                                                    <p className="text-[13px] font-semibold truncate">{a.name}{a.version != null && <span className="font-mono text-th-muted font-normal"> · v{a.version}</span>}</p>
                                                     <p className="text-[11px] text-th-muted">{a.project_name} · Deleted {new Date(a.deleted_at).toLocaleDateString()}</p>
                                                 </div>
                                                 <Button onClick={() => restoreAsset(a.id)} variant="secondary" size="sm">
