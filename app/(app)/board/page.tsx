@@ -226,7 +226,14 @@ export default function BoardPage() {
   }
 
   const handleDeleteAsset = async (assetId: string) => {
-    const ok = await confirm({ title: 'Delete this cut?', message: 'It will be moved to the Recycle Bin.', confirmLabel: 'Delete' })
+    const versionCount = assets.find((a) => a.id === assetId)?.version_count ?? 1
+    const ok = await confirm({
+      title: versionCount > 1 ? `Delete this cut and all ${versionCount} versions?` : 'Delete this cut?',
+      message: versionCount > 1
+        ? 'Every version will be moved to the Recycle Bin, where each can be restored individually.'
+        : 'It will be moved to the Recycle Bin.',
+      confirmLabel: 'Delete',
+    })
     if (!ok) return
 
     const previousAssets = assets
@@ -234,7 +241,7 @@ export default function BoardPage() {
 
     beginMutation()
     try {
-      const res = await fetch(`/api/assets/${assetId}/delete`, {
+      const res = await fetch(`/api/assets/${assetId}/delete?scope=group`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -248,6 +255,15 @@ export default function BoardPage() {
     } finally {
       endMutation()
     }
+  }
+
+  // Pull fresh data after a version is deleted from the card's version manager,
+  // so the badge count (and the latest version the card shows) update at once.
+  const refreshBoard = async () => {
+    const res = await fetch('/api/board', { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) return
+    const data = await res.json()
+    setAssets(data.assets ?? [])
   }
 
   const handleAssign = async (assetId: string, editorId: string) => {
@@ -595,12 +611,14 @@ export default function BoardPage() {
                           asset={asset}
                           color={col.color}
                           isAdmin={role === 'admin'}
+                          token={token}
                           editors={editors}
                           columns={COLUMNS}
                           onAssign={handleAssign}
                           onStatusChange={updateAssetStatus}
                           onPriorityChange={updatePriority}
                           onDelete={handleDeleteAsset}
+                          onVersionsChanged={refreshBoard}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
                         />

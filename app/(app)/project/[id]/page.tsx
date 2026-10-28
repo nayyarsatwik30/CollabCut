@@ -13,6 +13,7 @@ import { useSessionGuard } from '@/lib/useSessionGuard'
 import { priorityMeta } from '@/lib/priority'
 import { PriorityMenu } from '@/components/PriorityMenu'
 import { Toast, useToast } from '@/components/ui/Toast'
+import { VersionBadge } from '@/components/board/VersionManager'
 
 type Tab = 'assets' | 'raw-footage' | 'members' | 'brief'
 
@@ -59,6 +60,8 @@ interface Asset {
   is_complete?: boolean
   cut_type: 'custom' | 'board'
   priority: number
+  // Live versions in this asset's lineage; the card shows the latest one.
+  version_count?: number
 }
 
 const BRIEF_LABEL = 'font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold mb-1.5 block'
@@ -302,8 +305,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const handleDeleteAsset = async (e: React.MouseEvent, id: string) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!confirm('Delete this asset?')) return
-    await fetch(`/api/assets/${id}/delete`, {
+    const asset = assets.find((a) => a.id === id)
+    const versionCount = asset?.version_count ?? 1
+    const isBoard = asset?.cut_type === 'board'
+    if (!confirm(isBoard && versionCount > 1
+      ? `Delete this asset and all ${versionCount} versions? Each version moves to the Recycle Bin and can be restored individually.`
+      : 'Delete this asset?')) return
+    await fetch(`/api/assets/${id}/delete${isBoard ? '?scope=group' : ''}`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     })
@@ -556,9 +564,21 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                               <Film size={28} style={{ color: 'var(--th-accent-text)' }} />
                             )}
                             <span className="thumb-badge font-mono text-[11px] px-1.5 py-0.5 rounded relative z-[1]">{formatDuration(a.duration_sec)}</span>
-                            <div className="thumb-badge absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-0.5 rounded z-[1]">
-                              v{a.version}
-                            </div>
+                            {(a.version_count ?? 1) >= 2 ? (
+                              <VersionBadge
+                                assetId={a.id}
+                                versionCount={a.version_count ?? 1}
+                                token={token}
+                                canManage
+                                onChanged={loadData}
+                                label={`v${a.version} · ${a.version_count} versions`}
+                                className="thumb-badge absolute top-2.5 left-10 inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded z-[1] hover:brightness-125 transition"
+                              />
+                            ) : (
+                              <div className="thumb-badge absolute top-2.5 left-10 font-mono text-[10px] px-1.5 py-0.5 rounded z-[1]">
+                                v{a.version}
+                              </div>
+                            )}
                             <div className="app-pill thumb-badge absolute top-2.5 right-2.5 text-[10px] font-mono z-[1]">
                               <span
                                 className="thumb-badge-dot"

@@ -22,6 +22,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (!authorized) return NextResponse.json({ error: 'Not authorized to delete this asset' }, { status: 403 })
 
+    // ?scope=group is the card-level delete: it removes every live version in
+    // this asset's lineage. Each row gets its own deleted_at, so every version
+    // lands in the Recycle Bin individually and is restorable on its own.
+    if (new URL(req.url).searchParams.get('scope') === 'group') {
+        await migrationDb.query(
+            `UPDATE assets SET deleted_at = $2
+             WHERE deleted_at IS NULL
+               AND (id = $1 OR asset_group_id = (SELECT asset_group_id FROM assets WHERE id = $1))`,
+            [params.id, new Date().toISOString()]
+        )
+        return NextResponse.json({ success: true })
+    }
+
     // ?scope=version is the version-switcher's delete: it removes this one row
     // and must leave the lineage with at least one live version, and must not
     // orphan the origin version that carries the Content Brief. Without it
