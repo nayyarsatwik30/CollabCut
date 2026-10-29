@@ -14,6 +14,8 @@ import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import { priorityMeta } from '@/lib/priority'
 import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, clientKey, matchesClient, type ClientTab } from '@/lib/clients'
+import { useSelectedClient } from '@/lib/useSelectedClient'
+import { ClientTabStrip } from '@/components/board/ClientTabStrip'
 import { Orb } from '@/components/ui/Orb'
 import { Button, ButtonIcon } from '@/components/ui/Button'
 
@@ -58,20 +60,11 @@ export default function BoardPage() {
   // Footer client tabs (admin only). A client is the projects.client label
   // inside this workspace (see lib/clients.ts); selecting one only filters
   // what is rendered, it never changes what the API returns.
-  const [selectedClient, setSelectedClient] = useState<string>(ALL_CLIENTS_KEY)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [showNewContent, setShowNewContent] = useState(false)
 
-  // Client tabs created with "+" before any project uses them. There is no
-  // clients table (a client is just projects.client), so these live in
-  // per-workspace localStorage on this browser until a project is created
-  // under that name, after which the server-side data carries the tab.
   const [workspaceId, setWorkspaceId] = useState('')
-  const [extraClients, setExtraClients] = useState<string[]>([])
-  const [addingClient, setAddingClient] = useState(false)
-  const [newClientName, setNewClientName] = useState('')
-  const [newClientError, setNewClientError] = useState('')
-  const extraClientsKey = workspaceId ? `collabcut:client-tabs:${workspaceId}` : ''
+  const { selectedClient, setSelectedClient, extraClients, addClient } = useSelectedClient(workspaceId)
 
   // Admin-only Projects/Editors views alongside the regular Kanban - gated
   // both by not rendering the tab bar for non-admins (below) and by the
@@ -385,17 +378,6 @@ export default function BoardPage() {
     setEditorAssetsLoading(false)
   }
 
-  useEffect(() => {
-    if (!extraClientsKey) return
-    try {
-      const raw = localStorage.getItem(extraClientsKey)
-      const parsed = raw ? JSON.parse(raw) : []
-      setExtraClients(Array.isArray(parsed) ? parsed.filter((n): n is string => typeof n === 'string').slice(0, 100) : [])
-    } catch {
-      setExtraClients([])
-    }
-  }, [extraClientsKey])
-
   const clientTabs = useMemo<ClientTab[]>(() => {
     if (role !== 'admin') return []
     const tabs = buildClientTabs(assets.map((a) => ({ client: a.project_client })))
@@ -443,23 +425,6 @@ export default function BoardPage() {
   const activeClientLabel = clientTabs.find((t) => t.key === activeClient)?.label ?? ''
   // Default client for New Content: the selected tab (not All / No client).
   const defaultClient = activeClient === ALL_CLIENTS_KEY || activeClient === NO_CLIENT_KEY ? '' : activeClientLabel
-
-  const handleAddClient = () => {
-    const name = newClientName.trim().replace(/\s+/g, ' ')
-    if (!name) { setNewClientError('Enter a client name'); return }
-    if (name.length > 100) { setNewClientError('Max 100 characters'); return }
-    const key = clientKey(name)
-    const existing = clientTabs.find((t) => t.key === key)
-    if (!existing) {
-      const next = [...extraClients, name]
-      setExtraClients(next)
-      try { if (extraClientsKey) localStorage.setItem(extraClientsKey, JSON.stringify(next)) } catch { /* private mode: tab lasts for this session */ }
-    }
-    setSelectedClient(key)
-    setAddingClient(false)
-    setNewClientName('')
-    setNewClientError('')
-  }
 
   const visibleProjects = useMemo(
     () => projects.filter((p) => matchesClient(p.client, activeClient)),
@@ -780,60 +745,14 @@ export default function BoardPage() {
         )}
 
         {role === 'admin' && !error && boardView !== 'editors' && (
-          <div
-            role="group"
-            aria-label="Filter by client"
-            className="shrink-0 bg-th-surface border-t border-th-border px-4 flex items-end gap-1 overflow-x-auto"
-          >
-            {([{ key: ALL_CLIENTS_KEY, label: 'All clients', count: 0 }, ...clientTabs] as ClientTab[]).map((tab) => {
-              const active = activeClient === tab.key
-              return (
-                <button
-                  key={tab.key}
-                  aria-pressed={active}
-                  onClick={() => setSelectedClient(tab.key)}
-                  className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 text-[12px] border-t-2 btn-press transition-colors max-w-[200px]"
-                  style={{
-                    color: active ? 'var(--th-accent-text)' : 'var(--th-muted)',
-                    borderColor: active ? 'var(--th-accent)' : 'transparent',
-                    background: active ? 'var(--th-bg)' : 'transparent',
-                    fontWeight: active ? 700 : 400,
-                  }}
-                >
-                  <span className="truncate">{tab.label}</span>
-                  <span className="font-mono text-[10px] opacity-70">{tabCount(tab.key)}</span>
-                </button>
-              )
-            })}
-            {addingClient ? (
-              <form
-                onSubmit={(e) => { e.preventDefault(); handleAddClient() }}
-                className="shrink-0 flex items-center gap-1.5 px-2 py-1.5"
-              >
-                <input
-                  autoFocus
-                  value={newClientName}
-                  maxLength={100}
-                  onChange={(e) => { setNewClientName(e.target.value); setNewClientError('') }}
-                  onKeyDown={(e) => { if (e.key === 'Escape') { setAddingClient(false); setNewClientName(''); setNewClientError('') } }}
-                  placeholder="Client name"
-                  aria-label="New client name"
-                  className="w-36 px-2 py-1 text-[12px] rounded-th bg-th-bg border border-th-border text-th-text"
-                />
-                <Button type="submit" size="sm">Add</Button>
-                {newClientError && <span className="text-[11px] text-th-changes">{newClientError}</span>}
-              </form>
-            ) : (
-              <button
-                onClick={() => setAddingClient(true)}
-                aria-label="Add client tab"
-                title="Add client"
-                className="shrink-0 flex items-center px-3 py-2 text-th-muted hover:text-th-text btn-press"
-              >
-                <Plus size={14} />
-              </button>
-            )}
-          </div>
+          <ClientTabStrip
+            tabs={clientTabs}
+            allCount={tabCount(ALL_CLIENTS_KEY)}
+            countFor={tabCount}
+            activeKey={activeClient}
+            onSelect={setSelectedClient}
+            onAdd={(name) => addClient(name, clientTabs.map((t) => t.key))}
+          />
         )}
       </div>
 

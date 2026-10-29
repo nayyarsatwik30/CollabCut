@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Search, LayoutGrid, List, Plus, Upload, Film, Check, FolderKanban } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -10,6 +10,9 @@ import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { NewContentModal } from '@/components/board/NewContentModal'
 import { useSessionGuard } from '@/lib/useSessionGuard'
+import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, clientKey, matchesClient, type ClientTab } from '@/lib/clients'
+import { useSelectedClient } from '@/lib/useSelectedClient'
+import { ClientTabStrip } from '@/components/board/ClientTabStrip'
 import { priorityMeta } from '@/lib/priority'
 import type { Project } from '@/lib/types'
 
@@ -54,6 +57,10 @@ export default function DashboardPage() {
   const [dashTab, setDashTab] = useState<'assigned' | 'projects'>('assigned')
   const [myProjects, setMyProjects] = useState<Project[]>([])
   const [myProjectsLoading, setMyProjectsLoading] = useState(false)
+  // Same client selection as the Board page (shared per-workspace session
+  // state); admins only. Editors keep the unfiltered view.
+  const [workspaceId, setWorkspaceId] = useState('')
+  const { selectedClient, setSelectedClient, extraClients, addClient } = useSelectedClient(workspaceId)
 
   useEffect(() => {
     if (ready && session) checkAuthAndLoad()
@@ -84,6 +91,14 @@ export default function DashboardPage() {
       loadAssignedAssets(session.access_token)
     } else {
       loadProjects(session.access_token)
+      // Workspace id only keys the client-selection storage; best-effort.
+      try {
+        const wsRes = await fetch('/api/workspaces', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        if (wsRes.ok) {
+          const ws = await wsRes.json()
+          if (ws.workspace?.id) setWorkspaceId(ws.workspace.id)
+        }
+      } catch { /* no shared selection; All clients */ }
     }
   }
 
@@ -148,9 +163,40 @@ export default function DashboardPage() {
     }
   }
 
+  const isAdmin = role !== 'editor'
+
+  const clientTabs = useMemo<ClientTab[]>(() => {
+    if (!isAdmin) return []
+    const tabs = buildClientTabs(projects.map((p) => ({ client: p.client })))
+    const known = new Set(tabs.map((t) => t.key))
+    for (const name of extraClients) {
+      const key = clientKey(name)
+      if (key === NO_CLIENT_KEY || known.has(key)) continue
+      tabs.push({ key, label: name, count: 0 })
+      known.add(key)
+    }
+    return tabs.sort((a, b) => {
+      if (a.key === NO_CLIENT_KEY) return 1
+      if (b.key === NO_CLIENT_KEY) return -1
+      return a.label.localeCompare(b.label)
+    })
+  }, [isAdmin, projects, extraClients])
+
+  const activeClient = isAdmin && clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
+  const activeClientLabel = clientTabs.find((t) => t.key === activeClient)?.label ?? ''
+  const defaultClient = activeClient === ALL_CLIENTS_KEY || activeClient === NO_CLIENT_KEY ? '' : activeClientLabel
+
+  // Reset a stale stored selection (tab vanished) once projects have loaded.
+  useEffect(() => {
+    if (isAdmin && !loading && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
+      setSelectedClient(ALL_CLIENTS_KEY)
+    }
+  }, [isAdmin, loading, selectedClient, activeClient, setSelectedClient])
+
   const filtered = projects.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.client ?? '').toLowerCase().includes(search.toLowerCase())
+    (!isAdmin || matchesClient(p.client, activeClient)) &&
+    (p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.client ?? '').toLowerCase().includes(search.toLowerCase()))
   )
 
   const filteredAssigned = assignedAssets.filter((a) =>
@@ -244,6 +290,7 @@ export default function DashboardPage() {
         {showNew && (
           <NewContentModal
             onClose={() => setShowNew(false)}
+            defaultClient={defaultClient}
             onCreated={() => { setShowNew(false); loadProjects(token ?? '') }}
           />
         )}
@@ -349,12 +396,16 @@ export default function DashboardPage() {
               {loading ? (
                 <CardGridSkeleton count={8} minWidth={240} />
               ) : filtered.length === 0 && !search ? (
-                <EmptyState icon={Film} title="No projects yet" sub="Create your first project to get started.">
+                <EmptyState
+                  icon={Film}
+                  title={activeClient === ALL_CLIENTS_KEY ? 'No projects yet' : activeClient === NO_CLIENT_KEY ? 'No projects without a client' : `No projects for ${activeClientLabel} yet`}
+                  sub={activeClient === ALL_CLIENTS_KEY ? 'Create your first project to get started.' : 'Create one to get started.'}
+                >
                   <button
                     onClick={() => setShowNew(true)}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
                   >
-                    <Plus size={14} /> Create first project
+                    <Plus size={14} /> {activeClient === ALL_CLIENTS_KEY ? 'Create first project' : defaultClient ? `Create project for ${defaultClient}` : 'Create project'}
                   </button>
                 </EmptyState>
               ) : filtered.length === 0 && search ? (
@@ -394,6 +445,17 @@ export default function DashboardPage() {
             </>
           )}
         </div>
+
+        {isAdmin && !authError && !loading && (
+          <ClientTabStrip
+            tabs={clientTabs}
+            allCount={projects.length}
+            countFor={(key) => projects.filter((p) => matchesClient(p.client, key)).length}
+            activeKey={activeClient}
+            onSelect={setSelectedClient}
+            onAdd={(name) => addClient(name, clientTabs.map((t) => t.key))}
+          />
+        )}
       </div>
       <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
     </>
