@@ -69,6 +69,27 @@ export default function BoardPage() {
   const [boardView, setBoardView] = useState<BoardView>('board')
   const [projects, setProjects] = useState<WorkspaceProject[]>([])
   const [projectsLoading, setProjectsLoading] = useState(false)
+
+  // Every project fetch (initial load, poll, entering Projects) goes through
+  // here: bounded by a timeout (covers the body read too) and stamped with a
+  // generation so an older response can never overwrite a newer one.
+  const projectsGenRef = useRef(0)
+  const fetchProjects = async (accessToken: string): Promise<boolean> => {
+    const gen = ++projectsGenRef.current
+    try {
+      const res = await fetch('/api/board/projects', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(8000),
+      })
+      const data = await res.json()
+      if (gen !== projectsGenRef.current || !res.ok) return false
+      const next: WorkspaceProject[] = data.projects ?? []
+      setProjects((prev) => (sameData(prev, next) ? prev : next))
+      return true
+    } catch {
+      return false // timeout / network: keep whatever we have
+    }
+  }
   const [selectedEditor, setSelectedEditor] = useState<BoardEditorOption | null>(null)
   const [editorAssets, setEditorAssets] = useState<BoardAsset[] | null>(null)
   const [editorAssetsLoading, setEditorAssetsLoading] = useState(false)
@@ -107,15 +128,7 @@ export default function BoardPage() {
 
         // Projects feed the client tabs so a client with no cards yet still
         // gets a tab. Best-effort: tabs fall back to the board's assets.
-        try {
-          const projectsRes = await fetch('/api/board/projects', {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          })
-          const projectsData = await projectsRes.json()
-          if (projectsRes.ok) setProjects(projectsData.projects ?? [])
-        } catch {
-          // ignore
-        }
+        await fetchProjects(session.access_token)
       }
     } catch (err) {
       setError('Failed to load board')
@@ -152,20 +165,9 @@ export default function BoardPage() {
     const byId = (list: BoardAsset[]) => [...list].sort((a, b) => a.id.localeCompare(b.id))
     setAssets((prev) => (sameData(byId(prev), byId(next)) ? prev : next))
 
-    // Keep project-derived client tabs fresh too (new empty project, renamed
-    // client). Best-effort; failures leave the current list untouched.
-    if (role === 'admin') {
-      try {
-        const pRes = await fetch('/api/board/projects', { headers: { Authorization: `Bearer ${token}` } })
-        if (pRes.ok) {
-          const pData = await pRes.json()
-          const nextProjects: WorkspaceProject[] = pData.projects ?? []
-          setProjects((prev) => (sameData(prev, nextProjects) ? prev : nextProjects))
-        }
-      } catch {
-        // ignore
-      }
-    }
+    // Keep project-derived client tabs fresh too. Not awaited: a slow
+    // projects request must never delay the board's own polling cadence.
+    if (role === 'admin') void fetchProjects(token)
   }, 3000, !loading && !error && boardView === 'board')
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, assetId: string) => {
@@ -340,15 +342,7 @@ export default function BoardPage() {
       // Always refetch on entry so the grid and client tabs are never stale;
       // only show the spinner when there is nothing to show yet.
       setProjectsLoading(projects.length === 0)
-      try {
-        const res = await fetch('/api/board/projects', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const data = await res.json()
-        if (res.ok) setProjects(data.projects ?? [])
-      } catch (err) {
-        // leave projects empty - the grid will just show nothing to pick
-      }
+      await fetchProjects(token)
       setProjectsLoading(false)
     }
   }
@@ -387,6 +381,15 @@ export default function BoardPage() {
   // A tab can vanish (last card moved/deleted); fall back to All rather than
   // showing an empty board for a client that no longer exists.
   const activeClient = clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
+
+  // Actually reset (not just display All) so a stale key can't silently
+  // reselect if a client with that name reappears later. Only once tabs have
+  // loaded, so an empty initial list doesn't wipe a valid selection.
+  useEffect(() => {
+    if (clientTabs.length > 0 && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
+      setSelectedClient(ALL_CLIENTS_KEY)
+    }
+  }, [clientTabs, selectedClient, activeClient])
 
   const visibleAssets = useMemo(
     () => (role === 'admin' ? assets.filter((a) => matchesClient(a.project_client, activeClient)) : assets),
