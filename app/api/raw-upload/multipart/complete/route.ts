@@ -80,29 +80,50 @@ async function finalizeUpload(db: PoolClient, payload: UploadTokenPayload, userI
   try {
     // The parts B2 actually holds are the only source of truth - nothing
     // about ETags or sizes is taken from the client.
-    const parts = await listAllParts(payload.key, payload.uploadId)
-
-    const contiguous =
-      parts.length === payload.totalParts && parts.every((p, i) => p.PartNumber === i + 1 && !!p.ETag)
-    if (!contiguous) {
-      return NextResponse.json({ error: "The upload didn't finish properly. Please try again." }, { status: 400 })
+    let parts: Part[] | null = null
+    let completed: { VersionId?: string } = {}
+    try {
+      parts = await listAllParts(payload.key, payload.uploadId)
+    } catch (err) {
+      if ((err as { name?: string }).name !== 'NoSuchUpload') throw err
+      // The multipart upload is gone: either an earlier complete already
+      // finished it (its reply or the DB write was lost) or it was aborted.
+      // Recover from the object itself, which was verified by size below.
+      try {
+        const found = await b2.send(new HeadObjectCommand({ Bucket: B2_BUCKET, Key: payload.key }))
+        completed = { VersionId: found.VersionId }
+      } catch (headErr) {
+        const status = (headErr as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
+        if ((headErr as { name?: string }).name === 'NotFound' || status === 404) {
+          return NextResponse.json({ error: "The upload didn't finish properly. Please try again." }, { status: 400 })
+        }
+        return NextResponse.json({ error: 'Could not confirm the upload. Please try again in a moment.' }, { status: 502 })
+      }
     }
 
-    const total = parts.reduce((sum, p) => sum + (p.Size ?? 0), 0)
-    const smallPart = parts.slice(0, -1).some((p) => (p.Size ?? 0) < MIN_PART_SIZE)
-    if (smallPart || total !== payload.declaredSize || total > MAX_RAW_FILE_BYTES) {
-      await b2.send(new AbortMultipartUploadCommand({ Bucket: B2_BUCKET, Key: payload.key, UploadId: payload.uploadId })).catch(() => {})
-      return NextResponse.json({ error: "The upload didn't finish properly. Please try again." }, { status: 400 })
-    }
+    if (parts) {
+      const contiguous =
+        parts.length === payload.totalParts && parts.every((p, i) => p.PartNumber === i + 1 && !!p.ETag)
+      if (!contiguous) {
+        return NextResponse.json({ error: "The upload didn't finish properly. Please try again." }, { status: 400 })
+      }
 
-    const completed = await b2.send(
-      new CompleteMultipartUploadCommand({
-        Bucket: B2_BUCKET,
-        Key: payload.key,
-        UploadId: payload.uploadId,
-        MultipartUpload: { Parts: parts.map((p) => ({ PartNumber: p.PartNumber, ETag: p.ETag })) },
-      }),
-    )
+      const total = parts.reduce((sum, p) => sum + (p.Size ?? 0), 0)
+      const smallPart = parts.slice(0, -1).some((p) => (p.Size ?? 0) < MIN_PART_SIZE)
+      if (smallPart || total !== payload.declaredSize || total > MAX_RAW_FILE_BYTES) {
+        await b2.send(new AbortMultipartUploadCommand({ Bucket: B2_BUCKET, Key: payload.key, UploadId: payload.uploadId })).catch(() => {})
+        return NextResponse.json({ error: "The upload didn't finish properly. Please try again." }, { status: 400 })
+      }
+
+      completed = await b2.send(
+        new CompleteMultipartUploadCommand({
+          Bucket: B2_BUCKET,
+          Key: payload.key,
+          UploadId: payload.uploadId,
+          MultipartUpload: { Parts: parts.map((p) => ({ PartNumber: p.PartNumber, ETag: p.ETag })) },
+        }),
+      )
+    }
 
     completedObject = { versionId: completed.VersionId }
 
@@ -161,16 +182,8 @@ async function finalizeUpload(db: PoolClient, payload: UploadTokenPayload, userI
       return NextResponse.json({ error: 'Could not confirm the upload. Please try again in a moment.' }, { status: 502 })
     }
 
-    // CompleteMultipartUpload may have succeeded with its response lost: look
-    // for the (uniquely keyed) object before deciding there is nothing to clean.
-    if (!completedObject) {
-      try {
-        const found = await b2.send(new HeadObjectCommand({ Bucket: B2_BUCKET, Key: payload.key }))
-        completedObject = { versionId: found.VersionId }
-      } catch {
-        // Not found (or unreadable): nothing we can clean up.
-      }
-    }
+    // A completed-but-unrecorded object (lost Complete reply, unknown DB outcome) is
+    // kept: a retry sees NoSuchUpload and records it from the object itself.
     if (completedObject) {
       await b2
         .send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, VersionId: completedObject.versionId }))

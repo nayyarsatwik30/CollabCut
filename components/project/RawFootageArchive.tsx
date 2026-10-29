@@ -301,7 +301,24 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
       sessionRef.current = session
 
       await uploadParts(file, session, init.partSize, init.totalParts)
-      await postJson('/api/raw-upload/multipart/complete', { uploadToken: session.uploadToken })
+      // A 502/409 from complete can mean the file was stored but not yet
+      // recorded; retrying lets the server finish or confirm it.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await postJson('/api/raw-upload/multipart/complete', { uploadToken: session.uploadToken })
+          break
+        } catch (err) {
+          const status = err instanceof UploadError ? err.status : undefined
+          if ((status === 502 || status === 409) && !session.cancelled) {
+            if (attempt >= 3) {
+              throw new UploadError('The upload may have finished - the file list will refresh. If it is missing, upload it again.', status)
+            }
+            await sleep(1000 * 2 ** attempt)
+            continue
+          }
+          throw err
+        }
+      }
       sessionRef.current = null
       setProgress(100)
     } catch (err) {
