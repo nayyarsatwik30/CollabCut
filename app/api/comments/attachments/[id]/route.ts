@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
-import { isMissingTable, purgeRawFiles } from '@/lib/comment-attachments'
+import { isMissingTable, purgePendingRawFiles } from '@/lib/comment-attachments'
 
 // Remove-before-send: the uploader can discard an attachment that has not
 // been posted with a comment yet. Once linked to a comment it goes only when
@@ -18,7 +18,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       [params.id, user.id],
     )
     if (!result.rows[0]) return NextResponse.json({ error: 'Attachment not found' }, { status: 404 })
-    await purgeRawFiles(result.rows)
+    await purgePendingRawFiles(result.rows)
     return NextResponse.json({ success: true })
   } catch (err) {
     if (isMissingTable(err)) return NextResponse.json({ error: 'Attachment not found' }, { status: 404 })

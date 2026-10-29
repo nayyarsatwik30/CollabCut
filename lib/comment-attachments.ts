@@ -95,12 +95,21 @@ export async function deleteB2Objects(keys: string[]): Promise<void> {
   )
 }
 
-// Removes raw_files rows (the comment_attachments link cascades), then their
-// B2 objects.
-export async function purgeRawFiles(files: { id: string; b2_key: string }[]): Promise<void> {
+// Removes still-unposted attachments only (rows + B2 objects). Conditional on
+// comment_id IS NULL, so a file that got linked to a comment in the meantime
+// is left alone. The B2 key comes from the row actually deleted.
+export async function purgePendingRawFiles(files: { id: string }[]): Promise<void> {
   if (files.length === 0) return
-  await migrationDb.query(`DELETE FROM raw_files WHERE id = ANY($1::uuid[])`, [files.map((f) => f.id)])
-  await deleteB2Objects(files.map((f) => f.b2_key))
+  const deleted = await migrationDb.query(
+    `DELETE FROM raw_files rf
+     USING comment_attachments ca
+     WHERE rf.id = ca.raw_file_id
+       AND rf.id = ANY($1::uuid[])
+       AND ca.comment_id IS NULL
+     RETURNING rf.b2_key`,
+    [files.map((f) => f.id)],
+  )
+  await deleteB2Objects(deleted.rows.map((row) => row.b2_key))
 }
 
 export function attachmentSelect(): string {

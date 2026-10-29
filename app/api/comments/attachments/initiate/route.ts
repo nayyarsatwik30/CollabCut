@@ -8,7 +8,7 @@ import { b2, B2_BUCKET } from '@/lib/b2'
 import { sanitizeFileName } from '@/lib/raw-upload-token'
 import {
   MAX_COMMENT_ATTACHMENT_BYTES, MAX_PENDING_PER_USER, MIGRATION_MESSAGE, PENDING_MAX_AGE_HOURS, UPLOAD_TOKEN_TTL_MS,
-  assetIsLive, attachmentContentType, isMissingTable, purgeRawFiles, signAttachmentToken,
+  assetIsLive, attachmentContentType, isMissingTable, purgePendingRawFiles, signAttachmentToken,
 } from '@/lib/comment-attachments'
 
 // Step 1 of attaching a reference file to a comment: validate, then hand the
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
          AND ca.created_at < now() - make_interval(hours => $2::int)`,
       [user.id, PENDING_MAX_AGE_HOURS],
     )
-    await purgeRawFiles(stale.rows)
+    await purgePendingRawFiles(stale.rows)
 
     const pending = await migrationDb.query(
       `SELECT count(*)::int AS n FROM comment_attachments WHERE uploaded_by = $1 AND comment_id IS NULL`,
