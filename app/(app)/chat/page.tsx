@@ -110,15 +110,14 @@ export default function ChatPage() {
         if (effectiveId !== current) {
           activeRef.current = effectiveId
           setActiveId(effectiveId)
-          if (current) {
-            // Access to that workspace is gone: discard everything typed for it.
-            const prefix = `${current}|`
-            const hadDraft = Object.keys(draftsRef.current).some((k) => k.startsWith(prefix))
-            if (hadDraft) {
-              setDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith(prefix))))
-              setNotice('You no longer have access to that chat; your draft was cleared.')
-            }
-          }
+        }
+        // Drop drafts for every workspace no longer in the refreshed list (not just
+        // the active one), so they can't reappear if access is restored later.
+        const ids = new Set(list.map((w) => w.id))
+        const isStale = (k: string) => !ids.has(k.slice(0, k.indexOf('|')))
+        if (Object.keys(draftsRef.current).some(isStale)) {
+          setDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !isStale(k))))
+          setNotice('You no longer have access to that chat; your draft was cleared.')
         }
         const ws = list.find((w) => w.id === effectiveId)
         // Also drop a stale channel selection (e.g. the client's last project was trashed).
@@ -256,8 +255,9 @@ export default function ChatPage() {
           <EmptyState icon={MessageCircle} title="Chat unavailable" sub={setupError} />
         </div>
       ) : !activeId ? (
-        <div className="flex-1 p-6 flex items-center justify-center">
+        <div className="flex-1 p-6 flex flex-col items-center justify-center">
           <EmptyState icon={MessageCircle} title="No workspace yet" sub="Join or create a workspace to chat with your team." />
+          {notice && <p role="status" className="mt-3 text-[12px] text-th-muted">{notice}</p>}
         </div>
       ) : (
         <>
