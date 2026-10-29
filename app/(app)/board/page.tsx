@@ -76,6 +76,14 @@ export default function BoardPage() {
   const [boardView, setBoardView] = useState<BoardView>('board')
   const [projects, setProjects] = useState<WorkspaceProject[]>([])
   const [projectsLoading, setProjectsLoading] = useState(false)
+  // Last fetch on entering/retrying the Projects view failed (shown instead of
+  // the empty state when nothing is cached).
+  const [projectsFailed, setProjectsFailed] = useState(false)
+  const retryProjects = async () => {
+    setProjectsLoading(true)
+    setProjectsFailed(!(await fetchProjects(token)))
+    setProjectsLoading(false)
+  }
 
   // Every project fetch (initial load, poll, entering Projects) goes through
   // here: bounded by a timeout (covers the body read too) and stamped with a
@@ -383,7 +391,7 @@ export default function BoardPage() {
       // Always refetch on entry so the grid and client tabs are never stale;
       // only show the spinner when there is nothing to show yet.
       setProjectsLoading(projects.length === 0)
-      await fetchProjects(token)
+      setProjectsFailed(!(await fetchProjects(token)))
       setProjectsLoading(false)
     }
   }
@@ -552,6 +560,11 @@ export default function BoardPage() {
             {projectsLoading ? (
               <div className="flex items-center justify-center py-16">
                 <Orb state="composing" size={64} label="Loading" />
+              </div>
+            ) : projectsFailed && projects.length === 0 ? (
+              <div role="alert" className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+                <p className="text-[13px] text-th-changes">Couldn&apos;t load projects. Check your connection and try again.</p>
+                <Button onClick={retryProjects} size="sm" variant="secondary">Retry</Button>
               </div>
             ) : visibleProjects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
