@@ -84,7 +84,9 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
         xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)))
         xhr.onerror = () => reject(new Error('Network error while uploading'))
         xhr.onabort = () => reject(new Error('cancelled'))
-        xhr.send(file)
+        // Blob with an empty type: XHR then sends no Content-Type, so the CORS
+        // preflight needs no extra allowed header (same as the raw-footage parts).
+        xhr.send(file.slice(0, file.size, ''))
       })
       xhrs.current.delete(key)
 

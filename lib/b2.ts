@@ -9,6 +9,8 @@ export const b2 = new S3Client({
   region: B2_REGION,
   endpoint: process.env.B2_ENDPOINT!,
   forcePathStyle: true,
+  requestChecksumCalculation: 'WHEN_REQUIRED',
+  responseChecksumValidation: 'WHEN_REQUIRED',
   credentials: {
     accessKeyId: process.env.B2_KEY_ID!,
     secretAccessKey: process.env.B2_APPLICATION_KEY!,
