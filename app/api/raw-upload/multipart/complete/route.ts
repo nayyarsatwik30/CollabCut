@@ -12,7 +12,7 @@ import { requireAuth } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
 import { b2, B2_BUCKET } from '@/lib/b2'
 import { MAX_RAW_FILE_BYTES, fileExtension, hasSignature, matchesSignature } from '@/lib/raw-files'
-import { MIN_PART_SIZE, authorizeUpload } from '@/lib/raw-upload-token'
+import { MIN_PART_SIZE, authorizeUpload, type UploadTokenPayload } from '@/lib/raw-upload-token'
 
 async function listAllParts(key: string, uploadId: string): Promise<Part[]> {
   const parts: Part[] = []
@@ -25,6 +25,8 @@ async function listAllParts(key: string, uploadId: string): Promise<Part[]> {
   return parts.sort((a, b) => (a.PartNumber ?? 0) - (b.PartNumber ?? 0))
 }
 
+const RAW_FILE_COLUMNS = 'id, project_id, uploaded_by, file_name, file_size_bytes, content_type, created_at'
+
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if ('error' in auth) return auth.error
@@ -35,8 +37,37 @@ export async function POST(req: NextRequest) {
   if ('error' in gate) return gate.error
   const { payload } = gate
 
+  // Completion is serialized per upload key with a session-level Postgres
+  // advisory lock (no schema change): a concurrent request that can't get it
+  // never touches B2 - it returns the recorded row if there is one, else 409.
+  const lockClient = await migrationDb.connect()
+  let locked = false
+  let unlockFailed = false
+  try {
+    const lockResult = await lockClient.query(`SELECT pg_try_advisory_lock(hashtext($1)) AS ok`, [payload.key])
+    locked = lockResult.rows[0]?.ok === true
+    if (!locked) {
+      const recorded = await lockClient.query(`SELECT ${RAW_FILE_COLUMNS} FROM raw_files WHERE b2_key = $1 LIMIT 1`, [payload.key])
+      if (recorded.rows[0]) return NextResponse.json({ rawFile: recorded.rows[0] }, { status: 200 })
+      return NextResponse.json({ error: 'This upload is already being finalized - try again in a moment.' }, { status: 409 })
+    }
+    return await finalizeUpload(payload, user.id)
+  } finally {
+    if (locked) {
+      try {
+        await lockClient.query(`SELECT pg_advisory_unlock(hashtext($1))`, [payload.key])
+      } catch {
+        unlockFailed = true
+      }
+    }
+    // A connection whose unlock failed is destroyed so the lock can't leak.
+    lockClient.release(unlockFailed ? true : undefined)
+  }
+}
+
+async function finalizeUpload(payload: UploadTokenPayload, userId: string): Promise<NextResponse> {
   // Double submit: the upload already finished and was recorded.
-  const existing = await migrationDb.query(`SELECT id, project_id, uploaded_by, file_name, file_size_bytes, content_type, created_at FROM raw_files WHERE b2_key = $1 LIMIT 1`, [payload.key])
+  const existing = await migrationDb.query(`SELECT ${RAW_FILE_COLUMNS} FROM raw_files WHERE b2_key = $1 LIMIT 1`, [payload.key])
   if (existing.rows[0]) return NextResponse.json({ rawFile: existing.rows[0] }, { status: 200 })
 
   // Set once the object exists in B2; if anything after that throws, no row
@@ -102,7 +133,7 @@ export async function POST(req: NextRequest) {
       `INSERT INTO raw_files (project_id, uploaded_by, file_name, b2_key, file_size_bytes, content_type)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, project_id, uploaded_by, file_name, file_size_bytes, content_type, created_at`,
-      [payload.projectId, user.id, payload.safeName, payload.key, size, payload.contentType],
+      [payload.projectId, userId, payload.safeName, payload.key, size, payload.contentType],
     )
     return NextResponse.json({ rawFile: insertResult.rows[0] }, { status: 201 })
   } catch (err) {
