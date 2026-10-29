@@ -88,9 +88,10 @@ export default function BoardPage() {
     if (opts?.skipIfBusy && projectsInFlightRef.current) return false
     const gen = ++projectsGenRef.current
     projectsInFlightRef.current = true
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 8000)
+    let timer: ReturnType<typeof setTimeout> | undefined
     try {
+      const controller = new AbortController()
+      timer = setTimeout(() => controller.abort(), 8000)
       const res = await fetch('/api/board/projects', {
         headers: { Authorization: `Bearer ${accessToken}` },
         signal: controller.signal,
@@ -104,7 +105,7 @@ export default function BoardPage() {
     } catch {
       return false // timeout / network: keep whatever we have
     } finally {
-      clearTimeout(timer)
+      if (timer) clearTimeout(timer)
       if (gen === projectsGenRef.current) projectsInFlightRef.current = false
     }
   }
@@ -400,6 +401,7 @@ export default function BoardPage() {
   // hold off creating content so New can't open with the wrong client.
   const tabsReady = hydrated && projectsLoaded
   const clientPending = role === 'admin' && !tabsReady && selectedClient !== ALL_CLIENTS_KEY
+    && !clientTabs.some((t) => t.key === selectedClient)
   const activeClient = clientPending || clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
   const showClientCtx = role === 'admin' && boardView !== 'editors'
 

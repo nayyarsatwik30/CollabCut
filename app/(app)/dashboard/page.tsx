@@ -60,7 +60,8 @@ export default function DashboardPage() {
   // Same client selection as the Board page (shared per-workspace session
   // state); admins only. Editors keep the unfiltered view.
   const [workspaceId, setWorkspaceId] = useState('')
-  const { selectedClient, setSelectedClient, extraClients, addClient } = useSelectedClient(workspaceId)
+  const [wsLookupFailed, setWsLookupFailed] = useState(false)
+  const { selectedClient, setSelectedClient, extraClients, addClient, hydrated } = useSelectedClient(workspaceId)
 
   useEffect(() => {
     if (ready && session) checkAuthAndLoad()
@@ -97,8 +98,11 @@ export default function DashboardPage() {
         if (wsRes.ok) {
           const ws = await wsRes.json()
           if (ws.workspace?.id) setWorkspaceId(ws.workspace.id)
+          else setWsLookupFailed(true)
+        } else {
+          setWsLookupFailed(true)
         }
-      } catch { /* no shared selection; All clients */ }
+      } catch { setWsLookupFailed(true) /* no shared selection; All clients */ }
     }
   }
 
@@ -165,10 +169,24 @@ export default function DashboardPage() {
 
   const isAdmin = role === 'admin'
 
+  // /api/projects returns every project the user owns, across any workspaces
+  // they administer, while the saved selection is keyed to one workspace.
+  // Tabs and per-client filtering use only that workspace's projects.
+  const wsProjects = useMemo(
+    () => (workspaceId ? projects.filter((p) => {
+      const ws = (p as Project & { workspace_id?: string | null }).workspace_id
+      return !ws || ws === workspaceId
+    }) : projects),
+    [projects, workspaceId]
+  )
+  // New defaults its client from the selection, so wait for it to be restored
+  // (or for the workspace lookup to fail, then fall back to no default).
+  const newBlocked = isAdmin && !hydrated && !wsLookupFailed
+
   const clientTabs = useMemo<ClientTab[]>(() => {
     if (!isAdmin) return []
-    return mergeExtraClients(buildClientTabs(projects.map((p) => ({ client: p.client }))), extraClients)
-  }, [isAdmin, projects, extraClients])
+    return mergeExtraClients(buildClientTabs(wsProjects.map((p) => ({ client: p.client }))), extraClients)
+  }, [isAdmin, wsProjects, extraClients])
 
   const activeClient = isAdmin && clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
   const activeClientLabel = clientTabs.find((t) => t.key === activeClient)?.label ?? ''
@@ -178,7 +196,7 @@ export default function DashboardPage() {
   // missing client may still exist workspace-wide. The Board (workspace-wide
   // data) owns clearing stale selections; here it just displays as All.
 
-  const filtered = projects.filter((p) =>
+  const filtered = (activeClient === ALL_CLIENTS_KEY ? projects : wsProjects).filter((p) =>
     (!isAdmin || matchesClient(p.client, activeClient)) &&
     (p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.client ?? '').toLowerCase().includes(search.toLowerCase()))
@@ -241,6 +259,7 @@ export default function DashboardPage() {
 
             {role !== 'editor' && (
               <button
+                disabled={newBlocked}
                 onClick={() => setShowNew(true)}
                 className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
               >
@@ -396,6 +415,7 @@ export default function DashboardPage() {
                   sub={activeClient === ALL_CLIENTS_KEY ? 'Create your first project to get started.' : 'Create one to get started.'}
                 >
                   <button
+                    disabled={newBlocked}
                     onClick={() => setShowNew(true)}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
                   >
@@ -413,6 +433,7 @@ export default function DashboardPage() {
                     <ProjectCard key={p.id} project={p} view="grid" onDelete={handleDeleteProject} />
                   ))}
                   <button
+                    disabled={newBlocked}
                     onClick={() => setShowNew(true)}
                     className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent-text transition-colors btn-press overflow-hidden"
                   >
@@ -444,7 +465,7 @@ export default function DashboardPage() {
           <ClientTabStrip
             tabs={clientTabs}
             allCount={projects.length}
-            countFor={(key) => projects.filter((p) => matchesClient(p.client, key)).length}
+            countFor={(key) => wsProjects.filter((p) => matchesClient(p.client, key)).length}
             activeKey={activeClient}
             onSelect={setSelectedClient}
             onAdd={(name) => addClient(name, clientTabs.map((t) => t.key))}
