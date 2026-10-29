@@ -4,7 +4,7 @@ import { requireAuth, canAccessAsset } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
 import { b2, B2_BUCKET } from '@/lib/b2'
 import {
-  MAX_COMMENT_ATTACHMENT_BYTES, MIGRATION_MESSAGE, assetIsLive, attachmentSelect, isMissingTable, verifyAttachmentToken,
+  MAX_COMMENT_ATTACHMENT_BYTES, MAX_PENDING_PER_USER, MIGRATION_MESSAGE, assetIsLive, attachmentSelect, isMissingTable, verifyAttachmentToken,
 } from '@/lib/comment-attachments'
 
 // Step 2: the browser has PUT the file to B2. Re-check access, confirm the
@@ -60,6 +60,19 @@ export async function POST(req: NextRequest) {
       if (replay.rows[0]) {
         await client.query('COMMIT')
         return NextResponse.json({ attachment: replay.rows[0] })
+      }
+      // Re-enforce the unposted-files cap here: initiate inserts nothing, so
+      // concurrent initiations can all pass its check. A per-user lock makes
+      // the count + insert atomic across different uploads.
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`comment-attachment-pending:${user.id}`])
+      const pending = await client.query(
+        `SELECT count(*)::int AS n FROM comment_attachments WHERE uploaded_by = $1 AND comment_id IS NULL`,
+        [user.id],
+      )
+      if (pending.rows[0].n >= MAX_PENDING_PER_USER) {
+        await client.query('ROLLBACK')
+        await dropObject()
+        return NextResponse.json({ error: 'Too many unposted files - post your note or remove some.' }, { status: 409 })
       }
       const raw = await client.query(
         `INSERT INTO raw_files (project_id, uploaded_by, file_name, b2_key, file_size_bytes, content_type)
