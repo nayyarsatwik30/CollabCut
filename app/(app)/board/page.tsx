@@ -686,7 +686,7 @@ export default function BoardPage() {
 
             {activeClient !== ALL_CLIENTS_KEY && visibleAssets.length === 0 && (
               <div className="shrink-0 mx-6 mt-4 flex items-center gap-3 px-4 py-3 rounded-th border border-dashed border-th-border text-[12px] text-th-muted">
-                <span>{activeClient === NO_CLIENT_KEY ? 'No cards without a client.' : `No projects for ${activeClientLabel} yet`}</span>
+                <span>{activeClient === NO_CLIENT_KEY ? 'No cards without a client.' : `No cards for ${activeClientLabel} yet`}</span>
                 <Button onClick={() => setShowNewContent(true)} size="sm"><Plus size={13} /> New{defaultClient ? ` for ${defaultClient}` : ''}</Button>
               </div>
             )}
