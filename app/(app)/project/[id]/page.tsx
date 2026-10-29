@@ -10,7 +10,7 @@ import { TopBar } from '@/components/layout/TopBar'
 import { Avatar } from '@/components/ui/Badge'
 import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
 import { useSessionGuard } from '@/lib/useSessionGuard'
-import { priorityMeta } from '@/lib/priority'
+import { PriorityBadge } from '@/components/PriorityBadge'
 import { PriorityMenu } from '@/components/PriorityMenu'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { VersionBadge } from '@/components/board/VersionManager'
@@ -387,12 +387,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         <PriorityMenu value={a.priority} onChange={(p) => updatePriority(a.id, p)} size="sm" />
       </span>
     ) : (
-      <span
-        className="app-pill shrink-0 font-mono text-[10px]"
-        style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
-      >
-        {priorityMeta(a.priority).label}
-      </span>
+      <PriorityBadge size="sm" priority={a.priority} />
     )
 
   const formatSize = (bytes: number) => {

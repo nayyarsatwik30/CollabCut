@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from 'react-dom'
 import { Check } from 'lucide-react'
 import { PRIORITY_OPTIONS, priorityMeta } from '@/lib/priority'
+import { PriorityBars } from '@/components/PriorityBadge'
 
 interface PriorityMenuProps {
   value: number
@@ -101,7 +102,6 @@ export function PriorityMenu({ value, onChange, size = 'md' }: PriorityMenuProps
   }
 
   const text = size === 'sm' ? 'text-[9px] px-1.5 py-0.5 gap-1' : 'text-[11px] px-2 py-0.5 gap-1.5'
-  const dot = size === 'sm' ? 'w-1.5 h-1.5' : 'w-2 h-2'
 
   // Swallow pointer/click/drag so the Board card's own handlers (open review,
   // start drag) never see interaction with the menu. React events bubble
@@ -126,16 +126,16 @@ export function PriorityMenu({ value, onChange, size = 'md' }: PriorityMenuProps
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? `${uid}-list` : undefined}
-        aria-label={`Priority ${meta.label}. Change priority`}
+        aria-label={`${meta.a11y}. Change priority`}
         onClick={(e) => { e.stopPropagation(); open ? close() : openMenu() }}
         onKeyDown={(e) => {
           e.stopPropagation()
           if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); openMenu() }
         }}
-        className={`inline-flex items-center font-mono font-bold rounded-th-sm border-0 outline-none cursor-pointer transition-colors hover:brightness-125 focus-visible:ring-1 focus-visible:ring-th-accent ${text}`}
-        style={{ color: meta.color, background: `color-mix(in srgb, ${meta.color} 16%, transparent)` }}
+        className={`inline-flex items-center font-mono font-bold rounded-[3px] outline-none cursor-pointer transition-colors hover:brightness-125 focus-visible:ring-1 focus-visible:ring-th-accent ${text}`}
+        style={{ color: meta.color, background: `color-mix(in srgb, ${meta.color} 14%, transparent)`, border: `1px solid color-mix(in srgb, ${meta.color} 45%, transparent)` }}
       >
-        <span className={`${dot} rounded-full shrink-0`} style={{ background: meta.color }} />
+        <PriorityBars bars={meta.bars} size={size === 'sm' ? 9 : 10} />
         {meta.label}
       </button>
 
@@ -160,13 +160,16 @@ export function PriorityMenu({ value, onChange, size = 'md' }: PriorityMenuProps
                 id={`${uid}-opt-${i}`}
                 role="option"
                 aria-selected={selected}
+                aria-label={p.a11y}
                 onMouseEnter={() => setActiveIndex(i)}
                 onClick={(e) => { e.stopPropagation(); select(p.value) }}
                 className="flex items-center gap-2 h-8 px-2 rounded-th-sm cursor-pointer text-[12px] text-th-text select-none"
                 style={{ background: i === activeIndex ? 'var(--th-surface-hov)' : 'transparent' }}
               >
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
-                <span className="font-mono font-bold" style={{ color: p.color }}>{p.label}</span>
+                <span className="inline-flex items-center gap-1.5 font-mono font-bold" style={{ color: priorityMeta(p.value).color }}>
+                  <PriorityBars bars={p.bars} size={11} />
+                  {p.label}
+                </span>
                 <span className="text-th-muted">{p.name}</span>
                 <Check size={12} className="ml-auto shrink-0" style={{ opacity: selected ? 1 : 0 }} aria-hidden />
               </div>

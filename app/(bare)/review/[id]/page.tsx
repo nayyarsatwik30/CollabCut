@@ -9,7 +9,7 @@ import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
 import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
-import { priorityMeta } from '@/lib/priority'
+import { PriorityBadge } from '@/components/PriorityBadge'
 import { PriorityMenu } from '@/components/PriorityMenu'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { useSessionGuard } from '@/lib/useSessionGuard'
@@ -567,12 +567,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           {role === 'admin' ? (
             <PriorityMenu value={asset.priority} onChange={handlePriorityChange} />
           ) : (
-            <span
-              className="app-pill font-mono text-[10px] shrink-0"
-              style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
-            >
-              {priorityMeta(asset.priority).label}
-            </span>
+            <PriorityBadge priority={asset.priority} />
           )}
           </div>
         }
