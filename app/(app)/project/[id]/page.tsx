@@ -316,8 +316,10 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         protectedEdits.length === 0
           ? fresh
           : fresh.map((a) => {
-              const edit = [...protectedEdits].reverse().find((e) => e.key === priorityKey(a))
-              return edit ? { ...a, priority: edit.priority } : a
+              // Newest logged edit for this lineage wins; an older protected
+              // edit must not override a newer one that has since completed.
+              const latest = [...priorityEditsRef.current].reverse().find((e) => e.key === priorityKey(a))
+              return latest && protectedEdits.includes(latest) ? { ...a, priority: latest.priority } : a
             })
       )
     }
