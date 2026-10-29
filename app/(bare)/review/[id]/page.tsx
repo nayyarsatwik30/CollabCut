@@ -520,6 +520,15 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       </div>
 
                       <div className="p-2 border-t border-th-border bg-th-surface-alt/50">
+                        {versions.length >= 2 && (
+                          <Button
+                            onClick={() => { setShowVersions(false); handleOpenCompare() }}
+                            variant="secondary" size="sm" className="w-full mb-2 md:hidden"
+                          >
+                            <Layers size={13} />
+                            Compare versions
+                          </Button>
+                        )}
                         {v1Fulfilled ? (
                           <Button
                             onClick={() => {

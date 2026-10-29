@@ -330,6 +330,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         setProject(data.project)
         const fresh: Asset[] = data.project.assets ?? []
         const live = priorityEditsRef.current.filter((e) => e.pending || e.doneSeq > startSeq)
+        // Untouched lineages: what the server just returned is the confirmed
+        // value (e.g. after a timed-out PATCH, so a later failure rolls back
+        // to what is actually stored).
+        for (const a of fresh) {
+          const key = priorityKey(a)
+          if (!live.some((e) => e.key === key)) confirmedPriorityRef.current.set(key, a.priority)
+        }
         setAssets(
           live.length === 0
             ? fresh
