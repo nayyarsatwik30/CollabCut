@@ -10,7 +10,7 @@ import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { NewContentModal } from '@/components/board/NewContentModal'
 import { useSessionGuard } from '@/lib/useSessionGuard'
-import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, clientKey, matchesClient, type ClientTab } from '@/lib/clients'
+import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
 import { useSelectedClient } from '@/lib/useSelectedClient'
 import { ClientTabStrip } from '@/components/board/ClientTabStrip'
 import { priorityMeta } from '@/lib/priority'
@@ -60,7 +60,8 @@ export default function DashboardPage() {
   // Same client selection as the Board page (shared per-workspace session
   // state); admins only. Editors keep the unfiltered view.
   const [workspaceId, setWorkspaceId] = useState('')
-  const { selectedClient, setSelectedClient, extraClients, addClient } = useSelectedClient(workspaceId)
+  const [projectsLoaded, setProjectsLoaded] = useState(false) // fetched OK at least once
+  const { selectedClient, setSelectedClient, extraClients, addClient, hydrated } = useSelectedClient(workspaceId)
 
   useEffect(() => {
     if (ready && session) checkAuthAndLoad()
@@ -111,6 +112,7 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json()
         setProjects(data.projects ?? [])
+        setProjectsLoaded(true)
       }
     } catch (err) {
       console.error('Failed to load projects', err)
@@ -163,23 +165,11 @@ export default function DashboardPage() {
     }
   }
 
-  const isAdmin = role !== 'editor'
+  const isAdmin = role === 'admin'
 
   const clientTabs = useMemo<ClientTab[]>(() => {
     if (!isAdmin) return []
-    const tabs = buildClientTabs(projects.map((p) => ({ client: p.client })))
-    const known = new Set(tabs.map((t) => t.key))
-    for (const name of extraClients) {
-      const key = clientKey(name)
-      if (key === NO_CLIENT_KEY || known.has(key)) continue
-      tabs.push({ key, label: name, count: 0 })
-      known.add(key)
-    }
-    return tabs.sort((a, b) => {
-      if (a.key === NO_CLIENT_KEY) return 1
-      if (b.key === NO_CLIENT_KEY) return -1
-      return a.label.localeCompare(b.label)
-    })
+    return mergeExtraClients(buildClientTabs(projects.map((p) => ({ client: p.client }))), extraClients)
   }, [isAdmin, projects, extraClients])
 
   const activeClient = isAdmin && clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
@@ -188,10 +178,10 @@ export default function DashboardPage() {
 
   // Reset a stale stored selection (tab vanished) once projects have loaded.
   useEffect(() => {
-    if (isAdmin && !loading && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
+    if (isAdmin && hydrated && projectsLoaded && !loading && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
       setSelectedClient(ALL_CLIENTS_KEY)
     }
-  }, [isAdmin, loading, selectedClient, activeClient, setSelectedClient])
+  }, [isAdmin, hydrated, projectsLoaded, loading, selectedClient, activeClient, setSelectedClient])
 
   const filtered = projects.filter((p) =>
     (!isAdmin || matchesClient(p.client, activeClient)) &&
@@ -389,8 +379,17 @@ export default function DashboardPage() {
           ) : (
             <>
               <div className="flex items-center justify-between mb-5">
-                <h1 className="text-[18px] font-extrabold">All Projects</h1>
-                <span className="font-mono text-[11px] text-th-muted">{filtered.length} projects</span>
+                <h1 className="text-[18px] font-extrabold">
+                  {activeClient === ALL_CLIENTS_KEY ? 'All Projects' : `Projects: ${activeClient === NO_CLIENT_KEY ? 'No client' : activeClientLabel}`}
+                </h1>
+                <span className="flex items-center gap-3 font-mono text-[11px] text-th-muted">
+                  {filtered.length} projects
+                  {activeClient !== ALL_CLIENTS_KEY && (
+                    <button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} className="underline hover:text-th-text btn-press">
+                      Show all clients
+                    </button>
+                  )}
+                </span>
               </div>
 
               {loading ? (
@@ -454,6 +453,7 @@ export default function DashboardPage() {
             activeKey={activeClient}
             onSelect={setSelectedClient}
             onAdd={(name) => addClient(name, clientTabs.map((t) => t.key))}
+            unit="projects"
           />
         )}
       </div>

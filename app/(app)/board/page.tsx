@@ -13,7 +13,7 @@ import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import { priorityMeta } from '@/lib/priority'
-import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, clientKey, matchesClient, type ClientTab } from '@/lib/clients'
+import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
 import { useSelectedClient } from '@/lib/useSelectedClient'
 import { ClientTabStrip } from '@/components/board/ClientTabStrip'
 import { Orb } from '@/components/ui/Orb'
@@ -64,7 +64,10 @@ export default function BoardPage() {
   const [showNewContent, setShowNewContent] = useState(false)
 
   const [workspaceId, setWorkspaceId] = useState('')
-  const { selectedClient, setSelectedClient, extraClients, addClient } = useSelectedClient(workspaceId)
+  // True once /api/board/projects has succeeded at least once: tab data is
+  // only trustworthy (safe to reset a stored selection against) after that.
+  const [projectsLoaded, setProjectsLoaded] = useState(false)
+  const { selectedClient, setSelectedClient, extraClients, addClient, hydrated } = useSelectedClient(workspaceId)
 
   // Admin-only Projects/Editors views alongside the regular Kanban - gated
   // both by not rendering the tab bar for non-admins (below) and by the
@@ -96,6 +99,7 @@ export default function BoardPage() {
       if (gen !== projectsGenRef.current || !res.ok) return false
       const next: WorkspaceProject[] = data.projects ?? []
       setProjects((prev) => (sameData(prev, next) ? prev : next))
+      setProjectsLoaded(true)
       return true
     } catch {
       return false // timeout / network: keep whatever we have
@@ -143,7 +147,8 @@ export default function BoardPage() {
 
         // Projects feed the client tabs so a client with no cards yet still
         // gets a tab. Best-effort: tabs fall back to the board's assets.
-        await fetchProjects(session.access_token)
+        // Not awaited: a slow/hung projects request must not hold the skeleton.
+        void fetchProjects(session.access_token)
       }
     } catch (err) {
       setError('Failed to load board')
@@ -382,21 +387,10 @@ export default function BoardPage() {
     if (role !== 'admin') return []
     const tabs = buildClientTabs(assets.map((a) => ({ client: a.project_client })))
     const known = new Set(tabs.map((t) => t.key))
-    const fromProjects = buildClientTabs(projects.map((p) => ({ client: p.client })))
-    for (const t of fromProjects) {
+    for (const t of buildClientTabs(projects.map((p) => ({ client: p.client })))) {
       if (!known.has(t.key)) { tabs.push({ ...t, count: 0 }); known.add(t.key) }
     }
-    for (const name of extraClients) {
-      const key = clientKey(name)
-      if (key === NO_CLIENT_KEY || known.has(key)) continue
-      tabs.push({ key, label: name, count: 0 })
-      known.add(key)
-    }
-    return tabs.sort((a, b) => {
-      if (a.key === NO_CLIENT_KEY) return 1
-      if (b.key === NO_CLIENT_KEY) return -1
-      return a.label.localeCompare(b.label)
-    })
+    return mergeExtraClients(tabs, extraClients)
   }, [role, assets, projects, extraClients])
 
   // A tab can vanish (last card moved/deleted); fall back to All rather than
@@ -407,10 +401,10 @@ export default function BoardPage() {
   // reselect if a client with that name reappears later (also when the last
   // client disappears). Waits for the initial load to finish.
   useEffect(() => {
-    if (!loading && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
+    if (hydrated && !loading && projectsLoaded && role === 'admin' && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
       setSelectedClient(ALL_CLIENTS_KEY)
     }
-  }, [loading, selectedClient, activeClient])
+  }, [hydrated, loading, projectsLoaded, role, selectedClient, activeClient, setSelectedClient])
 
   const visibleAssets = useMemo(
     () => (role === 'admin' ? assets.filter((a) => matchesClient(a.project_client, activeClient)) : assets),
@@ -457,10 +451,15 @@ export default function BoardPage() {
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopBar title="Board" icon={LayoutGrid}>
+        <TopBar title={role === 'admin' && activeClient !== ALL_CLIENTS_KEY ? `Board: ${activeClient === NO_CLIENT_KEY ? 'No client' : activeClientLabel}` : 'Board'} icon={LayoutGrid}>
           <span className="font-mono text-[11px] text-th-muted hidden md:inline">
-            {role === 'editor' ? 'Showing assets assigned to you' : 'Showing all workspace assets'}
+            {role === 'editor'
+              ? 'Showing assets assigned to you'
+              : `${boardView === 'projects' ? `${visibleProjects.length} projects` : `${visibleAssets.length} cards`}${activeClient === ALL_CLIENTS_KEY ? ' (all clients)' : ''}`}
           </span>
+          {role === 'admin' && activeClient !== ALL_CLIENTS_KEY && (
+            <Button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} size="sm" variant="secondary">Show all clients</Button>
+          )}
           {role === 'admin' && (
             <Button onClick={() => setShowNewContent(true)} size="sm">
               <Plus size={13} /> New
@@ -752,6 +751,7 @@ export default function BoardPage() {
             activeKey={activeClient}
             onSelect={setSelectedClient}
             onAdd={(name) => addClient(name, clientTabs.map((t) => t.key))}
+            unit={boardView === 'projects' ? 'projects' : 'cards'}
           />
         )}
       </div>

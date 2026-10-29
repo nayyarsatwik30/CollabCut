@@ -46,3 +46,26 @@ export function buildClientTabs(items: { client: string | null | undefined }[]):
 export function matchesClient(client: string | null | undefined, selectedKey: string): boolean {
   return selectedKey === ALL_CLIENTS_KEY || clientKey(client) === selectedKey
 }
+
+// Named clients A-Z, "No client" last.
+export function sortClientTabs(tabs: ClientTab[]): ClientTab[] {
+  return [...tabs].sort((a, b) => {
+    if (a.key === NO_CLIENT_KEY) return 1
+    if (b.key === NO_CLIENT_KEY) return -1
+    return a.label.localeCompare(b.label)
+  })
+}
+
+// Appends locally-saved client names that no server-side data uses yet
+// (count 0), skipping any whose key already has a tab.
+export function mergeExtraClients(tabs: ClientTab[], extras: string[]): ClientTab[] {
+  const out = [...tabs]
+  const known = new Set(out.map((t) => t.key))
+  for (const name of extras) {
+    const key = clientKey(name)
+    if (key === NO_CLIENT_KEY || known.has(key)) continue
+    out.push({ key, label: name, count: 0 })
+    known.add(key)
+  }
+  return sortClientTabs(out)
+}

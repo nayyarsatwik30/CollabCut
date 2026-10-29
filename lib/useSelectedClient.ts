@@ -3,6 +3,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, clientKey } from '@/lib/clients'
 
+const MAX_NAME = 100
+const MAX_EXTRAS = 100
+
+function readExtras(ws: string): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(extraKey(ws)) ?? '[]')
+    return Array.isArray(parsed)
+      ? parsed.filter((n): n is string => typeof n === 'string').map((n) => n.slice(0, MAX_NAME)).slice(0, MAX_EXTRAS)
+      : []
+  } catch {
+    return []
+  }
+}
+
 // Shared by the Board and /dashboard Projects pages so the chosen client tab
 // survives navigation between them.
 //  - selected client: sessionStorage, per workspace (survives navigation and
@@ -15,6 +29,9 @@ const extraKey = (ws: string) => `collabcut:client-tabs:${ws}`
 export function useSelectedClient(workspaceId: string) {
   const [selectedClient, setSelectedClientState] = useState<string>(ALL_CLIENTS_KEY)
   const [extraClients, setExtraClients] = useState<string[]>([])
+  // Which workspace the state above was restored for; consumers must not act
+  // on selectedClient (e.g. reset it) until this matches their workspaceId.
+  const [hydratedFor, setHydratedFor] = useState('')
 
   useEffect(() => {
     if (!workspaceId) return
@@ -23,12 +40,8 @@ export function useSelectedClient(workspaceId: string) {
     } catch {
       setSelectedClientState(ALL_CLIENTS_KEY)
     }
-    try {
-      const parsed = JSON.parse(localStorage.getItem(extraKey(workspaceId)) ?? '[]')
-      setExtraClients(Array.isArray(parsed) ? parsed.filter((n): n is string => typeof n === 'string').slice(0, 100) : [])
-    } catch {
-      setExtraClients([])
-    }
+    setExtraClients(readExtras(workspaceId))
+    setHydratedFor(workspaceId)
   }, [workspaceId])
 
   const setSelectedClient = useCallback((key: string) => {
@@ -45,17 +58,24 @@ export function useSelectedClient(workspaceId: string) {
   const addClient = useCallback((raw: string, existingKeys: string[]): string | null => {
     const name = raw.trim().replace(/\s+/g, ' ')
     if (!name) return 'Enter a client name'
-    if (name.length > 100) return 'Max 100 characters'
+    if (name.length > MAX_NAME) return 'Max 100 characters'
+    // "No client" (any case/spacing) means the existing no-client bucket.
+    if (name.toLowerCase() === 'no client') {
+      if (!existingKeys.includes(NO_CLIENT_KEY)) return 'No projects without a client yet'
+      setSelectedClient(NO_CLIENT_KEY)
+      return null
+    }
     const key = clientKey(name)
-    if (key === NO_CLIENT_KEY) return 'Enter a client name'
     if (!existingKeys.includes(key)) {
-      const next = [...extraClients, name]
+      // Re-read so a second browser tab's additions aren't overwritten.
+      const current = readExtras(workspaceId)
+      const next = current.some((n) => clientKey(n) === key) ? current : [...current, name].slice(-MAX_EXTRAS)
       setExtraClients(next)
       try { if (workspaceId) localStorage.setItem(extraKey(workspaceId), JSON.stringify(next)) } catch { /* session-only */ }
     }
     setSelectedClient(key)
     return null
-  }, [extraClients, workspaceId, setSelectedClient])
+  }, [workspaceId, setSelectedClient])
 
-  return { selectedClient, setSelectedClient, extraClients, addClient }
+  return { selectedClient, setSelectedClient, extraClients, addClient, hydrated: !!workspaceId && hydratedFor === workspaceId }
 }
