@@ -449,11 +449,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   router.push(`/project/${asset.project_id}`)
                 }
               }}
-              variant="secondary" size="sm" className="shrink-0"
+              variant="secondary" size="sm" className="shrink-0" aria-label="Back"
             >
               <ButtonIcon className="group-hover:-translate-x-0.5 group-hover:translate-y-0 group-active:-translate-x-1">
                 <ChevronLeft size={13} />
-              </ButtonIcon> Back
+              </ButtonIcon> <span className="hidden sm:inline">Back</span>
             </Button>
             <div className="w-px h-5 bg-th-border shrink-0" />
           </>
@@ -545,7 +545,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               {versions.length >= 2 && (
                 <Button
                   onClick={handleOpenCompare}
-                  variant="secondary" size="xs" className="font-mono shrink-0"
+                  variant="secondary" size="xs" className="font-mono shrink-0 hidden md:inline-flex"
+                  title="Compare versions" aria-label="Compare versions"
                 >
                   <Layers size={10} className="text-th-accent-text" />
                   <span className="hidden xl:inline">Compare versions</span>
@@ -563,16 +564,16 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             </Button>
           )}
 
-          <StatusBadge status={asset.status as any} />
+          <StatusBadge status={asset.status as any} className="hidden md:inline-flex" />
 
-          {role === 'admin' ? (
-            <PriorityMenu value={asset.priority} onChange={handlePriorityChange} />
-          ) : (
-            <PriorityBadge priority={asset.priority} />
-          )}
           </div>
         }
       >
+        {role === 'admin' ? (
+          <PriorityMenu value={asset.priority} onChange={handlePriorityChange} />
+        ) : (
+          <PriorityBadge priority={asset.priority} />
+        )}
         <Button onClick={() => setShareOpen(true)} variant="secondary" size="sm" title="Share" aria-label="Share">
           <Share2 size={13} /> <span className="hidden lg:inline">Share</span>
         </Button>

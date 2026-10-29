@@ -302,6 +302,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   type PriorityEdit = { key: string; priority: number; pending: boolean; doneSeq: number }
   const priorityEditsRef = useRef<PriorityEdit[]>([])
   const confirmedPriorityRef = useRef(new Map<string, number>())
+  const tokenRef = useRef<string | null>(null)
+  tokenRef.current = token
   const priorityChainRef = useRef(new Map<string, Promise<void>>())
   const completionSeqRef = useRef(0)
   const refreshesInFlightRef = useRef(0)
@@ -381,17 +383,23 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     setAssets((prev) => prev.map((a) => (priorityKey(a) === key ? { ...a, priority } : a)))
 
     const run = async () => {
+      // A hung request must not block this lineage's queue forever: abort
+      // after 15s and treat it as a failure (rollback + toast).
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 15000)
       try {
         const res = await fetch(`/api/assets/${assetId}/priority`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenRef.current}` },
           body: JSON.stringify({ priority }),
+          signal: controller.signal,
         })
         if (!res.ok) throw new Error('priority update failed')
         confirmedPriorityRef.current.set(key, priority)
       } catch (err) {
         showToast('Failed to update priority.', 'error')
       } finally {
+        clearTimeout(timer)
         edit.pending = false
         edit.doneSeq = ++completionSeqRef.current
         if (!priorityEditsRef.current.some((e) => e.key === key && e.pending)) {
