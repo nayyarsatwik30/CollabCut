@@ -8,7 +8,7 @@
 //
 // color-mix with --th-text keeps the violet legible on both the light theme
 // (pulled darker) and the dark-navy theme (pulled lighter).
-export const PRIORITY_COLOR = 'color-mix(in srgb, #8b5cf6 62%, var(--th-text))'
+export const PRIORITY_COLOR = 'color-mix(in srgb, #8b5cf6 55%, var(--th-text))'
 
 export const PRIORITY_OPTIONS = [
   { value: 1, label: 'P1', name: 'High', bars: 3, a11y: 'Priority 1 (highest)' },

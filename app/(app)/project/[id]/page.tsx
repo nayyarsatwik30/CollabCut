@@ -288,40 +288,62 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     scheduleNext()
   }, [assets])
 
-  // Priority edits are optimistic: a loadData() whose request was in flight
-  // when an edit started (the upload-thumbnail poll, an upload finishing)
-  // returns the pre-edit value and would snap the badge back. Keep a log of
-  // edits keyed by lineage (a new version can appear mid-refresh with a new
-  // id); a refresh re-applies every edit that is still pending or that
-  // happened after the refresh started. A failed edit is dropped from the
-  // log, so its rollback is never overridden.
-  const priorityEditsRef = useRef<{ seq: number; key: string; priority: number; baseline: number; pending: boolean }[]>([])
-  const priorityEditSeq = useRef(0)
+  // Priority edits are optimistic and may overlap a background refresh.
+  // - Edits are serialized per lineage (chainRef), so requests apply in click
+  //   order and `confirmed` (last server-acknowledged value) is well defined.
+  // - When a lineage has no edit left in flight, the badge is set to
+  //   `confirmed`: a failed edit rolls back to the newest value the server
+  //   actually accepted, never to another edit's unsaved value.
+  // - A refresh that overlaps an edit (edit pending, or finished after the
+  //   refresh started) may carry a pre-edit value, so loadData re-applies the
+  //   lineage's pending value (or `confirmed`) over it.
+  // Lineage key = asset_group_id, since a new version can appear mid-refresh.
   const priorityKey = (a: { id: string; asset_group_id?: string | null }) => a.asset_group_id ?? a.id
+  type PriorityEdit = { key: string; priority: number; pending: boolean; doneSeq: number }
+  const priorityEditsRef = useRef<PriorityEdit[]>([])
+  const confirmedPriorityRef = useRef(new Map<string, number>())
+  const priorityChainRef = useRef(new Map<string, Promise<void>>())
+  const completionSeqRef = useRef(0)
+  const refreshesInFlightRef = useRef(0)
+
+  // Drop finished edits once nothing can still need them.
+  const prunePriorityEdits = () => {
+    if (refreshesInFlightRef.current === 0 && priorityEditsRef.current.every((e) => !e.pending)) {
+      priorityEditsRef.current = []
+    }
+  }
 
   const loadData = async () => {
     if (!session) return
     setToken(session.access_token)
 
-    const startSeq = priorityEditSeq.current
-    const projectRes = await fetch(`/api/projects/${params.id}`, {
-      headers: { Authorization: `Bearer ${session.access_token}` }
-    })
-    if (projectRes.ok) {
-      const data = await projectRes.json()
-      setProject(data.project)
-      const fresh: Asset[] = data.project.assets ?? []
-      const protectedEdits = priorityEditsRef.current.filter((e) => e.pending || e.seq > startSeq)
-      setAssets(
-        protectedEdits.length === 0
-          ? fresh
-          : fresh.map((a) => {
-              // Newest logged edit for this lineage wins; an older protected
-              // edit must not override a newer one that has since completed.
-              const latest = [...priorityEditsRef.current].reverse().find((e) => e.key === priorityKey(a))
-              return latest && protectedEdits.includes(latest) ? { ...a, priority: latest.priority } : a
-            })
-      )
+    const startSeq = completionSeqRef.current
+    refreshesInFlightRef.current += 1
+    try {
+      const projectRes = await fetch(`/api/projects/${params.id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      })
+      if (projectRes.ok) {
+        const data = await projectRes.json()
+        setProject(data.project)
+        const fresh: Asset[] = data.project.assets ?? []
+        const live = priorityEditsRef.current.filter((e) => e.pending || e.doneSeq > startSeq)
+        setAssets(
+          live.length === 0
+            ? fresh
+            : fresh.map((a) => {
+                const key = priorityKey(a)
+                const mine = live.filter((e) => e.key === key)
+                if (mine.length === 0) return a
+                const newestPending = [...mine].reverse().find((e) => e.pending)
+                const value = newestPending ? newestPending.priority : confirmedPriorityRef.current.get(key)
+                return value === undefined ? a : { ...a, priority: value }
+              })
+        )
+      }
+    } finally {
+      refreshesInFlightRef.current -= 1
+      prunePriorityEdits()
     }
     setLoading(false)
   }
@@ -349,38 +371,41 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     const asset = assets.find((a) => a.id === assetId)
     if (!asset || asset.priority === priority) return
 
-    setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority } : a)))
-
-    // baseline = the last server-confirmed priority to roll back to: the
-    // baseline of the newest still-pending edit for this lineage if there is
-    // one (its optimistic value is not confirmed), else what was displayed.
     const key = priorityKey(asset)
-    const prior = [...priorityEditsRef.current].reverse().find((e) => e.key === key && e.pending)
-    const edit = { seq: ++priorityEditSeq.current, key, priority, baseline: prior ? prior.baseline : asset.priority, pending: true }
-    priorityEditsRef.current.push(edit)
-    try {
-      const res = await fetch(`/api/assets/${assetId}/priority`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ priority }),
-      })
-      if (!res.ok) throw new Error('priority update failed')
-      // Confirmed: newer pending edits now roll back to this value.
-      for (const e of priorityEditsRef.current) if (e.key === edit.key && e.seq > edit.seq) e.baseline = edit.priority
-    } catch (err) {
-      const newer = priorityEditsRef.current.filter((e) => e.key === edit.key && e.seq > edit.seq)
-      if (newer.length === 0) {
-        setAssets((prev) => prev.map((a) => (priorityKey(a) === edit.key ? { ...a, priority: edit.baseline } : a)))
-      } else {
-        // Hand the confirmed baseline to the newer edits so their own failure
-        // rolls back past this unsaved value.
-        for (const e of newer) e.baseline = edit.baseline
-      }
-      priorityEditsRef.current = priorityEditsRef.current.filter((e) => e !== edit)
-      showToast('Failed to update priority.', 'error')
-    } finally {
-      edit.pending = false
+    const edit: PriorityEdit = { key, priority, pending: true, doneSeq: 0 }
+    // Nothing in flight for this lineage: what is displayed is confirmed.
+    if (!priorityEditsRef.current.some((e) => e.key === key && e.pending)) {
+      confirmedPriorityRef.current.set(key, asset.priority)
     }
+    priorityEditsRef.current.push(edit)
+    setAssets((prev) => prev.map((a) => (priorityKey(a) === key ? { ...a, priority } : a)))
+
+    const run = async () => {
+      try {
+        const res = await fetch(`/api/assets/${assetId}/priority`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ priority }),
+        })
+        if (!res.ok) throw new Error('priority update failed')
+        confirmedPriorityRef.current.set(key, priority)
+      } catch (err) {
+        showToast('Failed to update priority.', 'error')
+      } finally {
+        edit.pending = false
+        edit.doneSeq = ++completionSeqRef.current
+        if (!priorityEditsRef.current.some((e) => e.key === key && e.pending)) {
+          const confirmed = confirmedPriorityRef.current.get(key)
+          if (confirmed !== undefined) {
+            setAssets((prev) => prev.map((a) => (priorityKey(a) === key ? { ...a, priority: confirmed } : a)))
+          }
+        }
+        prunePriorityEdits()
+      }
+    }
+    const next = (priorityChainRef.current.get(key) ?? Promise.resolve()).then(run)
+    priorityChainRef.current.set(key, next)
+    await next
   }
 
   // The cards are <Link>s: PriorityMenu stops click propagation (so Board's

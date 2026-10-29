@@ -548,7 +548,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   variant="secondary" size="xs" className="font-mono shrink-0"
                 >
                   <Layers size={10} className="text-th-accent-text" />
-                  Compare versions
+                  <span className="hidden xl:inline">Compare versions</span>
+                  <span className="sr-only xl:hidden">Compare versions</span>
                 </Button>
               )}
             </>
@@ -572,21 +573,25 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           </div>
         }
       >
-        <Button onClick={() => setShareOpen(true)} variant="secondary" size="sm">
-          <Share2 size={13} /> Share
+        <Button onClick={() => setShareOpen(true)} variant="secondary" size="sm" title="Share" aria-label="Share">
+          <Share2 size={13} /> <span className="hidden lg:inline">Share</span>
         </Button>
         {role === 'admin' && (
           <Button
             onClick={handleToggleComplete}
             loading={togglingComplete}
             size="sm"
+            title={asset.is_complete ? 'Approved' : 'Approve cut'}
+            aria-label={asset.is_complete ? 'Approved' : 'Approve cut'}
             className={`approve-glow font-bold ${asset.is_complete ? 'approved' : ''}`}
             style={{
               background: asset.is_complete ? 'var(--th-resolved)' : 'var(--th-accent)',
               color: asset.is_complete ? '#fff' : 'var(--th-accent-fg)',
             }}
           >
-            {asset.is_complete ? <><Check size={13} /> Approved</> : <><ThumbsUp size={13} /> Approve cut</>}
+            {asset.is_complete
+              ? <><Check size={13} /> <span className="hidden lg:inline">Approved</span></>
+              : <><ThumbsUp size={13} /> <span className="hidden lg:inline">Approve cut</span></>}
           </Button>
         )}
       </TopBar>

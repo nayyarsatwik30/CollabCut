@@ -13,7 +13,7 @@ export function PriorityBars({ bars, size = 10 }: { bars: number; size?: number 
           height={3 + i * 3}
           rx="0.5"
           fill="currentColor"
-          opacity={i < bars ? 1 : 0.25}
+          opacity={i < bars ? 1 : 0.4}
         />
       ))}
     </svg>
@@ -36,7 +36,7 @@ export function PriorityBadge({ priority, size = 'md' }: { priority: number; siz
         border: `1px solid color-mix(in srgb, ${meta.color} 45%, transparent)`,
       }}
     >
-      <PriorityBars bars={meta.bars} size={size === 'sm' ? 9 : 10} />
+      <PriorityBars bars={meta.bars} size={size === 'sm' ? 11 : 12} />
       {meta.label}
     </span>
   )

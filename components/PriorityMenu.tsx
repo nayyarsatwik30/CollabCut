@@ -122,7 +122,7 @@ export function PriorityMenu({ value, onChange, size = 'md' }: PriorityMenuProps
         ref={triggerRef}
         type="button"
         draggable={false}
-        title="Change priority"
+        title={`${meta.a11y}. Change priority`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? `${uid}-list` : undefined}
@@ -135,7 +135,7 @@ export function PriorityMenu({ value, onChange, size = 'md' }: PriorityMenuProps
         className={`inline-flex items-center font-mono font-bold rounded-[3px] outline-none cursor-pointer transition-colors hover:brightness-125 focus-visible:ring-1 focus-visible:ring-th-accent ${text}`}
         style={{ color: meta.color, background: `color-mix(in srgb, ${meta.color} 14%, transparent)`, border: `1px solid color-mix(in srgb, ${meta.color} 45%, transparent)` }}
       >
-        <PriorityBars bars={meta.bars} size={size === 'sm' ? 9 : 10} />
+        <PriorityBars bars={meta.bars} size={size === 'sm' ? 11 : 12} />
         {meta.label}
       </button>
 
