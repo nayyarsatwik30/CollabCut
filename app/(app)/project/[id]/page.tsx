@@ -60,6 +60,7 @@ interface Asset {
   is_complete?: boolean
   cut_type: 'custom' | 'board'
   priority: number
+  asset_group_id?: string | null
   // Live versions in this asset's lineage; the card shows the latest one.
   version_count?: number
 }
@@ -287,17 +288,22 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     scheduleNext()
   }, [assets])
 
-  // Priority edits are optimistic: a loadData() whose request was already in
-  // flight when the edit started (the upload-thumbnail poll, an upload
-  // finishing) returns the pre-edit value and would snap the badge back. Track
-  // edits so such a response keeps the locally-set priority instead.
-  const priorityEditRef = useRef({ pending: 0, generation: 0 })
+  // Priority edits are optimistic: a loadData() whose request was in flight
+  // when an edit started (the upload-thumbnail poll, an upload finishing)
+  // returns the pre-edit value and would snap the badge back. Keep a log of
+  // edits keyed by lineage (a new version can appear mid-refresh with a new
+  // id); a refresh re-applies every edit that is still pending or that
+  // happened after the refresh started. A failed edit is dropped from the
+  // log, so its rollback is never overridden.
+  const priorityEditsRef = useRef<{ seq: number; key: string; priority: number; pending: boolean }[]>([])
+  const priorityEditSeq = useRef(0)
+  const priorityKey = (a: { id: string; asset_group_id?: string | null }) => a.asset_group_id ?? a.id
 
   const loadData = async () => {
     if (!session) return
     setToken(session.access_token)
 
-    const startGeneration = priorityEditRef.current.generation
+    const startSeq = priorityEditSeq.current
     const projectRes = await fetch(`/api/projects/${params.id}`, {
       headers: { Authorization: `Bearer ${session.access_token}` }
     })
@@ -305,13 +311,15 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       const data = await projectRes.json()
       setProject(data.project)
       const fresh: Asset[] = data.project.assets ?? []
-      const edit = priorityEditRef.current
-      if (edit.pending > 0 || edit.generation !== startGeneration) {
-        const local = new Map(assetsRef.current.map((a) => [a.id, a.priority]))
-        setAssets(fresh.map((a) => (local.has(a.id) ? { ...a, priority: local.get(a.id)! } : a)))
-      } else {
-        setAssets(fresh)
-      }
+      const protectedEdits = priorityEditsRef.current.filter((e) => e.pending || e.seq > startSeq)
+      setAssets(
+        protectedEdits.length === 0
+          ? fresh
+          : fresh.map((a) => {
+              const edit = [...protectedEdits].reverse().find((e) => e.key === priorityKey(a))
+              return edit ? { ...a, priority: edit.priority } : a
+            })
+      )
     }
     setLoading(false)
   }
@@ -342,8 +350,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     const previousPriority = asset.priority
     setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority } : a)))
 
-    priorityEditRef.current.pending += 1
-    priorityEditRef.current.generation += 1
+    const edit = { seq: ++priorityEditSeq.current, key: priorityKey(asset), priority, pending: true }
+    priorityEditsRef.current.push(edit)
     try {
       const res = await fetch(`/api/assets/${assetId}/priority`, {
         method: 'PATCH',
@@ -352,13 +360,15 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       })
       if (!res.ok) {
         setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
+        priorityEditsRef.current = priorityEditsRef.current.filter((e) => e !== edit)
         showToast('Failed to update priority.', 'error')
       }
     } catch (err) {
       setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
+      priorityEditsRef.current = priorityEditsRef.current.filter((e) => e !== edit)
       showToast('Failed to update priority.', 'error')
     } finally {
-      priorityEditRef.current.pending -= 1
+      edit.pending = false
     }
   }
 
