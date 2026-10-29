@@ -160,13 +160,19 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
   const retry = (key: string) => {
     const file = fileStore.current.get(key)
     if (!file) return
+    // Failed rows don't hold a slot, so re-check the per-note limit first.
+    if (itemsRef.current.filter((i) => i.state !== 'error').length >= MAX_ATTACHMENTS_PER_COMMENT) {
+      patch(key, { error: `Up to ${MAX_ATTACHMENTS_PER_COMMENT} files per note - remove one to retry this file.` })
+      return
+    }
     patch(key, { state: 'uploading', progress: 0, error: undefined })
     void upload(file, key)
   }
 
   // After a successful post the uploaded files belong to the comment - forget
-  // them without deleting anything. Failed rows stay so the user sees them.
-  const clearPosted = () => setItems((prev) => prev.filter((i) => i.state === 'error'))
+  // them without deleting anything. Only the submitted files are dropped; failed rows and files added mid-post stay.
+  const clearPosted = (postedIds: string[]) =>
+    setItems((prev) => prev.filter((i) => !(i.attachmentId && postedIds.includes(i.attachmentId))))
 
   // Drop unposted uploads when the draft goes away (asset switch / unmount).
   const abandon = () => {

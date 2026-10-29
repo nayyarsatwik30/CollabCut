@@ -51,10 +51,11 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
     if (!draftText.trim() || drafts.busy || drafts.errorCount > 0 || postingRef.current) return
     postingRef.current = true
     try {
-      const ok = await onAdd(draftText.trim(), draftStatus, drafts.ids)
+      const submittedIds = [...drafts.ids] // snapshot: files added during the request aren't part of this post
+      const ok = await onAdd(draftText.trim(), draftStatus, submittedIds)
       if (ok) {
         setDraftText('')
-        drafts.clearPosted()
+        drafts.clearPosted(submittedIds)
       }
     } finally {
       postingRef.current = false
