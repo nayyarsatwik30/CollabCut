@@ -151,6 +151,21 @@ export default function BoardPage() {
     // row reshuffle from Postgres isn't a change worth re-rendering for.
     const byId = (list: BoardAsset[]) => [...list].sort((a, b) => a.id.localeCompare(b.id))
     setAssets((prev) => (sameData(byId(prev), byId(next)) ? prev : next))
+
+    // Keep project-derived client tabs fresh too (new empty project, renamed
+    // client). Best-effort; failures leave the current list untouched.
+    if (role === 'admin') {
+      try {
+        const pRes = await fetch('/api/board/projects', { headers: { Authorization: `Bearer ${token}` } })
+        if (pRes.ok) {
+          const pData = await pRes.json()
+          const nextProjects: WorkspaceProject[] = pData.projects ?? []
+          setProjects((prev) => (sameData(prev, nextProjects) ? prev : nextProjects))
+        }
+      } catch {
+        // ignore
+      }
+    }
   }, 3000, !loading && !error && boardView === 'board')
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, assetId: string) => {
@@ -321,8 +336,10 @@ export default function BoardPage() {
     setSelectedEditor(null)
     setEditorAssets(null)
 
-    if (view === 'projects' && projects.length === 0) {
-      setProjectsLoading(true)
+    if (view === 'projects') {
+      // Always refetch on entry so the grid and client tabs are never stale;
+      // only show the spinner when there is nothing to show yet.
+      setProjectsLoading(projects.length === 0)
       try {
         const res = await fetch('/api/board/projects', {
           headers: { Authorization: `Bearer ${token}` },
@@ -683,8 +700,8 @@ export default function BoardPage() {
 
         {role === 'admin' && !error && boardView !== 'editors' && clientTabs.length > 0 && (
           <div
-            role="tablist"
-            aria-label="Client boards"
+            role="group"
+            aria-label="Filter by client"
             className="shrink-0 bg-th-surface border-t border-th-border px-4 flex items-end gap-1 overflow-x-auto"
           >
             {([{ key: ALL_CLIENTS_KEY, label: 'All clients', count: assets.length }, ...clientTabs] as ClientTab[]).map((tab) => {
@@ -692,8 +709,7 @@ export default function BoardPage() {
               return (
                 <button
                   key={tab.key}
-                  role="tab"
-                  aria-selected={active}
+                  aria-pressed={active}
                   onClick={() => setSelectedClient(tab.key)}
                   className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 text-[12px] border-t-2 btn-press transition-colors max-w-[200px]"
                   style={{

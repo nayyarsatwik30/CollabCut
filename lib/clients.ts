@@ -4,11 +4,13 @@
 // inside one workspace, so every client board is just a filter over that
 // workspace's own projects/assets. No separate table, no extra access path.
 
+// Special keys contain no 'c:' prefix, so they can never collide with a client
+// whose label happens to read '__all__' / '__none__'.
 export const ALL_CLIENTS_KEY = '__all__'
 export const NO_CLIENT_KEY = '__none__'
 
 export interface ClientTab {
-  key: string // stable identifier: normalized client name, or NO_CLIENT_KEY
+  key: string // stable identifier: "c:" + normalized client name, or NO_CLIENT_KEY
   label: string // display name (first-seen casing)
   count: number
 }
@@ -16,7 +18,7 @@ export interface ClientTab {
 // Case/whitespace-insensitive identity so "Kunal" and " kunal " share a board.
 export function clientKey(client: string | null | undefined): string {
   const normalized = (client ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
-  return normalized === '' ? NO_CLIENT_KEY : normalized
+  return normalized === '' ? NO_CLIENT_KEY : `c:${normalized}`
 }
 
 export function buildClientTabs(items: { client: string | null | undefined }[]): ClientTab[] {
