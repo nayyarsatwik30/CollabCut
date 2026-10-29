@@ -101,12 +101,17 @@ export async function GET(req: NextRequest) {
     // to first (auth check), then pull every version in those groups so
     // latestPerGroup has the sibling versions to actually pick a latest from.
     // It can't promote a version it was never given.
+    // The assignment row's own asset is deliberately not filtered on
+    // deleted_at: this only decides whether the editor has a claim on the
+    // lineage, and the claim can sit on a still-trashed sibling after a group
+    // delete and partial restore. The listing query below keeps the live-row
+    // filter, so nothing deleted is ever shown.
     const { rows: assignedRows } = await migrationDb.query(
       `SELECT a.asset_group_id
        FROM asset_editors ae
        JOIN assets a ON a.id = ae.asset_id
        JOIN projects p ON p.id = a.project_id
-       WHERE ae.editor_id = $1 AND a.cut_type = 'board' AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.workspace_id = $2`,
+       WHERE ae.editor_id = $1 AND a.cut_type = 'board' AND p.deleted_at IS NULL AND p.workspace_id = $2`,
       [user.id, workspaceId]
     )
 
