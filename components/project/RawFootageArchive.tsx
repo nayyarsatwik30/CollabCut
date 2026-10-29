@@ -244,6 +244,12 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
         fileSize: file.size,
         contentType: file.type,
       })
+      // Unmounted while initiate was in flight: cleanup saw no session, so
+      // abort the fresh multipart upload here instead of uploading unseen.
+      if (unmountedRef.current) {
+        await postJson('/api/raw-upload/multipart/abort', { uploadToken: init.uploadToken }).catch(() => {})
+        throw new UploadError('Upload cancelled')
+      }
       session = { uploadToken: init.uploadToken, cancelled: false, xhrs: new Set() }
       sessionRef.current = session
 
