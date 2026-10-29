@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const { payload } = gate
 
   // Double submit: the upload already finished and was recorded.
-  const existing = await migrationDb.query(`SELECT * FROM raw_files WHERE b2_key = $1 LIMIT 1`, [payload.key])
+  const existing = await migrationDb.query(`SELECT id, project_id, uploaded_by, file_name, file_size_bytes, content_type, created_at FROM raw_files WHERE b2_key = $1 LIMIT 1`, [payload.key])
   if (existing.rows[0]) return NextResponse.json({ rawFile: existing.rows[0] }, { status: 200 })
 
   try {
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     const insertResult = await migrationDb.query(
       `INSERT INTO raw_files (project_id, uploaded_by, file_name, b2_key, file_size_bytes, content_type)
        VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
+       RETURNING id, project_id, uploaded_by, file_name, file_size_bytes, content_type, created_at`,
       [payload.projectId, user.id, payload.safeName, payload.key, size, payload.contentType],
     )
     return NextResponse.json({ rawFile: insertResult.rows[0] }, { status: 201 })

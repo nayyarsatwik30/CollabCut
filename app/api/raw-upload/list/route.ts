@@ -4,7 +4,7 @@ import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { migrationDb } from '@/lib/migrationDb'
 import { b2, B2_BUCKET } from '@/lib/b2'
-import { canPreviewRawFile, classifyRawFile } from '@/lib/raw-files'
+import { canonicalContentType, canPreviewRawFile, classifyRawFile } from '@/lib/raw-files'
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req)
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   if (!projectId) return NextResponse.json({ error: 'projectId required' }, { status: 400 })
 
   const projectResult = await migrationDb.query(
-    `SELECT workspace_id FROM projects WHERE id = $1`,
+    `SELECT workspace_id FROM projects WHERE id = $1 AND deleted_at IS NULL`,
     [projectId]
   )
   const project = projectResult.rows[0]
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
       const kind = classifyRawFile(f.file_name, f.content_type)
       let preview_url: string | null = null
       if (canPreviewRawFile(f.file_name, kind)) {
-        preview_url = await getSignedUrl(b2, new GetObjectCommand({ Bucket: B2_BUCKET, Key: b2_key }), { expiresIn: 3600 }).catch(() => null)
+        preview_url = await getSignedUrl(b2, new GetObjectCommand({ Bucket: B2_BUCKET, Key: b2_key, ResponseContentType: canonicalContentType(f.file_name, kind), ResponseContentDisposition: 'inline' }), { expiresIn: 3600 }).catch(() => null)
       }
       return { ...f, kind, preview_url, profiles: profileById.get(f.uploaded_by) ?? null }
     }),

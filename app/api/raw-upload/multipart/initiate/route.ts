@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'File exceeds the 750MB archival limit' }, { status: 400 })
   }
 
-  const projectResult = await migrationDb.query(`SELECT workspace_id FROM projects WHERE id = $1`, [projectId])
+  const projectResult = await migrationDb.query(`SELECT workspace_id FROM projects WHERE id = $1 AND deleted_at IS NULL`, [projectId])
   const project = projectResult.rows[0]
   if (!project?.workspace_id) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 

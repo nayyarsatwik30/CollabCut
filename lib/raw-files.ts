@@ -89,16 +89,29 @@ export function validateRawFile(fileName: string, reportedType: unknown): RawFil
     }
   }
 
-  const kind = classifyRawFile(fileName, reported)
-  if (kind === 'photo' && ext === 'svg') return { ok: false, error: "SVG files can't be uploaded." }
-
-  let contentType = 'application/octet-stream'
-  if (mimeKind && /^(video|audio|image)\/[\w.+-]+$/i.test(reported)) contentType = reported
-  else {
-    const canonical = VIDEO_EXT[ext] ?? AUDIO_EXT[ext] ?? PHOTO_EXT[ext]
-    if (canonical) contentType = canonical
+  // Active content is refused outright, whatever the extension says.
+  if (/^(text\/(html|xml|javascript|x-javascript|ecmascript)|application\/(xml|xhtml|javascript|x-javascript|ecmascript)|image\/svg|[\w.+-]+\/[\w.+-]*\+xml)/.test(reported)) {
+    return { ok: false, error: `"${fileName}" has a file type that can't be uploaded.` }
   }
-  return { ok: true, kind, contentType }
+
+  // The client-reported MIME is never stored: Content-Type comes from the
+  // extension (audio/video split for ambiguous containers), else octet-stream.
+  const kind = classifyRawFile(fileName, reported)
+  return { ok: true, kind, contentType: canonicalContentType(fileName, kind) }
+}
+
+const AMBIGUOUS_MIME: Record<string, { audio: string; video: string }> = {
+  mp4: { audio: 'audio/mp4', video: 'video/mp4' },
+  m4a: { audio: 'audio/mp4', video: 'video/mp4' },
+  webm: { audio: 'audio/webm', video: 'video/webm' },
+  ogg: { audio: 'audio/ogg', video: 'video/ogg' },
+}
+
+export function canonicalContentType(fileName: string, kind?: RawFileKind): string {
+  const ext = fileExtension(fileName)
+  const amb = AMBIGUOUS_MIME[ext]
+  if (amb && (kind === 'audio' || kind === 'video')) return amb[kind]
+  return VIDEO_EXT[ext] ?? AUDIO_EXT[ext] ?? PHOTO_EXT[ext] ?? 'application/octet-stream'
 }
 
 // Whether the browser can show/play this file inline.

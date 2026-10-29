@@ -74,10 +74,6 @@ export function sanitizeFileName(name: unknown): string {
   return cleaned || 'file'
 }
 
-export function safeContentType(type: unknown): string {
-  return typeof type === 'string' && /^(video|audio|image)\/[\w.+-]+$/i.test(type) ? type : 'application/octet-stream'
-}
-
 // Shared gate for part/complete/abort: valid token for this caller, and the
 // caller is still an admin of the project's workspace right now.
 export async function authorizeUpload(
@@ -89,7 +85,7 @@ export async function authorizeUpload(
     return { error: NextResponse.json({ error: 'Upload session is invalid or has expired. Please start the upload again.' }, { status: 401 }) }
   }
 
-  const projectResult = await migrationDb.query(`SELECT workspace_id FROM projects WHERE id = $1`, [payload.projectId])
+  const projectResult = await migrationDb.query(`SELECT workspace_id FROM projects WHERE id = $1 AND deleted_at IS NULL`, [payload.projectId])
   const workspaceId = projectResult.rows[0]?.workspace_id
   if (!workspaceId) return { error: NextResponse.json({ error: 'Project not found' }, { status: 404 }) }
 
