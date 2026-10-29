@@ -40,15 +40,19 @@ export default function ChatPage() {
   activeRef.current = activeId
   const channelRef = useRef('')
   channelRef.current = channel
+  const messageRequestId = useRef(0)
+  const workspaceRequestId = useRef(0)
   const [convoVersion, setConvoVersion] = useState(0)
 
   // Workspaces (with their channels + unread counts). Rarely more than one
   // workspace; if so, a switcher shows. Polled so new client channels and
   // unread dots on other channels appear without a reload.
   const loadWorkspaces = useCallback(async () => {
+    const requestId = ++workspaceRequestId.current
     try {
       const res = await fetch('/api/chat/conversations')
       const data = await res.json().catch(() => ({}))
+      if (workspaceRequestId.current !== requestId) return // superseded by a newer refresh
       if (!res.ok) {
         setSetupError(data.error ?? 'Could not load chat.')
       } else {
@@ -61,7 +65,7 @@ export default function ChatPage() {
         if (ws && !ws.channels.some((c) => c.key === channelRef.current)) setChannel('')
       }
     } catch {
-      setSetupError('Could not load chat.')
+      if (workspaceRequestId.current === requestId) setSetupError('Could not load chat.')
     }
     setLoading(false)
   }, [])
@@ -95,10 +99,11 @@ export default function ChatPage() {
     const workspaceId = activeRef.current
     const ch = channelRef.current
     if (!workspaceId) return
+    const requestId = ++messageRequestId.current
     const res = await fetch(`/api/chat/messages?workspaceId=${workspaceId}&channel=${encodeURIComponent(ch)}`)
     if (!res.ok) return
     const data = await res.json()
-    if (activeRef.current !== workspaceId || channelRef.current !== ch) return // switched conversation mid-flight
+    if (activeRef.current !== workspaceId || channelRef.current !== ch || messageRequestId.current !== requestId) return // switched conversation mid-flight
     const next: ChatMessage[] = data.messages ?? []
     setMessages((prev) => (sameData(prev, next) ? prev : next))
     if (document.visibilityState === 'visible') markRead(workspaceId, ch, next)
@@ -147,6 +152,7 @@ export default function ChatPage() {
         // Keep anything typed while the request was in flight.
         setDraft((current) => (current === draftAtSend ? '' : current))
         stickToBottom.current = true
+        setSending(false) // the POST is done; don't block the composer on the refresh
         try {
           await fetchMessages()
         } catch {
