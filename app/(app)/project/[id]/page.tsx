@@ -306,6 +306,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   tokenRef.current = token
   const priorityChainRef = useRef(new Map<string, Promise<void>>())
   const completionSeqRef = useRef(0)
+  const editSeqRef = useRef(0)
   const loadDataRef = useRef<() => Promise<Asset[] | null>>(async () => null)
   const reconcileTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   useEffect(() => () => { reconcileTimersRef.current.forEach(clearTimeout) }, [])
@@ -388,15 +389,24 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   // reload at ~1.8s, ~6s and ~15s (via the latest loadData / token) until the
   // stored value differs from the pre-timeout baseline, and adopt the stored
   // value as the confirmed baseline even if a newer edit is pending.
-  const reconcileAfterTimeout = (key: string) => {
-    const before = confirmedPriorityRef.current.get(key)
+  const reconcileAfterTimeout = (key: string, expected: number) => {
+    const delays = [1800, 6000, 15000]
     const attempt = (i: number) => {
-      const delays = [1800, 6000, 15000]
       const t = setTimeout(async () => {
-        const fresh = await loadDataRef.current()
-        const stored = fresh?.find((a) => priorityKey(a) === key)?.priority
+        // Any edit started or finished after the GET began makes its result
+        // unreliable for this lineage (a newer write owns the baseline).
+        const editsAtStart = editSeqRef.current
+        const doneAtStart = completionSeqRef.current
+        let stored: number | undefined
+        try {
+          const fresh = await loadDataRef.current()
+          stored = fresh?.find((a) => priorityKey(a) === key)?.priority
+        } catch {
+          // transient failure: fall through and schedule the next attempt
+        }
+        if (editSeqRef.current !== editsAtStart || completionSeqRef.current !== doneAtStart) return
         if (stored !== undefined) confirmedPriorityRef.current.set(key, stored)
-        if ((stored === undefined || stored === before) && i + 1 < delays.length) attempt(i + 1)
+        if (stored !== expected && i + 1 < delays.length) attempt(i + 1)
       }, delays[i] - (i > 0 ? delays[i - 1] : 0))
       reconcileTimersRef.current.push(t)
     }
@@ -414,6 +424,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       confirmedPriorityRef.current.set(key, asset.priority)
     }
     priorityEditsRef.current.push(edit)
+    editSeqRef.current += 1
     setAssets((prev) => prev.map((a) => (priorityKey(a) === key ? { ...a, priority } : a)))
 
     const run = async () => {
@@ -436,7 +447,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       } catch (err) {
         if (timedOut) {
           showToast("Couldn't confirm the priority change - refreshing.", 'info')
-          reconcileAfterTimeout(key)
+          reconcileAfterTimeout(key, priority)
         } else {
           showToast('Failed to update priority.', 'error')
         }
