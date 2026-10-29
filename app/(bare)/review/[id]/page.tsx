@@ -581,6 +581,12 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           </div>
         }
       >
+        {/* Custom cuts have no version menu to carry the status below 520px. */}
+        {asset.cut_type !== 'board' && (
+          <span className="shrink-0 inline-flex min-[520px]:hidden" title={`Status: ${String(asset.status).replace(/_/g, ' ')}`}>
+            <StatusBadge status={asset.status as any} className="gap-0 px-1.5 text-[0px]" />
+          </span>
+        )}
         {role === 'admin' ? (
           <PriorityMenu value={asset.priority} onChange={handlePriorityChange} />
         ) : (

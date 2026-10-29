@@ -306,7 +306,10 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   tokenRef.current = token
   const priorityChainRef = useRef(new Map<string, Promise<void>>())
   const completionSeqRef = useRef(0)
-  const editSeqRef = useRef(0)
+  // Bumped when an edit to a lineage starts or finishes (per-lineage, so an
+  // edit to another video never invalidates this lineage's reconciliation).
+  const lineageSeqRef = useRef(new Map<string, number>())
+  const bumpLineage = (key: string) => lineageSeqRef.current.set(key, (lineageSeqRef.current.get(key) ?? 0) + 1)
   const loadDataRef = useRef<() => Promise<Asset[] | null>>(async () => null)
   const reconcileTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   useEffect(() => () => { reconcileTimersRef.current.forEach(clearTimeout) }, [])
@@ -395,8 +398,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       const t = setTimeout(async () => {
         // Any edit started or finished after the GET began makes its result
         // unreliable for this lineage (a newer write owns the baseline).
-        const editsAtStart = editSeqRef.current
-        const doneAtStart = completionSeqRef.current
+        const seqAtStart = lineageSeqRef.current.get(key) ?? 0
         let stored: number | undefined
         try {
           const fresh = await loadDataRef.current()
@@ -404,7 +406,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         } catch {
           // transient failure: fall through and schedule the next attempt
         }
-        if (editSeqRef.current !== editsAtStart || completionSeqRef.current !== doneAtStart) return
+        if ((lineageSeqRef.current.get(key) ?? 0) !== seqAtStart) return
         if (stored !== undefined) confirmedPriorityRef.current.set(key, stored)
         if (stored !== expected && i + 1 < delays.length) attempt(i + 1)
       }, delays[i] - (i > 0 ? delays[i - 1] : 0))
@@ -424,7 +426,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       confirmedPriorityRef.current.set(key, asset.priority)
     }
     priorityEditsRef.current.push(edit)
-    editSeqRef.current += 1
+    bumpLineage(key)
     setAssets((prev) => prev.map((a) => (priorityKey(a) === key ? { ...a, priority } : a)))
 
     const run = async () => {
@@ -455,6 +457,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         clearTimeout(timer)
         edit.pending = false
         edit.doneSeq = ++completionSeqRef.current
+        bumpLineage(key)
         if (!timedOut && !priorityEditsRef.current.some((e) => e.key === key && e.pending)) {
           const confirmed = confirmedPriorityRef.current.get(key)
           if (confirmed !== undefined) {
