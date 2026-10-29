@@ -107,6 +107,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ rawFile: insertResult.rows[0] }, { status: 201 })
   } catch (err) {
     console.error('raw-upload complete failed', (err as Error).name)
+    // CompleteMultipartUpload may have succeeded with its response lost: look
+    // for the (uniquely keyed) object before deciding there is nothing to clean.
+    if (!completedObject) {
+      try {
+        const found = await b2.send(new HeadObjectCommand({ Bucket: B2_BUCKET, Key: payload.key }))
+        completedObject = { versionId: found.VersionId }
+      } catch {
+        // Not found (or unreadable): nothing we can clean up.
+      }
+    }
     if (completedObject) {
       await b2
         .send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, VersionId: completedObject.versionId }))
