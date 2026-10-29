@@ -58,7 +58,23 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [setupError, setSetupError] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
-  const [draft, setDraft] = useState('')
+  // Drafts are kept per conversation (workspace + channel), so text written for
+  // one chat can never be sent to another, including after a tab switch or a
+  // lost-access fallback. Messages can't be deleted, so this matters.
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [notice, setNotice] = useState<string | null>(null)
+  const draftKey = `${activeId ?? ''}|${channel}`
+  const draft = drafts[draftKey] ?? ''
+  const draftsRef = useRef(drafts)
+  draftsRef.current = drafts
+  const setDraftFor = (key: string, update: string | ((cur: string) => string)) =>
+    setDrafts((prev) => {
+      const cur = prev[key] ?? ''
+      const next = typeof update === 'function' ? update(cur) : update
+      if (next === cur) return prev
+      const { [key]: _removed, ...rest } = prev
+      return next === '' ? rest : { ...rest, [key]: next }
+    })
   const [sending, setSending] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -94,6 +110,15 @@ export default function ChatPage() {
         if (effectiveId !== current) {
           activeRef.current = effectiveId
           setActiveId(effectiveId)
+          if (current) {
+            // Access to that workspace is gone: discard everything typed for it.
+            const prefix = `${current}|`
+            const hadDraft = Object.keys(draftsRef.current).some((k) => k.startsWith(prefix))
+            if (hadDraft) {
+              setDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith(prefix))))
+              setNotice('You no longer have access to that chat; your draft was cleared.')
+            }
+          }
         }
         const ws = list.find((w) => w.id === effectiveId)
         // Also drop a stale channel selection (e.g. the client's last project was trashed).
@@ -172,6 +197,7 @@ export default function ChatPage() {
     const text = draft.trim()
     if (!text || !activeId || sending) return
     const draftAtSend = draft
+    const sendKey = draftKey
     setSending(true)
     setSendError(null)
     let released = false
@@ -187,7 +213,7 @@ export default function ChatPage() {
         setSendError(data.error ?? 'Message could not be sent.')
       } else {
         // Keep anything typed while the request was in flight.
-        setDraft((current) => (current === draftAtSend ? '' : current))
+        setDraftFor(sendKey, (current) => (current === draftAtSend ? '' : current))
         stickToBottom.current = true
         release() // the POST is done; don't block the composer on the refresh
         try {
@@ -307,11 +333,12 @@ export default function ChatPage() {
 
           <div className="shrink-0 border-t border-th-border py-3">
             <div className="w-full max-w-3xl mx-auto px-3 sm:px-6">
+              {notice && <p role="status" className="mb-2 text-[12px] text-th-muted">{notice}</p>}
               {sendError && <p role="alert" className="mb-2 text-[12px] text-th-changes">{sendError}</p>}
               <div className="flex items-end gap-2">
                 <textarea
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
+                  onChange={(e) => { setDraftFor(draftKey, e.target.value); setNotice(null) }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                       e.preventDefault()
