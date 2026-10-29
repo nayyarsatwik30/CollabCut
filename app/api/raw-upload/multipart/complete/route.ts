@@ -8,6 +8,7 @@ import {
   ListPartsCommand,
   type Part,
 } from '@aws-sdk/client-s3'
+import type { PoolClient } from 'pg'
 import { requireAuth } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
 import { b2, B2_BUCKET } from '@/lib/b2'
@@ -37,6 +38,9 @@ export async function POST(req: NextRequest) {
   if ('error' in gate) return gate.error
   const { payload } = gate
 
+  // NOTE: session-level advisory locks need a direct (non-transaction-pooled)
+  // database connection. Every query made while the lock is held runs on this
+  // one client, so a request holds exactly one pooled connection.
   // Completion is serialized per upload key with a session-level Postgres
   // advisory lock (no schema change): a concurrent request that can't get it
   // never touches B2 - it returns the recorded row if there is one, else 409.
@@ -51,7 +55,7 @@ export async function POST(req: NextRequest) {
       if (recorded.rows[0]) return NextResponse.json({ rawFile: recorded.rows[0] }, { status: 200 })
       return NextResponse.json({ error: 'This upload is already being finalized - try again in a moment.' }, { status: 409 })
     }
-    return await finalizeUpload(payload, user.id)
+    return await finalizeUpload(lockClient, payload, user.id)
   } finally {
     if (locked) {
       try {
@@ -65,9 +69,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function finalizeUpload(payload: UploadTokenPayload, userId: string): Promise<NextResponse> {
+async function finalizeUpload(db: PoolClient, payload: UploadTokenPayload, userId: string): Promise<NextResponse> {
   // Double submit: the upload already finished and was recorded.
-  const existing = await migrationDb.query(`SELECT ${RAW_FILE_COLUMNS} FROM raw_files WHERE b2_key = $1 LIMIT 1`, [payload.key])
+  const existing = await db.query(`SELECT ${RAW_FILE_COLUMNS} FROM raw_files WHERE b2_key = $1 LIMIT 1`, [payload.key])
   if (existing.rows[0]) return NextResponse.json({ rawFile: existing.rows[0] }, { status: 200 })
 
   // Set once the object exists in B2; if anything after that throws, no row
@@ -129,7 +133,7 @@ async function finalizeUpload(payload: UploadTokenPayload, userId: string): Prom
       return NextResponse.json({ error: "The file's contents don't match its file type." }, { status: 400 })
     }
 
-    const insertResult = await migrationDb.query(
+    const insertResult = await db.query(
       `INSERT INTO raw_files (project_id, uploaded_by, file_name, b2_key, file_size_bytes, content_type)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, project_id, uploaded_by, file_name, file_size_bytes, content_type, created_at`,
