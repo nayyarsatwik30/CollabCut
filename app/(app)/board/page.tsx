@@ -81,12 +81,16 @@ export default function BoardPage() {
   // here: bounded by a timeout (covers the body read too) and stamped with a
   // generation so an older response can never overwrite a newer one.
   const projectsGenRef = useRef(0)
+  // Workspace the board currently shows; project requests are tagged with it
+  // and dropped if it changed while they were in flight.
+  const workspaceRef = useRef('')
   const projectsInFlightRef = useRef(false)
   const fetchProjects = async (accessToken: string, opts?: { skipIfBusy?: boolean }): Promise<boolean> => {
     // Polls skip while a request is still out so a slow endpoint can't pile up
     // requests that each get superseded (starvation).
     if (opts?.skipIfBusy && projectsInFlightRef.current) return false
     const gen = ++projectsGenRef.current
+    const issuedFor = workspaceRef.current
     projectsInFlightRef.current = true
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
@@ -98,7 +102,7 @@ export default function BoardPage() {
         signal: controller?.signal,
       })
       const data = await res.json()
-      if (gen !== projectsGenRef.current || !res.ok) return false
+      if (gen !== projectsGenRef.current || issuedFor !== workspaceRef.current || !res.ok) return false
       const next: WorkspaceProject[] = data.projects ?? []
       setProjects((prev) => (sameData(prev, next) ? prev : next))
       setProjectsLoaded(true)
@@ -137,7 +141,18 @@ export default function BoardPage() {
       }
 
       setRole(data.role)
-      if (data.workspace_id) setWorkspaceId(data.workspace_id)
+      if (data.workspace_id) {
+        // Different workspace than before (multi-membership admin): drop the
+        // previous workspace's projects and invalidate in-flight requests.
+        if (workspaceRef.current && workspaceRef.current !== data.workspace_id) {
+          projectsGenRef.current += 1
+          projectsInFlightRef.current = false
+          setProjects([])
+          setProjectsLoaded(false)
+        }
+        workspaceRef.current = data.workspace_id
+        setWorkspaceId(data.workspace_id)
+      }
       setAssets(data.assets ?? [])
 
       if (data.role === 'admin') {

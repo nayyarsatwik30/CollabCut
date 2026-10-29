@@ -190,7 +190,9 @@ export default function DashboardPage() {
   )
   // New defaults its client from the selection, so wait for it to be restored
   // (or for the workspace lookup to fail, then fall back to no default).
-  const newBlocked = isAdmin && !hydrated && !wsLookupFailed
+  // Also wait for the projects fetch: without it the tabs are empty and a stored
+  // client would resolve to All clients.
+  const newBlocked = isAdmin && ((!hydrated && !wsLookupFailed) || loading)
 
   const clientTabs = useMemo<ClientTab[]>(() => {
     if (!isAdmin) return []
@@ -200,7 +202,7 @@ export default function DashboardPage() {
   const activeClient = isAdmin && clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
   // Hold the heading back until the stored selection is restored so it never
   // flashes "All Projects" before switching to "Projects: <client>".
-  const headingReady = role !== null && (!isAdmin || hydrated || wsLookupFailed)
+  const headingReady = role !== null && (!isAdmin || ((hydrated || wsLookupFailed) && !loading))
   const activeClientLabel = clientTabs.find((t) => t.key === activeClient)?.label ?? ''
   const defaultClient = activeClient === ALL_CLIENTS_KEY || activeClient === NO_CLIENT_KEY ? '' : activeClientLabel
 
