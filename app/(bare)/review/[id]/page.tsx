@@ -479,6 +479,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                     <div className="absolute left-0 top-full mt-1.5 z-50 bg-th-surface border border-th-border rounded-th-lg shadow-panel w-60 overflow-hidden animate-slide-up">
                       <div className="px-4 py-2.5 border-b border-th-border font-mono text-[10px] text-th-muted uppercase tracking-wider">
                         Version history
+                        <span className="min-[520px]:hidden"> · {String(asset.status).replace(/_/g, ' ')}</span>
                       </div>
                       <div className="max-h-60 overflow-y-auto">
                         {versions.map((v) => {
@@ -559,7 +560,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 >
                   <Layers size={10} className="text-th-accent-text" />
                   <span className="hidden xl:inline">Compare versions</span>
-                  <span className="sr-only xl:hidden">Compare versions</span>
                 </Button>
               )}
             </>
@@ -574,7 +574,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           )}
 
           {/* Below md only the dot shows (label font-size 0); title/aria keep it readable. */}
-          <span className="shrink-0 inline-flex" title={`Status: ${String(asset.status).replace(/_/g, ' ')}`}>
+          <span className="shrink-0 inline-flex max-[519px]:hidden" title={`Status: ${String(asset.status).replace(/_/g, ' ')}`}>
             <StatusBadge status={asset.status as any} className="max-md:gap-0 max-md:px-1.5 max-md:text-[0px]" />
           </span>
 

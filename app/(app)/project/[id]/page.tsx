@@ -306,6 +306,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   tokenRef.current = token
   const priorityChainRef = useRef(new Map<string, Promise<void>>())
   const completionSeqRef = useRef(0)
+  const loadDataRef = useRef<() => Promise<Asset[] | null>>(async () => null)
+  const reconcileTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  useEffect(() => () => { reconcileTimersRef.current.forEach(clearTimeout) }, [])
   const refreshesInFlightRef = useRef(0)
 
   // Drop finished edits once nothing can still need them.
@@ -315,10 +318,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const loadData = async () => {
-    if (!session) return
+  const loadData = async (): Promise<Asset[] | null> => {
+    if (!session) return null
     setToken(session.access_token)
 
+    let loaded: Asset[] | null = null
     const startSeq = completionSeqRef.current
     refreshesInFlightRef.current += 1
     try {
@@ -329,6 +333,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         const data = await projectRes.json()
         setProject(data.project)
         const fresh: Asset[] = data.project.assets ?? []
+        loaded = fresh
         const live = priorityEditsRef.current.filter((e) => e.pending || e.doneSeq > startSeq)
         // Untouched lineages: what the server just returned is the confirmed
         // value (e.g. after a timed-out PATCH, so a later failure rolls back
@@ -355,7 +360,10 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       prunePriorityEdits()
     }
     setLoading(false)
+    return loaded
   }
+
+  loadDataRef.current = loadData
 
   const handleDeleteAsset = async (e: React.MouseEvent, id: string) => {
     e.preventDefault()
@@ -376,6 +384,25 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   // Priority is admin-only to change (editors only ever see the read-only
   // pill), kept in sync server-side across every version in the lineage -
   // see PATCH /api/assets/[id]/priority.
+  // A timed-out PATCH has an unknown outcome and the server may be slow:
+  // reload at ~1.8s, ~6s and ~15s (via the latest loadData / token) until the
+  // stored value differs from the pre-timeout baseline, and adopt the stored
+  // value as the confirmed baseline even if a newer edit is pending.
+  const reconcileAfterTimeout = (key: string) => {
+    const before = confirmedPriorityRef.current.get(key)
+    const attempt = (i: number) => {
+      const delays = [1800, 6000, 15000]
+      const t = setTimeout(async () => {
+        const fresh = await loadDataRef.current()
+        const stored = fresh?.find((a) => priorityKey(a) === key)?.priority
+        if (stored !== undefined) confirmedPriorityRef.current.set(key, stored)
+        if ((stored === undefined || stored === before) && i + 1 < delays.length) attempt(i + 1)
+      }, delays[i] - (i > 0 ? delays[i - 1] : 0))
+      reconcileTimersRef.current.push(t)
+    }
+    attempt(0)
+  }
+
   const updatePriority = async (assetId: string, priority: number) => {
     const asset = assets.find((a) => a.id === assetId)
     if (!asset || asset.priority === priority) return
@@ -409,7 +436,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       } catch (err) {
         if (timedOut) {
           showToast("Couldn't confirm the priority change - refreshing.", 'info')
-          setTimeout(() => { loadData() }, 1800)
+          reconcileAfterTimeout(key)
         } else {
           showToast('Failed to update priority.', 'error')
         }
