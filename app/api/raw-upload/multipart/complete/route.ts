@@ -151,13 +151,10 @@ async function finalizeUpload(db: PoolClient, payload: UploadTokenPayload, userI
     let recordedRow: any = null
     let rowCheckFailed = false
     try {
+      // Lock client only: a second pool connection here could deadlock the pool.
       recordedRow = await lookup((q, a) => db.query(q, a))
     } catch {
-      try {
-        recordedRow = await lookup((q, a) => migrationDb.query(q, a)) // fresh connection
-      } catch {
-        rowCheckFailed = true
-      }
+      rowCheckFailed = true
     }
     if (recordedRow) return NextResponse.json({ rawFile: recordedRow }, { status: 200 })
     if (rowCheckFailed) {
