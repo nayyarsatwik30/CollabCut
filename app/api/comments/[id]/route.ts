@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
-import { isMissingTable, purgeRawFiles } from '@/lib/comment-attachments'
+import { deleteB2Objects, isMissingTable } from '@/lib/comment-attachments'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireAuth(req)
@@ -91,8 +91,23 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     if (!isMissingTable(err)) throw err
   }
 
-  await migrationDb.query(`DELETE FROM comments WHERE id = $1`, [params.id])
-  await purgeRawFiles(attachmentFiles)
+  // One transaction: the note and its raw_files rows go together or not at
+  // all; B2 objects are removed only after the commit.
+  const client = await migrationDb.connect()
+  try {
+    await client.query('BEGIN')
+    if (attachmentFiles.length > 0) {
+      await client.query(`DELETE FROM raw_files WHERE id = ANY($1::uuid[])`, [attachmentFiles.map((f) => f.id)])
+    }
+    await client.query(`DELETE FROM comments WHERE id = $1`, [params.id])
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
+  await deleteB2Objects(attachmentFiles.map((f) => f.b2_key))
 
   return NextResponse.json({ success: true })
 }

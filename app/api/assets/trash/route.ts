@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
+import { isMissingTable, purgeRawFiles } from '@/lib/comment-attachments'
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req)
@@ -111,8 +112,24 @@ export async function DELETE(req: NextRequest) {
   const check = await authorizeAsset(asset_id, user.id)
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status })
 
+  // Reference files attached to this asset's comments live in raw_files; the
+  // asset delete only cascades the link rows, so collect them first and purge
+  // them (rows + B2 objects) once the asset is really gone.
+  let attachmentFiles: { id: string; b2_key: string }[] = []
+  try {
+    const attachments = await migrationDb.query(
+      `SELECT rf.id, rf.b2_key FROM comment_attachments ca JOIN raw_files rf ON rf.id = ca.raw_file_id
+       WHERE ca.asset_id = $1`,
+      [asset_id]
+    )
+    attachmentFiles = attachments.rows
+  } catch (err) {
+    if (!isMissingTable(err)) return NextResponse.json({ error: (err as Error).message }, { status: 500 })
+  }
+
   try {
     await migrationDb.query(`DELETE FROM assets WHERE id = $1`, [asset_id])
+    await purgeRawFiles(attachmentFiles)
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 })
   }

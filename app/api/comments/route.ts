@@ -132,28 +132,39 @@ export async function POST(req: NextRequest) {
   const profile = profileResult.rows[0]
   const authorName = profile?.name || profile?.email || user.email || 'Unknown'
 
-  const insertResult = await migrationDb.query(
-    `INSERT INTO comments (asset_id, time_sec, text, status, author_id, author_name)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [asset_id, time_sec, text, status ?? 'open', user.id, authorName]
-  )
-  const data = insertResult.rows[0]
-
-  if (attachmentIds.length > 0) {
-    const linked = await migrationDb.query(
-      `UPDATE comment_attachments SET comment_id = $1
-       WHERE id = ANY($2::uuid[]) AND asset_id = $3 AND uploaded_by = $4 AND comment_id IS NULL
-       RETURNING id`,
-      [data.id, attachmentIds, asset_id, user.id]
+  // Comment + attachment link in one transaction: a double submit that loses
+  // the race rolls back instead of leaving a note without its files.
+  const client = await migrationDb.connect()
+  let data
+  try {
+    await client.query('BEGIN')
+    const insertResult = await client.query(
+      `INSERT INTO comments (asset_id, time_sec, text, status, author_id, author_name)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [asset_id, time_sec, text, status ?? 'open', user.id, authorName]
     )
-    if (linked.rows.length !== attachmentIds.length) {
-      // A double submit claimed them first: undo this comment rather than
-      // leave a note that silently lost its files.
-      await migrationDb.query(`DELETE FROM comments WHERE id = $1`, [data.id])
-      return NextResponse.json({ error: 'An attachment is no longer available. Remove it and try again.' }, { status: 409 })
+    data = insertResult.rows[0]
+
+    if (attachmentIds.length > 0) {
+      const linked = await client.query(
+        `UPDATE comment_attachments SET comment_id = $1
+         WHERE id = ANY($2::uuid[]) AND asset_id = $3 AND uploaded_by = $4 AND comment_id IS NULL
+         RETURNING id`,
+        [data.id, attachmentIds, asset_id, user.id]
+      )
+      if (linked.rows.length !== attachmentIds.length) {
+        await client.query('ROLLBACK')
+        return NextResponse.json({ error: 'An attachment is no longer available. Remove it and try again.' }, { status: 409 })
+      }
+      const attached = await client.query(`${attachmentSelect()} WHERE ca.comment_id = $1 ORDER BY ca.created_at ASC`, [data.id])
+      data.attachments = attached.rows
     }
-    const attached = await migrationDb.query(`${attachmentSelect()} WHERE ca.comment_id = $1 ORDER BY ca.created_at ASC`, [data.id])
-    data.attachments = attached.rows
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
   }
 
   // Single lookup, reused below for both the pipeline_status transition and

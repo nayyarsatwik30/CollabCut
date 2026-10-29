@@ -82,18 +82,25 @@ export async function assetIsLive(assetId: string): Promise<{ projectId: string 
   return result.rows[0] ? { projectId: result.rows[0].project_id } : null
 }
 
-// Removes raw_files rows (the comment_attachments link cascades) and their
-// B2 objects. B2 failures are logged, not fatal - same as /api/raw-upload/[id].
-export async function purgeRawFiles(files: { id: string; b2_key: string }[]): Promise<void> {
-  if (files.length === 0) return
-  await migrationDb.query(`DELETE FROM raw_files WHERE id = ANY($1::uuid[])`, [files.map((f) => f.id)])
+// Deletes B2 objects best-effort - call only after the matching raw_files
+// rows are gone from the database. Failures are logged, not fatal (same as
+// /api/raw-upload/[id]).
+export async function deleteB2Objects(keys: string[]): Promise<void> {
   await Promise.all(
-    files.map((f) =>
-      b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: f.b2_key })).catch((err) => {
+    keys.map((key) =>
+      b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: key })).catch((err) => {
         console.error('comment attachment B2 delete failed', (err as Error).name)
       }),
     ),
   )
+}
+
+// Removes raw_files rows (the comment_attachments link cascades), then their
+// B2 objects.
+export async function purgeRawFiles(files: { id: string; b2_key: string }[]): Promise<void> {
+  if (files.length === 0) return
+  await migrationDb.query(`DELETE FROM raw_files WHERE id = ANY($1::uuid[])`, [files.map((f) => f.id)])
+  await deleteB2Objects(files.map((f) => f.b2_key))
 }
 
 export function attachmentSelect(): string {
