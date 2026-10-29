@@ -81,10 +81,14 @@ export function Sidebar() {
   }
 
   const fetchChatUnread = async () => {
-    const res = await fetch('/api/chat/unread-count')
-    if (res.ok) {
-      const data = await res.json()
-      setChatUnread((prev) => (prev === (data.count ?? 0) ? prev : data.count ?? 0))
+    try {
+      const res = await fetch('/api/chat/unread-count')
+      if (res.ok) {
+        const data = await res.json()
+        setChatUnread((prev) => (prev === (data.count ?? 0) ? prev : data.count ?? 0))
+      }
+    } catch {
+      // transient failure - the next poll retries
     }
   }
   useEffect(() => {

@@ -52,10 +52,13 @@ export async function canAccessChannel(workspaceId: string, userId: string, chan
   return result.rows.length > 0
 }
 
+// Postgres text can't hold NUL (22021 -> 500), so reject it up front with a 400.
+export const hasNul = (v: string) => v.includes('\u0000')
+
 // Parses the `channel` input: '' (General) when absent, else a bounded "c:<label>" client key.
 export function parseChannel(v: unknown): string | null {
   if (v === undefined || v === null) return ''
-  if (typeof v !== 'string' || v.length > CHANNEL_MAX_LENGTH) return null
+  if (typeof v !== 'string' || v.length > CHANNEL_MAX_LENGTH || hasNul(v)) return null
   // '' = General; anything else must be a client key ("c:" + non-empty label).
   if (v !== '' && !(v.startsWith('c:') && v.length > 2)) return null
   return v
@@ -77,8 +80,10 @@ export function isMissingTable(err: unknown): boolean {
 // clear 503 for the chat routes only and never crashes anything else.
 export function chatErrorResponse(err: unknown): NextResponse {
   if (isMissingTable(err)) {
+    // Developer hint stays in the server log; end users get a plain message.
+    console.error('[chat] chat tables are missing - apply scripts/migrations/in-app-chat.sql')
     return NextResponse.json(
-      { error: 'Chat is not set up yet. An admin needs to apply scripts/migrations/in-app-chat.sql.', code: 'chat_not_migrated' },
+      { error: "Chat isn't available right now. Try again in a minute.", code: 'chat_not_migrated' },
       { status: 503 },
     )
   }

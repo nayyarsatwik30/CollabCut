@@ -3,7 +3,7 @@ import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
 import {
   CHAT_MAX_LENGTH, CHAT_PAGE_SIZE, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SECONDS,
-  SENDER_NAME_SQL, canAccessChannel, chatErrorResponse, isUuid, parseChannel,
+  SENDER_NAME_SQL, canAccessChannel, chatErrorResponse, hasNul, isUuid, parseChannel,
 } from '@/lib/chat'
 
 // Latest messages of a workspace conversation, oldest first. Members only.
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
   const text = typeof payload?.body === 'string' ? payload.body.trim() : ''
   if (!isUuid(workspaceId) || channel === null) return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 })
   if (!text) return NextResponse.json({ error: 'Message cannot be empty' }, { status: 400 })
+  if (hasNul(text)) return NextResponse.json({ error: 'Message contains invalid characters' }, { status: 400 })
   if (text.length > CHAT_MAX_LENGTH) {
     return NextResponse.json({ error: `Message is too long (max ${CHAT_MAX_LENGTH} characters)` }, { status: 400 })
   }
@@ -73,9 +74,19 @@ export async function POST(req: NextRequest) {
     // can't all read a count below the cap and then all insert.
     const client = await migrationDb.connect()
     let row
+    let failure: Error | undefined
     try {
       await client.query('BEGIN')
-      await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`chat-send:${user.id}`])
+      // try-lock: a burst of POSTs from one user must not queue up holding
+      // pooled connections while waiting on the lock.
+      const lock = await client.query(`SELECT pg_try_advisory_xact_lock(hashtext($1)) AS ok`, [`chat-send:${user.id}`])
+      if (!lock.rows[0].ok) {
+        await client.query('ROLLBACK')
+        return NextResponse.json(
+          { error: 'You are sending messages too quickly. Wait a moment and try again.' },
+          { status: 429, headers: { 'Retry-After': '2' } },
+        )
+      }
       const recent = await client.query(
         `SELECT COUNT(*) FROM chat_messages WHERE sender_id = $1 AND created_at > now() - make_interval(secs => $2)`,
         [user.id, CHAT_RATE_WINDOW_SECONDS],
@@ -88,16 +99,18 @@ export async function POST(req: NextRequest) {
         )
       }
       const inserted = await client.query(
-        `INSERT INTO chat_messages (workspace_id, channel, sender_id, body) VALUES ($1, $2, $3, $4) RETURNING id, body, created_at, sender_id`,
+        `INSERT INTO chat_messages (workspace_id, channel, sender_id, body, created_at) VALUES ($1, $2, $3, $4, clock_timestamp()) RETURNING id, body, created_at, sender_id`,
         [workspaceId, channel, user.id, text],
       )
       row = inserted.rows[0]
       await client.query('COMMIT')
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {})
+      failure = err instanceof Error ? err : new Error(String(err))
       throw err
     } finally {
-      client.release()
+      // Passing an error destroys the connection instead of returning a possibly broken one to the pool.
+      client.release(failure)
     }
     const nameRow = await migrationDb.query(
       `SELECT ${SENDER_NAME_SQL('p')} AS name FROM profiles p WHERE p.id = $1`,
