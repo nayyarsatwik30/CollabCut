@@ -115,18 +115,34 @@ export default function DashboardPage() {
     }
   }
 
+  const [projectsError, setProjectsError] = useState(false)
   const loadProjects = async (accessToken: string) => {
     setLoading(true)
+    setProjectsError(false)
+    // Bounded (covers the body read) so a hung request can't leave the page
+    // loading, and New disabled, forever.
+    let timer: ReturnType<typeof setTimeout> | undefined
     try {
-      const res = await fetch('/api/projects', {
-        headers: { Authorization: `Bearer ${accessToken}` }
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => { controller?.abort(); reject(new Error('timeout')) }, 10000)
       })
-      if (res.ok) {
-        const data = await res.json()
-        setProjects(data.projects ?? [])
-      }
+      const load = (async () => {
+        const res = await fetch('/api/projects', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          signal: controller?.signal,
+        })
+        if (!res.ok) throw new Error('bad status')
+        return res.json()
+      })()
+      load.catch(() => {}) // late failure after the timeout is already handled
+      const data = await Promise.race([load, timeout])
+      setProjects(data.projects ?? [])
     } catch (err) {
       console.error('Failed to load projects', err)
+      setProjectsError(true)
+    } finally {
+      if (timer) clearTimeout(timer)
     }
     setLoading(false)
   }
@@ -424,6 +440,12 @@ export default function DashboardPage() {
                 </span>
               </div>
 
+              {projectsError && !loading && (
+                <div role="alert" className="mb-4 flex flex-wrap items-center gap-3 text-[13px] text-th-changes">
+                  Couldn&apos;t load your projects.
+                  <button onClick={() => loadProjects(token ?? '')} className="underline btn-press">Retry</button>
+                </div>
+              )}
               {loading ? (
                 <CardGridSkeleton count={8} minWidth={240} />
               ) : filtered.length === 0 && !search ? (

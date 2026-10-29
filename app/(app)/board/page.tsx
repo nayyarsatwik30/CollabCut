@@ -85,6 +85,20 @@ export default function BoardPage() {
   // and dropped if it changed while they were in flight.
   const workspaceRef = useRef('')
   const projectsInFlightRef = useRef(false)
+  // Shared by loadBoard and polling: if /api/board resolves a different
+  // workspace (multi-membership admin), drop the previous workspace's project
+  // state and invalidate in-flight project requests before using the new data.
+  const applyWorkspace = (id: string | undefined) => {
+    if (!id) return
+    if (workspaceRef.current && workspaceRef.current !== id) {
+      projectsGenRef.current += 1
+      projectsInFlightRef.current = false
+      setProjects([])
+      setProjectsLoaded(false)
+    }
+    workspaceRef.current = id
+    setWorkspaceId(id)
+  }
   const fetchProjects = async (accessToken: string, opts?: { skipIfBusy?: boolean }): Promise<boolean> => {
     // Polls skip while a request is still out so a slow endpoint can't pile up
     // requests that each get superseded (starvation).
@@ -141,18 +155,7 @@ export default function BoardPage() {
       }
 
       setRole(data.role)
-      if (data.workspace_id) {
-        // Different workspace than before (multi-membership admin): drop the
-        // previous workspace's projects and invalidate in-flight requests.
-        if (workspaceRef.current && workspaceRef.current !== data.workspace_id) {
-          projectsGenRef.current += 1
-          projectsInFlightRef.current = false
-          setProjects([])
-          setProjectsLoaded(false)
-        }
-        workspaceRef.current = data.workspace_id
-        setWorkspaceId(data.workspace_id)
-      }
+      applyWorkspace(data.workspace_id)
       setAssets(data.assets ?? [])
 
       if (data.role === 'admin') {
@@ -196,6 +199,7 @@ export default function BoardPage() {
     if (!res.ok) return
     const data = await res.json()
     if (m.pending > 0 || m.dragging || m.generation !== generation) return
+    applyWorkspace(data.workspace_id)
     const next: BoardAsset[] = data.assets ?? []
     // /api/board has no ORDER BY, so compare order-insensitively - a mere
     // row reshuffle from Postgres isn't a change worth re-rendering for.
