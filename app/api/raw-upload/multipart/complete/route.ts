@@ -85,14 +85,14 @@ async function finalizeUpload(db: PoolClient, payload: UploadTokenPayload, userI
     const contiguous =
       parts.length === payload.totalParts && parts.every((p, i) => p.PartNumber === i + 1 && !!p.ETag)
     if (!contiguous) {
-      return NextResponse.json({ error: 'Some parts of the upload are missing. Please retry.' }, { status: 400 })
+      return NextResponse.json({ error: "The upload didn't finish properly. Please try again." }, { status: 400 })
     }
 
     const total = parts.reduce((sum, p) => sum + (p.Size ?? 0), 0)
     const smallPart = parts.slice(0, -1).some((p) => (p.Size ?? 0) < MIN_PART_SIZE)
     if (smallPart || total !== payload.declaredSize || total > MAX_RAW_FILE_BYTES) {
       await b2.send(new AbortMultipartUploadCommand({ Bucket: B2_BUCKET, Key: payload.key, UploadId: payload.uploadId })).catch(() => {})
-      return NextResponse.json({ error: 'The uploaded file did not match its declared size.' }, { status: 400 })
+      return NextResponse.json({ error: "The upload didn't finish properly. Please try again." }, { status: 400 })
     }
 
     const completed = await b2.send(
@@ -110,7 +110,7 @@ async function finalizeUpload(db: PoolClient, payload: UploadTokenPayload, userI
     const size = headObj.ContentLength ?? 0
     if (size <= 0 || size > MAX_RAW_FILE_BYTES || size !== payload.declaredSize) {
       await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, VersionId: completed.VersionId })).catch(() => {})
-      return NextResponse.json({ error: 'The uploaded file did not match its declared size.' }, { status: 400 })
+      return NextResponse.json({ error: "The upload didn't finish properly. Please try again." }, { status: 400 })
     }
 
     // Content sniff for formats with a fixed signature (photos, wav, flac,
@@ -130,7 +130,7 @@ async function finalizeUpload(db: PoolClient, payload: UploadTokenPayload, userI
     }
     if (signatureOk === false) {
       await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, VersionId: completed.VersionId })).catch(() => {})
-      return NextResponse.json({ error: "The file's contents don't match its file type." }, { status: 400 })
+      return NextResponse.json({ error: "The file's contents don't match its file type. Check that it opens on your computer, or export it again." }, { status: 400 })
     }
 
     const insertResult = await db.query(

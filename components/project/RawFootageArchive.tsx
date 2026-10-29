@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Archive, CheckCircle2, CloudUpload, CircleAlert, Download, X, File as FileIcon, Film, Image as ImageIcon, Music, Trash2 } from 'lucide-react'
-import { MAX_RAW_FILE_BYTES, classifyRawFile, type RawFileKind } from '@/lib/raw-files'
+import { MAX_INLINE_PHOTO_BYTES, MAX_RAW_FILE_BYTES, classifyRawFile, type RawFileKind } from '@/lib/raw-files'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
 import { useConfirm, ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
@@ -112,7 +112,8 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   const [progress, setProgress] = useState(0)
   const [queueLabel, setQueueLabel] = useState('')
   const [dragOver, setDragOver] = useState(false)
-  const [loaded, setLoaded] = useState(false)
+  const [listStatus, setListStatus] = useState<'loading' | 'ok' | 'error'>('loading')
+  const listRequestRef = useRef(0)
   const [pickerAccept, setPickerAccept] = useState('')
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
 
@@ -136,18 +137,30 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     return data
   }
 
+  // Always resolves to ok or error (never leaves the tab half-rendered), and
+  // ignores a response that a newer request has overtaken.
   const loadFiles = async () => {
-    const res = await fetch(`/api/raw-upload/list?projectId=${projectId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (res.ok) {
-      const data = await readJson(res)
-      setFiles(data.rawFiles ?? [])
+    const requestId = ++listRequestRef.current
+    try {
+      const res = await fetch(`/api/raw-upload/list?projectId=${projectId}`, {
+        headers: { Authorization: `Bearer ${tokenRef.current}` },
+        cache: 'no-store',
+      })
+      const data = res.ok ? await readJson(res) : null
+      if (requestId !== listRequestRef.current || unmountedRef.current) return
+      if (data && Array.isArray(data.rawFiles)) {
+        setFiles(data.rawFiles)
+        setListStatus('ok')
+      } else {
+        setListStatus('error')
+      }
+    } catch {
+      if (requestId === listRequestRef.current && !unmountedRef.current) setListStatus('error')
     }
-    setLoaded(true)
   }
 
   useEffect(() => {
+    setListStatus('loading')
     loadFiles()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, token])
@@ -263,12 +276,21 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     setProgress(0)
     let session: UploadSession | null = null
     try {
-      const init = await postJson('/api/raw-upload/multipart/initiate', {
-        projectId,
-        fileName: file.name,
-        fileSize: file.size,
-        contentType: file.type,
-      })
+      let init
+      try {
+        init = await postJson('/api/raw-upload/multipart/initiate', {
+          projectId,
+          fileName: file.name,
+          fileSize: file.size,
+          contentType: file.type,
+        })
+      } catch (err) {
+        // Blocked or mismatched type (server returns 400 with a technical reason).
+        if (err instanceof UploadError && err.status === 400 && /can't be uploaded|looks like/i.test(err.message)) {
+          throw new UploadError("this file type can't be uploaded.", 400)
+        }
+        throw err
+      }
       // Unmounted while initiate was in flight: cleanup saw no session, so
       // abort the fresh multipart upload here instead of uploading unseen.
       if (unmountedRef.current || cancelRef.current) {
@@ -398,7 +420,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     })
     const data = await readJson(res)
     if (!res.ok) {
-      setError(res.status >= 500 || typeof data.error !== 'string' ? 'Could not open file. Please try again.' : data.error)
+      setError(res.status >= 500 || typeof data.error !== 'string' ? 'Could not open file. Try again, or download it instead.' : data.error)
       return null
     }
     return data.url as string
@@ -424,7 +446,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
       else popup.close()
     } catch {
       popup.close()
-      setError('Could not open file')
+      setError('Could not open file. Try again, or download it instead.')
     }
   }
 
@@ -504,7 +526,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
         Camera originals, voice-over and music, and photos the client sent. Drag files anywhere in this box, or use an Add button below.
       </p>
       <p className="text-[11px] text-th-muted mb-4">
-        Stored privately for admins and counted toward your storage. Photos and audio can be previewed here; video is archived for download only. Reviewing a cut? Upload it under Assets instead. Max 750MB per file.
+        Stored privately for admins and counted toward your storage. Photos and audio can be previewed here; video is archived for download only. Reviewing a cut? Upload it under Assets instead.
       </p>
 
       {uploading && (
@@ -540,11 +562,26 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
         </div>
       ))}
 
-      {loaded && files.length === 0 && !uploading && (
-        <div className="mb-4 rounded-th-sm border border-dashed border-th-border py-5 text-center">
-          <p className="text-[12px] text-th-text">Drop files here. They're sorted into Video, Audio or Photos automatically. Up to 750MB each.</p>
+      {listStatus === 'error' && (
+        <div className="mb-3 flex items-center gap-2 text-[12px] text-th-changes" role="alert">
+          <CircleAlert size={13} className="shrink-0" />
+          <span>Couldn't load your files.</span>
+          <button onClick={() => { setListStatus('loading'); loadFiles() }} className="underline font-semibold">Try again</button>
         </div>
       )}
+
+      <div className="mb-4 rounded-th-sm border-2 border-dashed border-th-muted py-5 px-3 text-center flex flex-col items-center gap-1.5">
+        <CloudUpload size={20} className="text-th-muted" />
+        {listStatus === 'loading' ? (
+          <div className="h-3 w-56 rounded bg-th-border animate-pulse" aria-label="Loading files" />
+        ) : (
+          <p className="text-[12px] text-th-text">
+            {files.length === 0
+              ? "Drop files here. They're sorted into Video, Audio or Photos automatically. Up to 750MB each."
+              : 'Drop more files here to add them. Up to 750MB each.'}
+          </p>
+        )}
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         {columns.map(({ kind, title, hint, accept, icon: Icon, cta }) => {
@@ -580,6 +617,11 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
                           <span className="flex w-full h-full items-center justify-center text-th-faint"><ImageIcon size={22} /></span>
                         )}
                       </button>
+                      {!f.preview_url && (
+                        <p className="px-1.5 pt-1 text-[10px] text-th-muted">
+                          {(f.file_size_bytes ?? 0) > MAX_INLINE_PHOTO_BYTES ? 'Too large to preview - download to view.' : 'No preview - download to view.'}
+                        </p>
+                      )}
                       <div className="flex items-center gap-1 px-1.5 py-1">
                         <div className="min-w-0 flex-1">
                           <p className="text-[11px] font-medium truncate" title={f.file_name}>{f.file_name}</p>
