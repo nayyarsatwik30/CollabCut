@@ -87,7 +87,7 @@ export default function ChatPage() {
         const list: Workspace[] = data.workspaces ?? []
         setSetupError(null)
         setWorkspaces((prev) => (sameData(prev, list) ? prev : list))
-        setActiveId((cur) => cur ?? list[0]?.id ?? null)
+        setActiveId((cur) => (cur && list.some((w) => w.id === cur) ? cur : list[0]?.id ?? null))
         // Drop a stale channel selection (e.g. the client's last project was trashed).
         const ws = list.find((w) => w.id === (activeRef.current ?? list[0]?.id))
         if (ws && !ws.channels.some((c) => c.key === channelRef.current)) setChannel('')
@@ -246,7 +246,12 @@ export default function ChatPage() {
                       )}
                     >
                       {c.label}
-                      {c.unread > 0 && c.key !== channel && <span className="w-1.5 h-1.5 rounded-full bg-th-accent" />}
+                      {c.unread > 0 && c.key !== channel && (
+                        <>
+                          <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-th-accent" />
+                          <span className="sr-only">{`, ${c.unread > 99 ? '99+' : c.unread} unread`}</span>
+                        </>
+                      )}
                     </button>
                   ))}
                 </div>

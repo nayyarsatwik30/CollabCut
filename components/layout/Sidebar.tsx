@@ -132,7 +132,7 @@ export function Sidebar() {
         key={href}
         href={href}
         title={collapsed ? label : undefined}
-        aria-label={collapsed ? label : undefined}
+        aria-label={collapsed ? `${label}${badge > 0 ? `, ${badge > 99 ? '99+' : badge} unread` : ''}` : undefined}
         className={cn(
           'relative flex items-center py-2 rounded-th-sm text-[13px] transition-colors',
           collapsed ? 'justify-center px-0' : 'gap-2.5 px-3',
