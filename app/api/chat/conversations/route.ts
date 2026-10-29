@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
-import { CLIENT_KEY_SQL, EDITOR_CLIENT_ACCESS_SQL, chatErrorResponse, messageVisibleSql } from '@/lib/chat'
+import { CLIENT_KEY_SQL, CLIENT_LABEL_SQL, EDITOR_CLIENT_ACCESS_SQL, chatErrorResponse, messageVisibleSql } from '@/lib/chat'
 
 // Every workspace the caller belongs to, each with its channels (General plus
 // one per client the caller can see) and unread counts.
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       ),
       migrationDb.query(
         `SELECT wm.workspace_id, ${CLIENT_KEY_SQL('p.client')} AS channel,
-                MIN(regexp_replace(btrim(p.client), '\\s+', ' ', 'g')) AS label
+                MIN(${CLIENT_LABEL_SQL('p.client')}) AS label
          FROM workspace_members wm
          JOIN projects p ON p.workspace_id = wm.workspace_id AND p.deleted_at IS NULL
          WHERE wm.user_id = $1 AND btrim(COALESCE(p.client, '')) <> ''

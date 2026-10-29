@@ -1,7 +1,6 @@
 -- In-app chat. A workspace has a General channel (channel = '') plus one
--- channel per client (channel = the normalized projects.client label, i.e.
--- lower(collapse-whitespace(trim(client))) - the same client identity the
--- board's client tabs use). Idempotent - safe to run more than once. Take a fresh backup
+-- channel per client (channel = 'c:' || lower(collapse-whitespace(trim(client))),
+-- identical to clientKey() in lib/clients.ts used by the board's client tabs). Idempotent - safe to run more than once. Take a fresh backup
 -- (node scripts/db-backup/backup.js) before running.
 
 CREATE TABLE IF NOT EXISTS chat_messages (

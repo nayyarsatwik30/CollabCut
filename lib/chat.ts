@@ -20,8 +20,11 @@ export const CHANNEL_MAX_LENGTH = 200
 // when they uploaded or are assigned an asset in a live project of that
 // client - the same visibility the board gives editors. Trashed projects and
 // assets never grant access. Client identity must match the SQL expression
-// in CLIENT_KEY_SQL (also used by the board's client tabs).
-export const CLIENT_KEY_SQL = (col: string) => `lower(regexp_replace(btrim(${col}), '\\s+', ' ', 'g'))`
+// in CLIENT_KEY_SQL, which mirrors lib/clients.ts#clientKey on the
+// feat/client-board-tabs branch: "c:" + trim, collapse whitespace, lowercase.
+// (Chat has no no-client channel, so the __none__ case never occurs here.)
+export const CLIENT_LABEL_SQL = (col: string) => `btrim(regexp_replace(${col}, '\\s+', ' ', 'g'))`
+export const CLIENT_KEY_SQL = (col: string) => `('c:' || lower(${CLIENT_LABEL_SQL(col)}))`
 export const EDITOR_CLIENT_ACCESS_SQL = (projectAlias: string, userParam: string) => `EXISTS (
   SELECT 1 FROM assets a WHERE a.project_id = ${projectAlias}.id AND a.deleted_at IS NULL
     AND (a.uploaded_by = ${userParam} OR EXISTS (SELECT 1 FROM asset_editors ae WHERE ae.asset_id = a.id AND ae.editor_id = ${userParam})))`
@@ -49,10 +52,12 @@ export async function canAccessChannel(workspaceId: string, userId: string, chan
   return result.rows.length > 0
 }
 
-// Parses the `channel` input: '' (General) when absent, else a bounded string.
+// Parses the `channel` input: '' (General) when absent, else a bounded "c:<label>" client key.
 export function parseChannel(v: unknown): string | null {
   if (v === undefined || v === null) return ''
   if (typeof v !== 'string' || v.length > CHANNEL_MAX_LENGTH) return null
+  // '' = General; anything else must be a client key ("c:" + non-empty label).
+  if (v !== '' && !(v.startsWith('c:') && v.length > 2)) return null
   return v
 }
 
