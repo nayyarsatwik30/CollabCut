@@ -4,8 +4,8 @@ import { CreateMultipartUploadCommand } from '@aws-sdk/client-s3'
 import { requireAuth, hasWorkspaceRole } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
 import { b2, B2_BUCKET } from '@/lib/b2'
-import { MAX_RAW_FILE_BYTES } from '@/lib/raw-files'
-import { PART_SIZE, TOKEN_TTL_MS, safeContentType, sanitizeFileName, signUploadToken } from '@/lib/raw-upload-token'
+import { MAX_RAW_FILE_BYTES, validateRawFile } from '@/lib/raw-files'
+import { PART_SIZE, TOKEN_TTL_MS, sanitizeFileName, signUploadToken } from '@/lib/raw-upload-token'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
@@ -32,7 +32,9 @@ export async function POST(req: NextRequest) {
   if (!isAdmin) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
 
   const safeName = sanitizeFileName(body?.fileName)
-  const contentType = safeContentType(body?.contentType)
+  const check = validateRawFile(safeName, body?.contentType)
+  if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 })
+  const contentType = check.contentType
   const key = `${projectId}/${randomUUID()}-${safeName}`
 
   try {

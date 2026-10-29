@@ -3,6 +3,7 @@ import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   ListPartsCommand,
   type Part,
@@ -10,7 +11,7 @@ import {
 import { requireAuth } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
 import { b2, B2_BUCKET } from '@/lib/b2'
-import { MAX_RAW_FILE_BYTES } from '@/lib/raw-files'
+import { MAX_RAW_FILE_BYTES, matchesSignature } from '@/lib/raw-files'
 import { MIN_PART_SIZE, authorizeUpload } from '@/lib/raw-upload-token'
 
 async function listAllParts(key: string, uploadId: string): Promise<Part[]> {
@@ -65,11 +66,20 @@ export async function POST(req: NextRequest) {
       }),
     )
 
-    const head = await b2.send(new HeadObjectCommand({ Bucket: B2_BUCKET, Key: payload.key }))
-    const size = head.ContentLength ?? 0
+    const headObj = await b2.send(new HeadObjectCommand({ Bucket: B2_BUCKET, Key: payload.key }))
+    const size = headObj.ContentLength ?? 0
     if (size <= 0 || size > MAX_RAW_FILE_BYTES || size !== payload.declaredSize) {
       await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key })).catch(() => {})
       return NextResponse.json({ error: 'The uploaded file did not match its declared size.' }, { status: 400 })
+    }
+
+    // Cheap content sniff for formats with a fixed signature (photos, wav,
+    // flac, ogg): the first bytes must agree with the extension.
+    const probe = await b2.send(new GetObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, Range: 'bytes=0-15' }))
+    const head = (await probe.Body?.transformToByteArray()) ?? new Uint8Array()
+    if (matchesSignature(payload.safeName, head) === false) {
+      await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key })).catch(() => {})
+      return NextResponse.json({ error: "The file's contents don't match its file type." }, { status: 400 })
     }
 
     const insertResult = await migrationDb.query(
