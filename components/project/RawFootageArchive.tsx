@@ -179,7 +179,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
         if (xhr.status >= 200 && xhr.status < 300) resolve()
         else reject(new UploadError(`Part upload failed (${xhr.status})`, xhr.status))
       }
-      xhr.onerror = () => { session.xhrs.delete(xhr); reject(new UploadError('Network error while uploading')) }
+      xhr.onerror = () => { session.xhrs.delete(xhr); reject(new UploadError('Could not reach file storage: you may be offline, or the storage bucket'+"'"+'s CORS settings are blocking this site.')) }
       xhr.onabort = () => { session.xhrs.delete(xhr); reject(new UploadError('Upload cancelled')) }
       xhr.send(blob)
     })
