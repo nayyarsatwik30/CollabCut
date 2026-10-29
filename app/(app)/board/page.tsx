@@ -90,11 +90,12 @@ export default function BoardPage() {
     projectsInFlightRef.current = true
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
-      const controller = new AbortController()
-      timer = setTimeout(() => controller.abort(), 8000)
+      // AbortController is missing on very old browsers: skip the timeout there.
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+      if (controller) timer = setTimeout(() => controller.abort(), 8000)
       const res = await fetch('/api/board/projects', {
         headers: { Authorization: `Bearer ${accessToken}` },
-        signal: controller.signal,
+        signal: controller?.signal,
       })
       const data = await res.json()
       if (gen !== projectsGenRef.current || !res.ok) return false

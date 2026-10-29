@@ -94,9 +94,18 @@ export default function DashboardPage() {
       loadProjects(session.access_token)
       // Workspace id only keys the client-selection storage; best-effort.
       try {
-        const wsRes = await fetch('/api/workspaces', { headers: { Authorization: `Bearer ${session.access_token}` } })
-        if (wsRes.ok) {
-          const ws = await wsRes.json()
+        // Bounded without AbortController: a hung lookup falls back to no tabs.
+        const lookup = (async () => {
+          const wsRes = await fetch('/api/workspaces', { headers: { Authorization: `Bearer ${session.access_token}` } })
+          return wsRes.ok ? await wsRes.json() : null
+        })()
+        lookup.catch(() => {}) // late failure after the timeout is already handled
+        let timer: ReturnType<typeof setTimeout> | undefined
+        const ws = await Promise.race([
+          lookup,
+          new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), 8000) }),
+        ]).finally(() => { if (timer) clearTimeout(timer) })
+        if (ws) {
           if (ws.workspace?.id) setWorkspaceId(ws.workspace.id)
           else setWsLookupFailed(true)
         } else {
@@ -175,7 +184,7 @@ export default function DashboardPage() {
   const wsProjects = useMemo(
     () => (workspaceId ? projects.filter((p) => {
       const ws = (p as Project & { workspace_id?: string | null }).workspace_id
-      return !ws || ws === workspaceId
+      return ws === workspaceId
     }) : projects),
     [projects, workspaceId]
   )
@@ -461,7 +470,12 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {isAdmin && !authError && !loading && (
+        {isAdmin && !authError && !loading && !hydrated && wsLookupFailed && (
+          <div className="shrink-0 bg-th-surface border-t border-th-border px-4 py-2 text-[11px] text-th-muted">
+            Client tabs are unavailable right now (workspace lookup failed). Showing all projects - refresh to retry.
+          </div>
+        )}
+        {isAdmin && !authError && !loading && hydrated && (
           <ClientTabStrip
             tabs={clientTabs}
             allCount={projects.length}
