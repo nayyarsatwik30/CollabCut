@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
+import { isMissingTable, purgeRawFiles } from '@/lib/comment-attachments'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireAuth(req)
@@ -76,7 +77,22 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   if (!authorized) return NextResponse.json({ error: 'Not authorized to delete this comment' }, { status: 403 })
 
+  // Files attached to the note go with it (storage rows + B2 objects), so a
+  // deleted comment leaves nothing reachable or counted against quota.
+  let attachmentFiles: { id: string; b2_key: string }[] = []
+  try {
+    const attachments = await migrationDb.query(
+      `SELECT rf.id, rf.b2_key FROM comment_attachments ca JOIN raw_files rf ON rf.id = ca.raw_file_id
+       WHERE ca.comment_id = $1`,
+      [params.id]
+    )
+    attachmentFiles = attachments.rows
+  } catch (err) {
+    if (!isMissingTable(err)) throw err
+  }
+
   await migrationDb.query(`DELETE FROM comments WHERE id = $1`, [params.id])
+  await purgeRawFiles(attachmentFiles)
 
   return NextResponse.json({ success: true })
 }

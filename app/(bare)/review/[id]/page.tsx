@@ -68,6 +68,7 @@ interface Comment {
   resolved: boolean
   created_at: string
   replies: any[]
+  attachments?: { id: string; file_name: string; file_size_bytes: number | null; content_type: string | null }[]
 }
 
 // Annotate row is hidden: no tool draws anything yet (drawTool only drives button highlight).
@@ -255,7 +256,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     setShowCompareModal(true)
   }
 
-  const handleAddComment = useCallback(async (text: string, status: CommentStatus) => {
+  const handleAddComment = useCallback(async (text: string, status: CommentStatus, attachmentIds: string[] = []) => {
     if (!asset) return false
     const res = await fetch('/api/comments', {
       method: 'POST',
@@ -269,6 +270,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         text,
         status,
         author_name: userName,
+        ...(attachmentIds.length > 0 ? { attachment_ids: attachmentIds } : {}),
       }),
     })
     if (res.ok) {
@@ -277,10 +279,14 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       setComments((prev) =>
         prev.some((c) => c.id === data.comment.id)
           ? prev
-          : [...prev, { ...data.comment, replies: [] }].sort((a, b) => a.time_sec - b.time_sec)
+          : [...prev, { ...data.comment, replies: [], attachments: data.comment.attachments ?? [] }].sort((a, b) => a.time_sec - b.time_sec)
       )
       showToast('Note added', 'success')
       return true
+    }
+    if (attachmentIds.length > 0) {
+      const err = await res.json().catch(() => null)
+      showToast(err?.error ?? 'Failed to add note', 'error')
     }
     return false
   }, [currentTime, asset, token, userName, showToast])
@@ -700,12 +706,14 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   status: c.status,
                   text: c.text,
                   replies: c.replies ?? [],
+                  attachments: c.attachments ?? [],
                   resolved: c.resolved,
                   createdAt: new Date(c.created_at).toLocaleString(),
                 })) as any}
                 currentTime={currentTime}
                 onSeek={(time) => videoPlayerRef.current?.seekTo(time)}
                 onAdd={handleAddComment}
+                attachments={{ assetId: asset.id, token }}
                 onResolve={handleResolve}
                 onDelete={handleDelete}
                 onReply={handleReply}

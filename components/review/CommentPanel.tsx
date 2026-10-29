@@ -5,6 +5,7 @@ import { Plus, MessageSquare } from 'lucide-react'
 import { Comment, CommentStatus } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { CommentCard } from './CommentCard'
+import { AttachButton, DraftAttachmentList, useCommentAttachments } from './CommentAttachments'
 
 type Filter = 'all' | CommentStatus
 
@@ -12,7 +13,9 @@ interface CommentPanelProps {
   comments: Comment[]
   currentTime: number
   onSeek: (time: number) => void
-  onAdd: (text: string, status: CommentStatus) => Promise<boolean>
+  onAdd: (text: string, status: CommentStatus, attachmentIds?: string[]) => Promise<boolean>
+  /** Enables the Attach button (logged-in review screen only). */
+  attachments?: { assetId: string; token: string | null }
   onResolve: (id: string) => void
   onDelete: (id: string) => void
   onReply: (id: string, text: string) => void
@@ -31,19 +34,24 @@ const DRAFT_STATUS_OPTIONS: { key: CommentStatus; label: string; color: string }
   { key: 'resolved', label: 'Done',    color: 'var(--th-resolved)' },
 ]
 
-export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, onDelete, onReply }: CommentPanelProps) {
+export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, onDelete, onReply, attachments }: CommentPanelProps) {
   const [filter,       setFilter]       = useState<Filter>('all')
   const [draftText,    setDraftText]    = useState('')
   const [draftStatus,  setDraftStatus]  = useState<CommentStatus>('open')
+
+  const drafts = useCommentAttachments(attachments?.assetId ?? null, attachments?.token ?? null)
 
   const filtered = filter === 'all'
     ? comments
     : comments.filter((c) => c.status === filter)
 
   const handleSubmit = async () => {
-    if (!draftText.trim()) return
-    const ok = await onAdd(draftText.trim(), draftStatus)
-    if (ok) setDraftText('')
+    if (!draftText.trim() || drafts.busy) return
+    const ok = await onAdd(draftText.trim(), draftStatus, drafts.ids)
+    if (ok) {
+      setDraftText('')
+      drafts.clearPosted()
+    }
   }
 
   return (
@@ -105,6 +113,7 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
             AT {formatTimecode(currentTime)}
           </span>
           <div className="ml-auto flex items-center gap-1">
+            {attachments && <AttachButton onFiles={drafts.addFiles} disabled={drafts.full} />}
             {DRAFT_STATUS_OPTIONS.map(({ key, label, color }) => (
               <button
                 key={key}
@@ -133,14 +142,17 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
           style={{ borderColor: draftText ? 'var(--th-accent)' : 'var(--th-border)' }}
         />
 
+        <DraftAttachmentList items={drafts.items} onRemove={drafts.remove} />
+
         {/* Submit — only visible when typing */}
         {draftText.trim() && (
           <button
             onClick={handleSubmit}
-            className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:bg-th-accent-hover transition-colors animate-fade-in"
+            disabled={drafts.busy}
+            className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:bg-th-accent-hover transition-colors animate-fade-in disabled:opacity-60"
             style={{ boxShadow: '0 4px 14px color-mix(in srgb, var(--th-accent) 40%, transparent)' }}
           >
-            <Plus size={14} /> Post note at {formatTimecode(currentTime)}
+            <Plus size={14} /> {drafts.busy ? 'Uploading file…' : `Post note at ${formatTimecode(currentTime)}`}
           </button>
         )}
       </div>
