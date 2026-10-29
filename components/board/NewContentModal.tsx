@@ -7,12 +7,13 @@ import { useSession } from 'next-auth/react'
 interface NewContentModalProps {
   onClose: () => void
   onCreated: () => void
+  defaultClient?: string
 }
 
-export function NewContentModal({ onClose, onCreated }: NewContentModalProps) {
+export function NewContentModal({ onClose, onCreated, defaultClient = '' }: NewContentModalProps) {
   const { data: session, status } = useSession()
   const [title, setTitle] = useState('')
-  const [client, setClient] = useState('')
+  const [client, setClient] = useState(defaultClient)
   const [rawFileUrl, setRawFileUrl] = useState('')
   const [notes, setNotes] = useState('')
   const [reference, setReference] = useState('')

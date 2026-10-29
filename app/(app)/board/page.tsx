@@ -13,7 +13,7 @@ import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import { priorityMeta } from '@/lib/priority'
-import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, matchesClient, type ClientTab } from '@/lib/clients'
+import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, clientKey, matchesClient, type ClientTab } from '@/lib/clients'
 import { Orb } from '@/components/ui/Orb'
 import { Button, ButtonIcon } from '@/components/ui/Button'
 
@@ -61,6 +61,17 @@ export default function BoardPage() {
   const [selectedClient, setSelectedClient] = useState<string>(ALL_CLIENTS_KEY)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [showNewContent, setShowNewContent] = useState(false)
+
+  // Client tabs created with "+" before any project uses them. There is no
+  // clients table (a client is just projects.client), so these live in
+  // per-workspace localStorage on this browser until a project is created
+  // under that name, after which the server-side data carries the tab.
+  const [workspaceId, setWorkspaceId] = useState('')
+  const [extraClients, setExtraClients] = useState<string[]>([])
+  const [addingClient, setAddingClient] = useState(false)
+  const [newClientName, setNewClientName] = useState('')
+  const [newClientError, setNewClientError] = useState('')
+  const extraClientsKey = workspaceId ? `collabcut:client-tabs:${workspaceId}` : ''
 
   // Admin-only Projects/Editors views alongside the regular Kanban - gated
   // both by not rendering the tab bar for non-admins (below) and by the
@@ -127,6 +138,7 @@ export default function BoardPage() {
       }
 
       setRole(data.role)
+      if (data.workspace_id) setWorkspaceId(data.workspace_id)
       setAssets(data.assets ?? [])
 
       if (data.role === 'admin') {
@@ -373,20 +385,37 @@ export default function BoardPage() {
     setEditorAssetsLoading(false)
   }
 
+  useEffect(() => {
+    if (!extraClientsKey) return
+    try {
+      const raw = localStorage.getItem(extraClientsKey)
+      const parsed = raw ? JSON.parse(raw) : []
+      setExtraClients(Array.isArray(parsed) ? parsed.filter((n): n is string => typeof n === 'string').slice(0, 100) : [])
+    } catch {
+      setExtraClients([])
+    }
+  }, [extraClientsKey])
+
   const clientTabs = useMemo<ClientTab[]>(() => {
     if (role !== 'admin') return []
     const tabs = buildClientTabs(assets.map((a) => ({ client: a.project_client })))
     const known = new Set(tabs.map((t) => t.key))
     const fromProjects = buildClientTabs(projects.map((p) => ({ client: p.client })))
     for (const t of fromProjects) {
-      if (!known.has(t.key)) tabs.push({ ...t, count: 0 })
+      if (!known.has(t.key)) { tabs.push({ ...t, count: 0 }); known.add(t.key) }
+    }
+    for (const name of extraClients) {
+      const key = clientKey(name)
+      if (key === NO_CLIENT_KEY || known.has(key)) continue
+      tabs.push({ key, label: name, count: 0 })
+      known.add(key)
     }
     return tabs.sort((a, b) => {
       if (a.key === NO_CLIENT_KEY) return 1
       if (b.key === NO_CLIENT_KEY) return -1
       return a.label.localeCompare(b.label)
     })
-  }, [role, assets, projects])
+  }, [role, assets, projects, extraClients])
 
   // A tab can vanish (last card moved/deleted); fall back to All rather than
   // showing an empty board for a client that no longer exists.
@@ -405,6 +434,33 @@ export default function BoardPage() {
     () => (role === 'admin' ? assets.filter((a) => matchesClient(a.project_client, activeClient)) : assets),
     [role, assets, activeClient]
   )
+  // Tab counts follow the active view so a tab never promises more (or fewer)
+  // items than the grid/board beneath it shows.
+  const tabCount = (key: string) =>
+    boardView === 'projects'
+      ? projects.filter((p) => matchesClient(p.client, key)).length
+      : key === ALL_CLIENTS_KEY ? assets.length : (clientTabs.find((t) => t.key === key)?.count ?? 0)
+  const activeClientLabel = clientTabs.find((t) => t.key === activeClient)?.label ?? ''
+  // Default client for New Content: the selected tab (not All / No client).
+  const defaultClient = activeClient === ALL_CLIENTS_KEY || activeClient === NO_CLIENT_KEY ? '' : activeClientLabel
+
+  const handleAddClient = () => {
+    const name = newClientName.trim().replace(/\s+/g, ' ')
+    if (!name) { setNewClientError('Enter a client name'); return }
+    if (name.length > 100) { setNewClientError('Max 100 characters'); return }
+    const key = clientKey(name)
+    const existing = clientTabs.find((t) => t.key === key)
+    if (!existing) {
+      const next = [...extraClients, name]
+      setExtraClients(next)
+      try { if (extraClientsKey) localStorage.setItem(extraClientsKey, JSON.stringify(next)) } catch { /* private mode: tab lasts for this session */ }
+    }
+    setSelectedClient(key)
+    setAddingClient(false)
+    setNewClientName('')
+    setNewClientError('')
+  }
+
   const visibleProjects = useMemo(
     () => projects.filter((p) => matchesClient(p.client, activeClient)),
     [projects, activeClient]
@@ -485,7 +541,12 @@ export default function BoardPage() {
             ) : visibleProjects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
                 <FolderKanban size={32} className="text-th-faint" />
-                <p className="text-[13px] text-th-muted">{projects.length === 0 ? 'No projects in this workspace yet.' : 'No projects for this client yet.'}</p>
+                <p className="text-[13px] text-th-muted">
+                  {activeClient === ALL_CLIENTS_KEY
+                    ? 'No projects in this workspace yet.'
+                    : activeClient === NO_CLIENT_KEY ? 'No projects without a client.' : `No projects for ${activeClientLabel} yet`}
+                </p>
+                <Button onClick={() => setShowNewContent(true)} size="sm"><Plus size={13} /> New{defaultClient ? ` for ${defaultClient}` : ''}</Button>
               </div>
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
@@ -658,6 +719,13 @@ export default function BoardPage() {
               </div>
             </div>
 
+            {activeClient !== ALL_CLIENTS_KEY && visibleAssets.length === 0 && (
+              <div className="shrink-0 mx-6 mt-4 flex items-center gap-3 px-4 py-3 rounded-th border border-dashed border-th-border text-[12px] text-th-muted">
+                <span>{activeClient === NO_CLIENT_KEY ? 'No cards without a client.' : `No projects for ${activeClientLabel} yet`}</span>
+                <Button onClick={() => setShowNewContent(true)} size="sm"><Plus size={13} /> New{defaultClient ? ` for ${defaultClient}` : ''}</Button>
+              </div>
+            )}
+
             {/* Columns */}
             <div className="flex-1 overflow-x-auto overflow-y-hidden p-6">
               <div className="flex gap-4 h-full min-w-max">
@@ -711,13 +779,13 @@ export default function BoardPage() {
           </>
         )}
 
-        {role === 'admin' && !error && boardView !== 'editors' && clientTabs.length > 0 && (
+        {role === 'admin' && !error && boardView !== 'editors' && (
           <div
             role="group"
             aria-label="Filter by client"
             className="shrink-0 bg-th-surface border-t border-th-border px-4 flex items-end gap-1 overflow-x-auto"
           >
-            {([{ key: ALL_CLIENTS_KEY, label: 'All clients', count: assets.length }, ...clientTabs] as ClientTab[]).map((tab) => {
+            {([{ key: ALL_CLIENTS_KEY, label: 'All clients', count: 0 }, ...clientTabs] as ClientTab[]).map((tab) => {
               const active = activeClient === tab.key
               return (
                 <button
@@ -733,10 +801,38 @@ export default function BoardPage() {
                   }}
                 >
                   <span className="truncate">{tab.label}</span>
-                  <span className="font-mono text-[10px] opacity-70">{tab.count}</span>
+                  <span className="font-mono text-[10px] opacity-70">{tabCount(tab.key)}</span>
                 </button>
               )
             })}
+            {addingClient ? (
+              <form
+                onSubmit={(e) => { e.preventDefault(); handleAddClient() }}
+                className="shrink-0 flex items-center gap-1.5 px-2 py-1.5"
+              >
+                <input
+                  autoFocus
+                  value={newClientName}
+                  maxLength={100}
+                  onChange={(e) => { setNewClientName(e.target.value); setNewClientError('') }}
+                  onKeyDown={(e) => { if (e.key === 'Escape') { setAddingClient(false); setNewClientName(''); setNewClientError('') } }}
+                  placeholder="Client name"
+                  aria-label="New client name"
+                  className="w-36 px-2 py-1 text-[12px] rounded-th bg-th-bg border border-th-border text-th-text"
+                />
+                <Button type="submit" size="sm">Add</Button>
+                {newClientError && <span className="text-[11px] text-th-changes">{newClientError}</span>}
+              </form>
+            ) : (
+              <button
+                onClick={() => setAddingClient(true)}
+                aria-label="Add client tab"
+                title="Add client"
+                className="shrink-0 flex items-center px-3 py-2 text-th-muted hover:text-th-text btn-press"
+              >
+                <Plus size={14} />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -746,6 +842,7 @@ export default function BoardPage() {
 
       {showNewContent && (
         <NewContentModal
+          defaultClient={defaultClient}
           onClose={() => setShowNewContent(false)}
           onCreated={() => {
             setShowNewContent(false)
