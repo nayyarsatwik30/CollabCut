@@ -573,7 +573,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
       <div className="mb-4 rounded-th-sm border-2 border-dashed border-th-muted py-5 px-3 text-center flex flex-col items-center gap-1.5">
         <CloudUpload size={20} className="text-th-muted" />
         {listStatus === 'loading' ? (
-          <div className="h-3 w-56 rounded bg-th-border animate-pulse" aria-label="Loading files" />
+          <div role="status" aria-live="polite" aria-label="Loading files" className="h-3 w-56 rounded bg-th-border animate-pulse" />
         ) : (
           <p className="text-[12px] text-th-text">
             {files.length === 0

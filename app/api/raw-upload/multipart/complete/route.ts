@@ -142,6 +142,28 @@ async function finalizeUpload(db: PoolClient, payload: UploadTokenPayload, userI
     return NextResponse.json({ rawFile: insertResult.rows[0] }, { status: 201 })
   } catch (err) {
     console.error('raw-upload complete failed', (err as Error).name)
+    // The INSERT may have committed even though its reply was lost. Only a
+    // positively confirmed "no row" allows deleting the object; if we can't
+    // tell, keep it (an orphaned object beats a row pointing at nothing) and
+    // let the client retry - the retry finds the row, or cleans the object.
+    const lookup = async (run: (sql: string, args: unknown[]) => Promise<{ rows: any[] }>) =>
+      (await run(`SELECT ${RAW_FILE_COLUMNS} FROM raw_files WHERE b2_key = $1 LIMIT 1`, [payload.key])).rows[0] ?? null
+    let recordedRow: any = null
+    let rowCheckFailed = false
+    try {
+      recordedRow = await lookup((q, a) => db.query(q, a))
+    } catch {
+      try {
+        recordedRow = await lookup((q, a) => migrationDb.query(q, a)) // fresh connection
+      } catch {
+        rowCheckFailed = true
+      }
+    }
+    if (recordedRow) return NextResponse.json({ rawFile: recordedRow }, { status: 200 })
+    if (rowCheckFailed) {
+      return NextResponse.json({ error: 'Could not confirm the upload. Please try again in a moment.' }, { status: 502 })
+    }
+
     // CompleteMultipartUpload may have succeeded with its response lost: look
     // for the (uniquely keyed) object before deciding there is nothing to clean.
     if (!completedObject) {
