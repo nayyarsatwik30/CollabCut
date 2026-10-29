@@ -13,6 +13,7 @@ import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import { priorityMeta } from '@/lib/priority'
+import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, matchesClient, type ClientTab } from '@/lib/clients'
 import { Orb } from '@/components/ui/Orb'
 import { Button, ButtonIcon } from '@/components/ui/Button'
 
@@ -54,6 +55,10 @@ export default function BoardPage() {
   const [role, setRole] = useState<'admin' | 'editor' | null>(null)
   const [assets, setAssets] = useState<BoardAsset[]>([])
   const [editors, setEditors] = useState<BoardEditorOption[]>([])
+  // Footer client tabs (admin only). A client is the projects.client label
+  // inside this workspace (see lib/clients.ts); selecting one only filters
+  // what is rendered, it never changes what the API returns.
+  const [selectedClient, setSelectedClient] = useState<string>(ALL_CLIENTS_KEY)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [showNewContent, setShowNewContent] = useState(false)
 
@@ -99,6 +104,18 @@ export default function BoardPage() {
         })
         const editorsData = await editorsRes.json()
         if (editorsRes.ok) setEditors(editorsData.editors ?? [])
+
+        // Projects feed the client tabs so a client with no cards yet still
+        // gets a tab. Best-effort: tabs fall back to the board's assets.
+        try {
+          const projectsRes = await fetch('/api/board/projects', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          })
+          const projectsData = await projectsRes.json()
+          if (projectsRes.ok) setProjects(projectsData.projects ?? [])
+        } catch {
+          // ignore
+        }
       }
     } catch (err) {
       setError('Failed to load board')
@@ -335,10 +352,38 @@ export default function BoardPage() {
     setEditorAssetsLoading(false)
   }
 
+  const clientTabs = useMemo<ClientTab[]>(() => {
+    if (role !== 'admin') return []
+    const tabs = buildClientTabs(assets.map((a) => ({ client: a.project_client })))
+    const known = new Set(tabs.map((t) => t.key))
+    const fromProjects = buildClientTabs(projects.map((p) => ({ client: p.client })))
+    for (const t of fromProjects) {
+      if (!known.has(t.key)) tabs.push({ ...t, count: 0 })
+    }
+    return tabs.sort((a, b) => {
+      if (a.key === NO_CLIENT_KEY) return 1
+      if (b.key === NO_CLIENT_KEY) return -1
+      return a.label.localeCompare(b.label)
+    })
+  }, [role, assets, projects])
+
+  // A tab can vanish (last card moved/deleted); fall back to All rather than
+  // showing an empty board for a client that no longer exists.
+  const activeClient = clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
+
+  const visibleAssets = useMemo(
+    () => (role === 'admin' ? assets.filter((a) => matchesClient(a.project_client, activeClient)) : assets),
+    [role, assets, activeClient]
+  )
+  const visibleProjects = useMemo(
+    () => projects.filter((p) => matchesClient(p.client, activeClient)),
+    [projects, activeClient]
+  )
+
   const grouped = useMemo(() => {
     const map: Record<string, BoardAsset[]> = {}
     for (const col of COLUMNS) map[col.key] = []
-    for (const asset of assets) {
+    for (const asset of visibleAssets) {
       const key = map[asset.pipeline_status] ? asset.pipeline_status : 'idea'
       map[key].push(asset)
     }
@@ -348,7 +393,7 @@ export default function BoardPage() {
       map[key].sort((a, b) => a.priority - b.priority)
     }
     return map
-  }, [assets])
+  }, [visibleAssets])
 
   if (loading) {
     return (
@@ -407,14 +452,14 @@ export default function BoardPage() {
               <div className="flex items-center justify-center py-16">
                 <Orb state="composing" size={64} label="Loading" />
               </div>
-            ) : projects.length === 0 ? (
+            ) : visibleProjects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
                 <FolderKanban size={32} className="text-th-faint" />
-                <p className="text-[13px] text-th-muted">No projects in this workspace yet.</p>
+                <p className="text-[13px] text-th-muted">{projects.length === 0 ? 'No projects in this workspace yet.' : 'No projects for this client yet.'}</p>
               </div>
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
-                {projects.map((p) => (
+                {visibleProjects.map((p) => (
                   <ProjectCard key={p.id} project={{ ...p, client: p.client ?? '' }} view="grid" />
                 ))}
               </div>
@@ -557,7 +602,7 @@ export default function BoardPage() {
                 }}
               >
                 <div className="flex items-center" style={{ gap: 8, padding: '9px 16px' }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--th-text)' }}>{assets.length}</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--th-text)' }}>{visibleAssets.length}</span>
                   <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--th-muted)' }}>total</span>
                 </div>
                 <div style={{ width: 1, height: 20, background: 'var(--th-border)', margin: '0 2px' }} />
@@ -634,6 +679,36 @@ export default function BoardPage() {
               </div>
             </div>
           </>
+        )}
+
+        {role === 'admin' && !error && boardView !== 'editors' && clientTabs.length > 0 && (
+          <div
+            role="tablist"
+            aria-label="Client boards"
+            className="shrink-0 bg-th-surface border-t border-th-border px-4 flex items-end gap-1 overflow-x-auto"
+          >
+            {([{ key: ALL_CLIENTS_KEY, label: 'All clients', count: assets.length }, ...clientTabs] as ClientTab[]).map((tab) => {
+              const active = activeClient === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setSelectedClient(tab.key)}
+                  className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 text-[12px] border-t-2 btn-press transition-colors max-w-[200px]"
+                  style={{
+                    color: active ? 'var(--th-accent-text)' : 'var(--th-muted)',
+                    borderColor: active ? 'var(--th-accent)' : 'transparent',
+                    background: active ? 'var(--th-bg)' : 'transparent',
+                    fontWeight: active ? 700 : 400,
+                  }}
+                >
+                  <span className="truncate">{tab.label}</span>
+                  <span className="font-mono text-[10px] opacity-70">{tab.count}</span>
+                </button>
+              )
+            })}
+          </div>
         )}
       </div>
 
