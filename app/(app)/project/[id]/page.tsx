@@ -287,17 +287,31 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     scheduleNext()
   }, [assets])
 
+  // Priority edits are optimistic: a loadData() whose request was already in
+  // flight when the edit started (the upload-thumbnail poll, an upload
+  // finishing) returns the pre-edit value and would snap the badge back. Track
+  // edits so such a response keeps the locally-set priority instead.
+  const priorityEditRef = useRef({ pending: 0, generation: 0 })
+
   const loadData = async () => {
     if (!session) return
     setToken(session.access_token)
 
+    const startGeneration = priorityEditRef.current.generation
     const projectRes = await fetch(`/api/projects/${params.id}`, {
       headers: { Authorization: `Bearer ${session.access_token}` }
     })
     if (projectRes.ok) {
       const data = await projectRes.json()
       setProject(data.project)
-      setAssets(data.project.assets ?? [])
+      const fresh: Asset[] = data.project.assets ?? []
+      const edit = priorityEditRef.current
+      if (edit.pending > 0 || edit.generation !== startGeneration) {
+        const local = new Map(assetsRef.current.map((a) => [a.id, a.priority]))
+        setAssets(fresh.map((a) => (local.has(a.id) ? { ...a, priority: local.get(a.id)! } : a)))
+      } else {
+        setAssets(fresh)
+      }
     }
     setLoading(false)
   }
@@ -328,6 +342,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     const previousPriority = asset.priority
     setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority } : a)))
 
+    priorityEditRef.current.pending += 1
+    priorityEditRef.current.generation += 1
     try {
       const res = await fetch(`/api/assets/${assetId}/priority`, {
         method: 'PATCH',
@@ -341,6 +357,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     } catch (err) {
       setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
       showToast('Failed to update priority.', 'error')
+    } finally {
+      priorityEditRef.current.pending -= 1
     }
   }
 

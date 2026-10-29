@@ -11,7 +11,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { priority } = await req.json()
+  const body = await req.json().catch(() => null)
+  const priority = body?.priority
   if (!VALID_PRIORITIES.includes(priority)) {
     return NextResponse.json({ error: 'priority must be 1, 2, or 3' }, { status: 400 })
   }
@@ -56,6 +57,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
          RETURNING a.id`,
         [priority, params.id, workspaceId]
       )
+
+  if (updateResult.rows.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   return NextResponse.json({ success: true, updated: updateResult.rows.length })
 }
