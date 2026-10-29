@@ -15,6 +15,34 @@ interface Channel { key: string; label: string; unread: number }
 interface Workspace { id: string; name: string; role: string; channels: Channel[] }
 interface ChatMessage { id: string; body: string; created_at: string; sender_id: string; sender_name: string; mine: boolean }
 
+const AVATAR_COLORS = ['#2F8F83', '#4F6BD8', '#B5528A', '#C27A2C', '#7A5BC0', '#3A8DBF', '#B8483F', '#5E8A3A']
+const GROUP_WINDOW_MS = 5 * 60 * 1000
+
+// Deterministic per sender (not profiles.avatar_color, which defaults to the same green for everyone).
+function avatarColor(seed: string) {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
+
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] ?? '?').slice(0, 2)
+  return letters.toUpperCase()
+}
+
+function Avatar({ name, seed }: { name: string; seed: string }) {
+  return (
+    <span
+      aria-hidden
+      className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+      style={{ background: avatarColor(seed) }}
+    >
+      {initialsOf(name)}
+    </span>
+  )
+}
+
 function formatTime(iso: string) {
   const d = new Date(iso)
   const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -170,26 +198,23 @@ export default function ChatPage() {
 
   const active = workspaces?.find((w) => w.id === activeId)
 
+  const workspaceControl =
+    workspaces && workspaces.length > 1 ? (
+      <select
+        value={activeId ?? ''}
+        onChange={(e) => { setActiveId(e.target.value); setChannel('') }}
+        aria-label="Workspace"
+        className="max-w-[220px] truncate rounded-th-sm border border-th-border bg-th-surface px-2 py-1 text-[12px]"
+      >
+        {workspaces.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+    ) : active ? (
+      <span className="text-[13px] font-semibold truncate">{active.name}</span>
+    ) : null
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-      <TopBar
-        title="Chat"
-        icon={MessageCircle}
-        leading={
-          workspaces && workspaces.length > 1 ? (
-            <select
-              value={activeId ?? ''}
-              onChange={(e) => { setActiveId(e.target.value); setChannel('') }}
-              aria-label="Workspace"
-              className="ml-2 max-w-[220px] truncate rounded-th-sm border border-th-border bg-th-surface px-2 py-1 text-[12px]"
-            >
-              {workspaces.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          ) : active ? (
-            <span className="ml-2 text-[12px] text-th-muted truncate">{active.name}</span>
-          ) : null
-        }
-      />
+      <TopBar title="Chat" icon={MessageCircle} />
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center"><Orb state="composing" size={64} label="Loading" /></div>
@@ -203,55 +228,73 @@ export default function ChatPage() {
         </div>
       ) : (
         <>
-          {active && active.channels.length > 1 && (
-            <div role="tablist" aria-label="Channels" className="shrink-0 flex gap-1.5 overflow-x-auto border-b border-th-border px-6 py-2">
-              {active.channels.map((c) => (
-                <button
-                  key={c.key || 'general'}
-                  role="tab"
-                  aria-selected={c.key === channel}
-                  onClick={() => setChannel(c.key)}
-                  className={cn(
-                    'shrink-0 flex items-center gap-1.5 rounded-th-full px-3 py-1 text-[12px] transition-colors',
-                    c.key === channel ? 'bg-th-accent text-th-accent-fg font-semibold' : 'text-th-muted hover:bg-th-surface-alt',
-                  )}
-                >
-                  {c.label}
-                  {c.unread > 0 && c.key !== channel && <span className="w-1.5 h-1.5 rounded-full bg-th-accent" />}
-                </button>
-              ))}
+          {/* Header + channel tabs: same bounded column as the messages and composer. */}
+          <div className="shrink-0 border-b border-th-border">
+            <div className="w-full max-w-3xl mx-auto px-3 sm:px-6">
+              <div className="py-2.5 flex items-center gap-2 min-w-0">{workspaceControl}</div>
+              {active && active.channels.length > 1 && (
+                <div role="tablist" aria-label="Channels" className="flex gap-1.5 overflow-x-auto pb-2">
+                  {active.channels.map((c) => (
+                    <button
+                      key={c.key || 'general'}
+                      role="tab"
+                      aria-selected={c.key === channel}
+                      onClick={() => setChannel(c.key)}
+                      className={cn(
+                        'shrink-0 flex items-center gap-1.5 rounded-th-full px-3 py-1 text-[12px] transition-colors',
+                        c.key === channel ? 'bg-th-accent text-th-accent-fg font-semibold' : 'text-th-muted hover:bg-th-surface-alt',
+                      )}
+                    >
+                      {c.label}
+                      {c.unread > 0 && c.key !== channel && <span className="w-1.5 h-1.5 rounded-full bg-th-accent" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-          <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-6 py-4">
-            {messages.length === 0 ? (
-              <p className="text-center text-[13px] text-th-muted pt-10">No messages yet. Say hello to your team.</p>
-            ) : (
-              <div className="max-w-3xl mx-auto space-y-2">
-                {messages.map((m, i) => {
-                  const showName = !m.mine && messages[i - 1]?.sender_id !== m.sender_id
+          </div>
+
+          <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto py-4">
+            <div className="w-full max-w-3xl mx-auto px-3 sm:px-6">
+              {messages.length === 0 ? (
+                <p className="text-center text-[13px] text-th-muted pt-10">No messages yet. Say hello to your team.</p>
+              ) : (
+                messages.map((m, i) => {
+                  const prev = messages[i - 1]
+                  const grouped =
+                    !!prev && prev.sender_id === m.sender_id &&
+                    new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() < GROUP_WINDOW_MS
+                  const name = m.sender_name || 'Unknown member'
                   return (
-                    <div key={m.id} className={cn('flex flex-col', m.mine ? 'items-end' : 'items-start')}>
-                      {showName && <span className="px-1 mb-0.5 text-[11px] font-semibold text-th-muted">{m.sender_name}</span>}
-                      <div
-                        className={cn(
-                          'max-w-[75%] rounded-th-lg px-3 py-2 text-[13px] whitespace-pre-wrap break-words',
-                          m.mine ? 'bg-th-accent text-th-accent-fg' : 'bg-th-surface-alt border border-th-border',
+                    <div key={m.id} className={cn('flex gap-2', m.mine && 'flex-row-reverse', grouped ? 'mt-0.5' : i === 0 ? '' : 'mt-3')}>
+                      {grouped ? <span className="w-8 shrink-0" /> : <Avatar name={name} seed={m.sender_id} />}
+                      <div className={cn('flex flex-col min-w-0 max-w-[80%]', m.mine ? 'items-end' : 'items-start')}>
+                        {!grouped && (
+                          <span className="px-1 mb-0.5 text-[11px] font-semibold text-th-muted truncate max-w-full">
+                            {m.mine ? `You (${name})` : name}
+                          </span>
                         )}
-                      >
-                        {m.body}
-                        <span className={cn('block mt-1 text-[10px] font-mono', m.mine ? 'text-right opacity-70' : 'text-th-faint')}>
-                          {formatTime(m.created_at)}
-                        </span>
+                        <div
+                          className={cn(
+                            'rounded-th-lg px-3 py-2 text-[13px] whitespace-pre-wrap break-words max-w-full',
+                            m.mine ? 'bg-th-accent text-th-accent-fg' : 'bg-th-surface-alt border border-th-border',
+                          )}
+                        >
+                          {m.body}
+                          <span className={cn('block mt-1 text-[10px] font-mono', m.mine ? 'text-right opacity-70' : 'text-th-faint')}>
+                            {formatTime(m.created_at)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )
-                })}
-              </div>
-            )}
+                })
+              )}
+            </div>
           </div>
 
-          <div className="shrink-0 border-t border-th-border px-6 py-3">
-            <div className="max-w-3xl mx-auto">
+          <div className="shrink-0 border-t border-th-border py-3">
+            <div className="w-full max-w-3xl mx-auto px-3 sm:px-6">
               {sendError && <p role="alert" className="mb-2 text-[12px] text-th-changes">{sendError}</p>}
               <div className="flex items-end gap-2">
                 <textarea

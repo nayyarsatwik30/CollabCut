@@ -61,6 +61,13 @@ export function parseChannel(v: unknown): string | null {
   return v
 }
 
+// SQL for a sender's display name: profile name, else the email local-part
+// (never the domain), else a fixed fallback. Never empty.
+export const SENDER_NAME_SQL = (profileAlias: string) => `COALESCE(
+  NULLIF(btrim(${profileAlias}.name), ''),
+  NULLIF(split_part(${profileAlias}.email, '@', 1), ''),
+  'Unknown member')`
+
 // Postgres "undefined_table": the chat migration hasn't been applied yet.
 export function isMissingTable(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === '42P01'

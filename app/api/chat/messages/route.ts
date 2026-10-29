@@ -3,7 +3,7 @@ import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
 import {
   CHAT_MAX_LENGTH, CHAT_PAGE_SIZE, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SECONDS,
-  canAccessChannel, chatErrorResponse, isUuid, parseChannel,
+  SENDER_NAME_SQL, canAccessChannel, chatErrorResponse, isUuid, parseChannel,
 } from '@/lib/chat'
 
 // Latest messages of a workspace conversation, oldest first. Members only.
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
     const result = await migrationDb.query(
       `SELECT * FROM (
-         SELECT m.id, m.body, m.created_at, m.sender_id, COALESCE(p.name, 'Former member') AS sender_name
+         SELECT m.id, m.body, m.created_at, m.sender_id, ${SENDER_NAME_SQL('p')} AS sender_name
          FROM chat_messages m
          LEFT JOIN profiles p ON p.id = m.sender_id
          WHERE m.workspace_id = $1 AND m.channel = $2
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
         body: r.body,
         created_at: r.created_at,
         sender_id: r.sender_id,
-        sender_name: r.sender_name,
+        sender_name: r.sender_name || 'Unknown member',
         mine: r.sender_id === user.id,
       })),
     })
@@ -99,7 +99,12 @@ export async function POST(req: NextRequest) {
     } finally {
       client.release()
     }
-    return NextResponse.json({ message: { ...row, sender_name: '', mine: true } }, { status: 201 })
+    const nameRow = await migrationDb.query(
+      `SELECT ${SENDER_NAME_SQL('p')} AS name FROM profiles p WHERE p.id = $1`,
+      [user.id],
+    ).catch(() => null)
+    const senderName: string = nameRow?.rows[0]?.name || 'Unknown member'
+    return NextResponse.json({ message: { ...row, sender_name: senderName, mine: true } }, { status: 201 })
   } catch (err) {
     return chatErrorResponse(err)
   }
