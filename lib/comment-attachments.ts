@@ -102,16 +102,34 @@ export async function deleteB2Objects(keys: string[]): Promise<void> {
 // is left alone. The B2 key comes from the row actually deleted.
 export async function purgePendingRawFiles(files: { id: string }[]): Promise<void> {
   if (files.length === 0) return
-  const deleted = await migrationDb.query(
-    `DELETE FROM raw_files rf
-     USING comment_attachments ca
-     WHERE rf.id = ca.raw_file_id
-       AND rf.id = ANY($1::uuid[])
-       AND ca.comment_id IS NULL
-     RETURNING rf.b2_key`,
-    [files.map((f) => f.id)],
-  )
-  await deleteB2Objects(deleted.rows.map((row) => row.b2_key))
+  const client = await migrationDb.connect()
+  let keys: string[] = []
+  try {
+    await client.query('BEGIN')
+    // Lock the still-pending link rows first. A concurrent comment post that
+    // links one holds/needs the same row lock, so we either wait and then skip
+    // the now-linked row (the condition is re-checked after the wait) or win
+    // and the post sees it gone.
+    const locked = await client.query(
+      `SELECT raw_file_id FROM comment_attachments
+       WHERE raw_file_id = ANY($1::uuid[]) AND comment_id IS NULL FOR UPDATE`,
+      [files.map((f) => f.id)],
+    )
+    if (locked.rows.length > 0) {
+      const deleted = await client.query(
+        `DELETE FROM raw_files WHERE id = ANY($1::uuid[]) RETURNING b2_key`,
+        [locked.rows.map((r) => r.raw_file_id)],
+      )
+      keys = deleted.rows.map((row) => row.b2_key)
+    }
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
+  await deleteB2Objects(keys)
 }
 
 export function attachmentSelect(): string {

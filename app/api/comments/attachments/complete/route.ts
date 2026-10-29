@@ -39,8 +39,14 @@ export async function POST(req: NextRequest) {
     try {
       const head = await b2.send(new HeadObjectCommand({ Bucket: B2_BUCKET, Key: payload.key }))
       size = head.ContentLength ?? 0
-    } catch {
-      return NextResponse.json({ error: 'The file did not finish uploading. Please try again.' }, { status: 400 })
+    } catch (err) {
+      const e = err as { name?: string; $metadata?: { httpStatusCode?: number } }
+      if (e.name === 'NotFound' || e.$metadata?.httpStatusCode === 404) {
+        return NextResponse.json({ error: 'The file did not finish uploading. Please try again.' }, { status: 400 })
+      }
+      // Transient storage failure: 5xx so the client offers Retry.
+      console.error('comment attachment head failed', e.name)
+      return NextResponse.json({ error: 'Could not verify the upload. Please try again.' }, { status: 502 })
     }
     if (size <= 0 || size > MAX_COMMENT_ATTACHMENT_BYTES || size !== payload.declaredSize) {
       await dropObject()

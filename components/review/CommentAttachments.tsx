@@ -89,7 +89,7 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
       // 4xx messages are written for users; 5xx / unparsable become the generic one.
       if (!initRes.ok) {
         const userFacing = initRes.status < 500 || initRes.status === 503
-        return fail(userFacing ? init.error ?? FRIENDLY_FAILURE : FRIENDLY_FAILURE, init, !userFacing)
+        return fail(userFacing ? init.error ?? FRIENDLY_FAILURE : FRIENDLY_FAILURE, init, initRes.status >= 500)
       }
       if (cancelled.current.has(key)) return // minted but never used: nothing recorded, nothing to clean up
 
