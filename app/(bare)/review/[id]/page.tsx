@@ -573,7 +573,10 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             </Button>
           )}
 
-          <StatusBadge status={asset.status as any} className="hidden md:inline-flex" />
+          {/* Below md only the dot shows (label font-size 0); title/aria keep it readable. */}
+          <span className="shrink-0 inline-flex" title={`Status: ${String(asset.status).replace(/_/g, ' ')}`}>
+            <StatusBadge status={asset.status as any} className="max-md:gap-0 max-md:px-1.5 max-md:text-[0px]" />
+          </span>
 
           </div>
         }
