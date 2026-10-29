@@ -9,6 +9,9 @@ export const b2 = new S3Client({
   region: B2_REGION,
   endpoint: process.env.B2_ENDPOINT!,
   forcePathStyle: true,
+  // SDK v3 >= 3.729 adds CRC32 checksums by default. For a presigned UploadPart
+  // that bakes the checksum of an EMPTY body into the URL, which a real part
+  // body never matches. Only compute checksums when an operation requires one.
   requestChecksumCalculation: 'WHEN_REQUIRED',
   responseChecksumValidation: 'WHEN_REQUIRED',
   credentials: {
