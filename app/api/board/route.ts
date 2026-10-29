@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
-import { latestPerGroup } from '@/lib/asset-lineage'
+import { countPerGroup, latestPerGroup } from '@/lib/asset-lineage'
 import { requireAuth } from '@/lib/api-auth'
 
 interface BoardAsset {
@@ -14,6 +14,7 @@ interface BoardAsset {
   editor: { id: string; name: string } | null
   mux_upload_id: string | null
   priority: number
+  version_count: number
 }
 
 export async function GET(req: NextRequest) {
@@ -47,6 +48,7 @@ export async function GET(req: NextRequest) {
       [workspaceId]
     )
 
+    const versionCounts = countPerGroup(assetRows)
     const latestRows = latestPerGroup(assetRows)
 
     // Same lineage gap the editor branch below already works around:
@@ -85,6 +87,7 @@ export async function GET(req: NextRequest) {
       editor: editorByGroup.get(row.asset_group_id ?? row.id) ?? null,
       mux_upload_id: row.mux_upload_id ?? null,
       priority: row.priority ?? 3,
+      version_count: versionCounts.get(row.asset_group_id ?? row.id) ?? 1,
     }))
   } else {
     const { rows: profileRows } = await migrationDb.query(
@@ -98,12 +101,17 @@ export async function GET(req: NextRequest) {
     // to first (auth check), then pull every version in those groups so
     // latestPerGroup has the sibling versions to actually pick a latest from.
     // It can't promote a version it was never given.
+    // The assignment row's own asset is deliberately not filtered on
+    // deleted_at: this only decides whether the editor has a claim on the
+    // lineage, and the claim can sit on a still-trashed sibling after a group
+    // delete and partial restore. The listing query below keeps the live-row
+    // filter, so nothing deleted is ever shown.
     const { rows: assignedRows } = await migrationDb.query(
       `SELECT a.asset_group_id
        FROM asset_editors ae
        JOIN assets a ON a.id = ae.asset_id
        JOIN projects p ON p.id = a.project_id
-       WHERE ae.editor_id = $1 AND a.cut_type = 'board' AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.workspace_id = $2`,
+       WHERE ae.editor_id = $1 AND a.cut_type = 'board' AND p.deleted_at IS NULL AND p.workspace_id = $2`,
       [user.id, workspaceId]
     )
 
@@ -119,6 +127,7 @@ export async function GET(req: NextRequest) {
         [assignedGroupIds]
       )
 
+      const versionCounts = countPerGroup(assetRows)
       assets = latestPerGroup(assetRows).map((row: any) => ({
         id: row.id,
         name: row.name,
@@ -130,6 +139,7 @@ export async function GET(req: NextRequest) {
         editor: { id: user.id, name: myProfile?.name ?? user.email ?? 'You' },
         mux_upload_id: row.mux_upload_id ?? null,
         priority: row.priority ?? 3,
+        version_count: versionCounts.get(row.asset_group_id ?? row.id) ?? 1,
       }))
     }
   }

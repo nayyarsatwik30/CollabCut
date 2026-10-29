@@ -22,6 +22,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (!authorized) return NextResponse.json({ error: 'Not authorized to delete this asset' }, { status: 403 })
 
+    // ?scope=group is the card-level delete: it removes every live version in
+    // this asset's lineage. Each row gets its own deleted_at, so every version
+    // lands in the Recycle Bin individually and is restorable on its own.
+    if (new URL(req.url).searchParams.get('scope') === 'group') {
+        await migrationDb.query(
+            `UPDATE assets SET deleted_at = $2
+             WHERE deleted_at IS NULL
+               AND (id = $1 OR asset_group_id = (SELECT asset_group_id FROM assets WHERE id = $1))`,
+            [params.id, new Date().toISOString()]
+        )
+        return NextResponse.json({ success: true })
+    }
+
     // ?scope=version is the version-switcher's delete: it removes this one row
     // and must leave the lineage with at least one live version, and must not
     // orphan the origin version that carries the Content Brief. Without it
@@ -47,10 +60,37 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
         // Re-check "another live version exists" inside the UPDATE itself so two
         // concurrent version deletes can't both pass the check above.
+        //
+        // asset_editors pins an assignment to one version's row, and the board
+        // only counts assignments on live rows, so deleting an assigned version
+        // would silently cut the editor off from the whole lineage. Hand its
+        // assignments to the latest surviving version in the same statement
+        // (data-modifying CTEs are atomic). Editors already assigned to that
+        // version keep their existing row; their duplicate stays on the deleted one.
         const result = await migrationDb.query(
-            `UPDATE assets SET deleted_at = $1
-             WHERE id = $2 AND deleted_at IS NULL
-               AND EXISTS (SELECT 1 FROM assets o WHERE o.asset_group_id = assets.asset_group_id AND o.id <> assets.id AND o.deleted_at IS NULL)`,
+            `WITH del AS (
+               UPDATE assets SET deleted_at = $1
+               WHERE id = $2 AND deleted_at IS NULL
+                 AND EXISTS (SELECT 1 FROM assets o WHERE o.asset_group_id = assets.asset_group_id AND o.id <> assets.id AND o.deleted_at IS NULL)
+               RETURNING id, asset_group_id
+             ),
+             survivor AS (
+               SELECT a.id FROM assets a, del
+               WHERE a.asset_group_id = del.asset_group_id AND a.id <> del.id AND a.deleted_at IS NULL
+               ORDER BY a.version DESC
+               LIMIT 1
+             ),
+             moved AS (
+               UPDATE asset_editors ae SET asset_id = (SELECT id FROM survivor)
+               FROM del
+               WHERE ae.asset_id = del.id
+                 AND NOT EXISTS (
+                   SELECT 1 FROM asset_editors x
+                   WHERE x.asset_id = (SELECT id FROM survivor) AND x.editor_id = ae.editor_id
+                 )
+               RETURNING ae.id
+             )
+             SELECT id FROM del`,
             [new Date().toISOString(), params.id]
         )
         if (result.rowCount === 0) {

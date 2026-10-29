@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole } from '@/lib/api-auth'
-import { latestPerGroup } from '@/lib/asset-lineage'
+import { countPerGroup, latestPerGroup } from '@/lib/asset-lineage'
 
 // pg returns `date` columns as a local-midnight Date; hand the client a plain
 // YYYY-MM-DD so it can't shift a day across timezones.
@@ -52,7 +52,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
      FROM assets WHERE project_id = $1 AND deleted_at IS NULL`,
     [params.id]
   )
-  data.assets = latestPerGroup(assetsResult.rows)
+  const versionCounts = countPerGroup(assetsResult.rows)
+  data.assets = latestPerGroup(assetsResult.rows).map((row: any) => ({
+    ...row,
+    version_count: versionCounts.get(row.asset_group_id ?? row.id) ?? 1,
+  }))
 
   const [ownerResult, editorRowsResult] = await Promise.all([
     migrationDb.query(
