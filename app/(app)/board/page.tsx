@@ -12,7 +12,7 @@ import { Toast, useToast } from '@/components/ui/Toast'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
-import { priorityMeta } from '@/lib/priority'
+import { PriorityBadge } from '@/components/PriorityBadge'
 import { Orb } from '@/components/ui/Orb'
 import { Button, ButtonIcon } from '@/components/ui/Button'
 
@@ -515,12 +515,7 @@ export default function BoardPage() {
                             const col = COLUMNS.find((c) => c.key === cut.status) ?? COLUMNS[0]
                             return (
                               <div key={cut.id} className="flex items-center gap-1.5 min-w-0">
-                                <span
-                                  className="app-pill shrink-0 font-mono text-[10px]"
-                                  style={{ color: priorityMeta(cut.priority).color, background: `color-mix(in srgb, ${priorityMeta(cut.priority).color} 16%, transparent)` }}
-                                >
-                                  {priorityMeta(cut.priority).label}
-                                </span>
+                                <PriorityBadge priority={cut.priority} />
                                 <span className="text-[11px] text-th-text truncate flex-1">{cut.title}</span>
                                 <span
                                   className="app-pill shrink-0 text-[10px]"

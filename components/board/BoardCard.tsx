@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, ChevronDown, Clock, Film, Trash2, UserPlus } from 'lucide-react'
-import { priorityMeta } from '@/lib/priority'
+import { PriorityBadge } from '@/components/PriorityBadge'
 import { PriorityMenu } from '@/components/PriorityMenu'
 import { VersionBadge } from '@/components/board/VersionManager'
 
@@ -134,12 +134,7 @@ export function BoardCard({ asset, color, isAdmin, token, editors, columns, onAs
             size="sm"
           />
         ) : (
-          <span
-            className="app-pill font-mono text-[10px] shrink-0"
-            style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
-          >
-            {priorityMeta(asset.priority).label}
-          </span>
+          <PriorityBadge size="sm" priority={asset.priority} />
         )}
         {!isPlaceholder && (
           <VersionBadge

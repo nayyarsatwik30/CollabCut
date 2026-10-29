@@ -9,7 +9,7 @@ import { CommentPanel } from '@/components/review/CommentPanel'
 import { ShareModal } from '@/components/review/ShareModal'
 import { UploadModal } from '@/components/project/UploadModal'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
-import { priorityMeta } from '@/lib/priority'
+import { PriorityBadge } from '@/components/PriorityBadge'
 import { PriorityMenu } from '@/components/PriorityMenu'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { useSessionGuard } from '@/lib/useSessionGuard'
@@ -449,11 +449,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   router.push(`/project/${asset.project_id}`)
                 }
               }}
-              variant="secondary" size="sm" className="shrink-0"
+              variant="secondary" size="sm" className="shrink-0" aria-label="Back"
             >
               <ButtonIcon className="group-hover:-translate-x-0.5 group-hover:translate-y-0 group-active:-translate-x-1">
                 <ChevronLeft size={13} />
-              </ButtonIcon> Back
+              </ButtonIcon> <span className="hidden sm:inline">Back</span>
             </Button>
             <div className="w-px h-5 bg-th-border shrink-0" />
           </>
@@ -479,6 +479,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                     <div className="absolute left-0 top-full mt-1.5 z-50 bg-th-surface border border-th-border rounded-th-lg shadow-panel w-60 overflow-hidden animate-slide-up">
                       <div className="px-4 py-2.5 border-b border-th-border font-mono text-[10px] text-th-muted uppercase tracking-wider">
                         Version history
+                        <span className="min-[520px]:hidden"> · {String(asset.status).replace(/_/g, ' ')}</span>
                       </div>
                       <div className="max-h-60 overflow-y-auto">
                         {versions.map((v) => {
@@ -520,6 +521,15 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                       </div>
 
                       <div className="p-2 border-t border-th-border bg-th-surface-alt/50">
+                        {versions.length >= 2 && (
+                          <Button
+                            onClick={() => { setShowVersions(false); handleOpenCompare() }}
+                            variant="secondary" size="sm" className="w-full mb-2 md:hidden"
+                          >
+                            <Layers size={13} />
+                            Compare versions
+                          </Button>
+                        )}
                         {v1Fulfilled ? (
                           <Button
                             onClick={() => {
@@ -545,10 +555,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               {versions.length >= 2 && (
                 <Button
                   onClick={handleOpenCompare}
-                  variant="secondary" size="xs" className="font-mono shrink-0"
+                  variant="secondary" size="xs" className="font-mono shrink-0 hidden md:inline-flex"
+                  title="Compare versions" aria-label="Compare versions"
                 >
                   <Layers size={10} className="text-th-accent-text" />
-                  Compare versions
+                  <span className="hidden xl:inline">Compare versions</span>
                 </Button>
               )}
             </>
@@ -562,36 +573,44 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             </Button>
           )}
 
-          <StatusBadge status={asset.status as any} />
+          {/* Below md only the dot shows (label font-size 0); title/aria keep it readable. */}
+          <span className="shrink-0 inline-flex max-[519px]:hidden" title={`Status: ${String(asset.status).replace(/_/g, ' ')}`}>
+            <StatusBadge status={asset.status as any} className="max-md:gap-0 max-md:px-1.5 max-md:text-[0px]" />
+          </span>
 
-          {role === 'admin' ? (
-            <PriorityMenu value={asset.priority} onChange={handlePriorityChange} />
-          ) : (
-            <span
-              className="app-pill font-mono text-[10px] shrink-0"
-              style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
-            >
-              {priorityMeta(asset.priority).label}
-            </span>
-          )}
           </div>
         }
       >
-        <Button onClick={() => setShareOpen(true)} variant="secondary" size="sm">
-          <Share2 size={13} /> Share
+        {/* Custom cuts have no version menu to carry the status below 520px. */}
+        {asset.cut_type !== 'board' && (
+          <span className="shrink-0 inline-flex min-[520px]:hidden" title={`Status: ${String(asset.status).replace(/_/g, ' ')}`}>
+            <StatusBadge status={asset.status as any} />
+          </span>
+        )}
+        {role === 'admin' ? (
+          <PriorityMenu value={asset.priority} onChange={handlePriorityChange} />
+        ) : (
+          <PriorityBadge priority={asset.priority} />
+        )}
+        <Button onClick={() => setShareOpen(true)} variant="secondary" size="sm" title="Share" aria-label="Share">
+          <Share2 size={13} /> <span className="hidden lg:inline">Share</span>
         </Button>
         {role === 'admin' && (
           <Button
             onClick={handleToggleComplete}
             loading={togglingComplete}
             size="sm"
+            title={asset.is_complete ? 'Approved' : 'Approve cut'}
+            aria-label={asset.is_complete ? 'Approved' : 'Approve cut'}
             className={`approve-glow font-bold ${asset.is_complete ? 'approved' : ''}`}
             style={{
               background: asset.is_complete ? 'var(--th-resolved)' : 'var(--th-accent)',
               color: asset.is_complete ? '#fff' : 'var(--th-accent-fg)',
             }}
           >
-            {asset.is_complete ? <><Check size={13} /> Approved</> : <><ThumbsUp size={13} /> Approve cut</>}
+            {asset.is_complete
+              ? <><Check size={13} /> <span className="hidden lg:inline">Approved</span></>
+              : <><ThumbsUp size={13} /> <span className="hidden lg:inline">Approve cut</span></>}
           </Button>
         )}
       </TopBar>
