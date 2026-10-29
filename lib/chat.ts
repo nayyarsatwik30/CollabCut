@@ -17,17 +17,29 @@ export const CHANNEL_MAX_LENGTH = 200
 // workspace_members row of that user for m.workspace_id; `userParam` is the
 // placeholder holding the user id. The General channel ('') is open to every
 // member. A client channel is open to workspace admins, and to editors only
-// when they uploaded or are assigned an asset in a live project of that
-// client - the same visibility the board gives editors. Trashed projects and
+// when they are assigned to a board cut in a live project of that client (see
+// EDITOR_CLIENT_ACCESS_SQL) - the same visibility the board gives editors. Trashed projects and
 // assets never grant access. Client identity must match the SQL expression
 // in CLIENT_KEY_SQL, which mirrors lib/clients.ts#clientKey on the
 // feat/client-board-tabs branch: "c:" + trim, collapse whitespace, lowercase.
 // (Chat has no no-client channel, so the __none__ case never occurs here.)
 export const CLIENT_LABEL_SQL = (col: string) => `btrim(regexp_replace(${col}, '\\s+', ' ', 'g'))`
 export const CLIENT_KEY_SQL = (col: string) => `('c:' || lower(${CLIENT_LABEL_SQL(col)}))`
+// Mirrors the editor branch of app/api/board/route.ts exactly: an editor is
+// entitled to a project when they are assigned (asset_editors) to ANY version of
+// a board-cut lineage (cut_type = 'board', assignment row's project not trashed,
+// same workspace) and that project still holds a live (not deleted) asset of
+// that lineage. The assignment row itself may sit on a trashed sibling. Merely
+// uploading an asset does NOT grant access (the board doesn't show it either).
 export const EDITOR_CLIENT_ACCESS_SQL = (projectAlias: string, userParam: string) => `EXISTS (
-  SELECT 1 FROM assets a WHERE a.project_id = ${projectAlias}.id AND a.deleted_at IS NULL
-    AND (a.uploaded_by = ${userParam} OR EXISTS (SELECT 1 FROM asset_editors ae WHERE ae.asset_id = a.id AND ae.editor_id = ${userParam})))`
+  SELECT 1 FROM assets x
+  WHERE x.project_id = ${projectAlias}.id AND x.deleted_at IS NULL
+    AND x.asset_group_id IN (
+      SELECT y.asset_group_id FROM asset_editors ae
+      JOIN assets y ON y.id = ae.asset_id
+      JOIN projects yp ON yp.id = y.project_id
+      WHERE ae.editor_id = ${userParam} AND y.cut_type = 'board'
+        AND yp.deleted_at IS NULL AND yp.workspace_id = ${projectAlias}.workspace_id))`
 export const messageVisibleSql = (wmAlias: string, userParam: string) => `(m.channel = '' OR EXISTS (
   SELECT 1 FROM projects p WHERE p.workspace_id = m.workspace_id AND p.deleted_at IS NULL
     AND ${CLIENT_KEY_SQL('p.client')} = m.channel
@@ -71,9 +83,11 @@ export const SENDER_NAME_SQL = (profileAlias: string) => `COALESCE(
   NULLIF(split_part(${profileAlias}.email, '@', 1), ''),
   'Unknown member')`
 
-// Postgres "undefined_table": the chat migration hasn't been applied yet.
+// Postgres "undefined_table" for the CHAT tables specifically (migration not
+// applied). A missing dependency table (e.g. asset_editors) must not count.
 export function isMissingTable(err: unknown): boolean {
-  return (err as { code?: string } | null)?.code === '42P01'
+  const e = err as { code?: string; message?: string } | null
+  return e?.code === '42P01' && /chat_(messages|reads)/.test(e.message ?? '')
 }
 
 // Maps a thrown DB error to a response, so a missing chat table surfaces as a
