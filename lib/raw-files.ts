@@ -121,8 +121,9 @@ export const MAX_INLINE_PHOTO_BYTES = 25 * 1024 * 1024
 // the full original); they show a file icon with a Download action instead.
 export function canPreviewRawFile(fileName: string, kind: RawFileKind, sizeBytes?: number | string | null): boolean {
   const ext = fileExtension(fileName)
-  const size = Number(sizeBytes ?? 0)
-  return (kind === 'photo' && BROWSER_IMAGE_EXT.has(ext) && size <= MAX_INLINE_PHOTO_BYTES) || (kind === 'audio' && BROWSER_AUDIO_EXT.has(ext))
+  // Unknown size (NULL) is not treated as small: no inline preview then.
+  const size = sizeBytes == null ? NaN : Number(sizeBytes)
+  return (kind === 'photo' && BROWSER_IMAGE_EXT.has(ext) && size > 0 && size <= MAX_INLINE_PHOTO_BYTES) || (kind === 'audio' && BROWSER_AUDIO_EXT.has(ext))
 }
 
 // Leading-bytes check for formats with an unambiguous signature, so a renamed

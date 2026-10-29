@@ -271,7 +271,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
       })
       // Unmounted while initiate was in flight: cleanup saw no session, so
       // abort the fresh multipart upload here instead of uploading unseen.
-      if (unmountedRef.current) {
+      if (unmountedRef.current || cancelRef.current) {
         await postJson('/api/raw-upload/multipart/abort', { uploadToken: init.uploadToken }).catch(() => {})
         throw new UploadError('Upload cancelled')
       }
@@ -298,6 +298,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   // against two quick drops starting two queues.
   const handleFiles = async (list: File[]) => {
     if (list.length === 0) return
+    if (runningRef.current && cancelRef.current) return // cancelling: don't accept more
     if (!runningRef.current) {
       batchRef.current = { done: 0, total: 0, ok: [] }
       cancelRef.current = false
@@ -311,7 +312,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     runningRef.current = true
     setState('uploading')
     const failures: string[] = []
-    while (queueRef.current.length > 0 && !unmountedRef.current) {
+    while (queueRef.current.length > 0 && !unmountedRef.current && !cancelRef.current) {
       const file = queueRef.current.shift()!
       const batch = batchRef.current
       batch.done++
