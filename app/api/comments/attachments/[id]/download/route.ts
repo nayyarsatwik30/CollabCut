@@ -4,7 +4,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { requireAuth, canAccessAsset } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
 import { b2, B2_BUCKET } from '@/lib/b2'
-import { isInlineSafe, isMissingTable } from '@/lib/comment-attachments'
+import { UUID_RE, isInlineSafe, isMissingTable } from '@/lib/comment-attachments'
 
 const URL_TTL_SECONDS = 5 * 60
 
@@ -17,6 +17,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const auth = await requireAuth(req)
   if ('error' in auth) return auth.error
   const { user } = auth
+
+  if (!UUID_RE.test(params.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   let row
   try {

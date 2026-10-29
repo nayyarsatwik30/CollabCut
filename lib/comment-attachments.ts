@@ -16,6 +16,8 @@ export const MAX_PENDING_PER_USER = 10
 export const UPLOAD_TOKEN_TTL_MS = 60 * 60 * 1000
 export const PENDING_MAX_AGE_HOURS = 24
 
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export function isMissingTable(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === '42P01'
 }

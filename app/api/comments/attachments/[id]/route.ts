@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
-import { isMissingTable, purgePendingRawFiles } from '@/lib/comment-attachments'
+import { UUID_RE, isMissingTable, purgePendingRawFiles } from '@/lib/comment-attachments'
 
 // Remove-before-send: the uploader can discard an attachment that has not
 // been posted with a comment yet. Once linked to a comment it goes only when
@@ -10,6 +10,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const auth = await requireAuth(req)
   if ('error' in auth) return auth.error
   const { user } = auth
+
+  if (!UUID_RE.test(params.id)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   try {
     const result = await migrationDb.query(
