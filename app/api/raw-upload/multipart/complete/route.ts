@@ -73,16 +73,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'The uploaded file did not match its declared size.' }, { status: 400 })
     }
 
-    // Cheap content sniff for formats with a fixed signature (photos, wav,
-    // flac, ogg): the first bytes must agree with the extension.
-    // Best effort: the object is already committed, so a failed read must not
-    // strand it without a row - skip the sniff and record the file.
+    // Content sniff for formats with a fixed signature (photos, wav, flac,
+    // ogg): the first bytes must agree with the extension. Fails closed - if
+    // the probe can't be read for such a format, the object is removed and the
+    // client retries. Formats without a signature (null) skip the probe.
     let signatureOk: boolean | null = null
-    try {
-      const probe = await b2.send(new GetObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, Range: 'bytes=0-15' }))
-      signatureOk = matchesSignature(payload.safeName, (await probe.Body?.transformToByteArray()) ?? new Uint8Array())
-    } catch (err) {
-      console.error('raw-upload signature read failed', (err as Error).name)
+    if (matchesSignature(payload.safeName, new Uint8Array(16)) !== null) {
+      try {
+        const probe = await b2.send(new GetObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, Range: 'bytes=0-15' }))
+        signatureOk = matchesSignature(payload.safeName, (await probe.Body?.transformToByteArray()) ?? new Uint8Array())
+      } catch (err) {
+        console.error('raw-upload signature read failed', (err as Error).name)
+        await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key })).catch(() => {})
+        return NextResponse.json({ error: 'Could not verify the file. Please try the upload again.' }, { status: 502 })
+      }
     }
     if (signatureOk === false) {
       await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key })).catch(() => {})
