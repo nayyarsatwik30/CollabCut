@@ -56,26 +56,36 @@ export function useSelectedClient(workspaceId: string) {
   // Returns an error message, or null on success. Adding a name whose key
   // already exists just selects that tab.
   const addClient = useCallback((raw: string, existingKeys: string[]): string | null => {
+    // Adding before the workspace is known would never be persisted (and the
+    // later restore would replace it), so ask the user to retry instead.
+    if (!workspaceId || hydratedFor !== workspaceId) return 'Still loading - try again in a moment'
     const name = raw.trim().replace(/\s+/g, ' ')
     if (!name) return 'Enter a client name'
     if (name.length > MAX_NAME) return 'Max 100 characters'
-    // "No client" (any case/spacing) means the existing no-client bucket.
+    const key = clientKey(name)
+    // "No client" selects a real client literally named that if one exists,
+    // otherwise the empty-client bucket.
     if (name.toLowerCase() === 'no client') {
-      if (!existingKeys.includes(NO_CLIENT_KEY)) return 'No projects without a client yet'
-      setSelectedClient(NO_CLIENT_KEY)
+      const target = existingKeys.includes(key) ? key : existingKeys.includes(NO_CLIENT_KEY) ? NO_CLIENT_KEY : null
+      if (!target) return 'No projects without a client yet'
+      setSelectedClient(target)
       return null
     }
-    const key = clientKey(name)
     if (!existingKeys.includes(key)) {
-      // Re-read so a second browser tab's additions aren't overwritten.
-      const current = readExtras(workspaceId)
-      const next = current.some((n) => clientKey(n) === key) ? current : [...current, name].slice(-MAX_EXTRAS)
-      setExtraClients(next)
-      try { if (workspaceId) localStorage.setItem(extraKey(workspaceId), JSON.stringify(next)) } catch { /* session-only */ }
+      // Union of storage (a second browser tab's additions) and memory (names
+      // whose earlier write failed), so neither is dropped.
+      const current = [...readExtras(workspaceId)]
+      for (const n of extraClients) if (!current.some((c) => clientKey(c) === clientKey(n))) current.push(n)
+      if (!current.some((n) => clientKey(n) === key)) {
+        if (current.length >= MAX_EXTRAS) return `Limit of ${MAX_EXTRAS} saved clients reached`
+        current.push(name)
+      }
+      setExtraClients(current) // kept in memory even if the write below fails
+      try { localStorage.setItem(extraKey(workspaceId), JSON.stringify(current)) } catch { /* session-only */ }
     }
     setSelectedClient(key)
     return null
-  }, [workspaceId, setSelectedClient])
+  }, [workspaceId, hydratedFor, extraClients, setSelectedClient])
 
   return { selectedClient, setSelectedClient, extraClients, addClient, hydrated: !!workspaceId && hydratedFor === workspaceId }
 }

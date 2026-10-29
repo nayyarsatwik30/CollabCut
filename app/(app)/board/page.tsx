@@ -13,7 +13,7 @@ import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import { priorityMeta } from '@/lib/priority'
-import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
+import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, clientKey, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
 import { useSelectedClient } from '@/lib/useSelectedClient'
 import { ClientTabStrip } from '@/components/board/ClientTabStrip'
 import { Orb } from '@/components/ui/Orb'
@@ -395,16 +395,22 @@ export default function BoardPage() {
 
   // A tab can vanish (last card moved/deleted); fall back to All rather than
   // showing an empty board for a client that no longer exists.
-  const activeClient = clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
+  // Until the tab data is trustworthy (selection restored + projects fetched),
+  // keep the stored selection active instead of flashing back to All, and
+  // hold off creating content so New can't open with the wrong client.
+  const tabsReady = hydrated && projectsLoaded
+  const clientPending = role === 'admin' && !tabsReady && selectedClient !== ALL_CLIENTS_KEY
+  const activeClient = clientPending || clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
+  const showClientCtx = role === 'admin' && boardView !== 'editors'
 
   // Actually reset (not just display All) so a stale key can't silently
   // reselect if a client with that name reappears later (also when the last
   // client disappears). Waits for the initial load to finish.
   useEffect(() => {
-    if (hydrated && !loading && projectsLoaded && role === 'admin' && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
+    if (tabsReady && !loading && role === 'admin' && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
       setSelectedClient(ALL_CLIENTS_KEY)
     }
-  }, [hydrated, loading, projectsLoaded, role, selectedClient, activeClient, setSelectedClient])
+  }, [tabsReady, loading, role, selectedClient, activeClient, setSelectedClient])
 
   const visibleAssets = useMemo(
     () => (role === 'admin' ? assets.filter((a) => matchesClient(a.project_client, activeClient)) : assets),
@@ -416,7 +422,9 @@ export default function BoardPage() {
     boardView === 'projects'
       ? projects.filter((p) => matchesClient(p.client, key)).length
       : key === ALL_CLIENTS_KEY ? assets.length : (clientTabs.find((t) => t.key === key)?.count ?? 0)
-  const activeClientLabel = clientTabs.find((t) => t.key === activeClient)?.label ?? ''
+  const activeClientLabel = clientTabs.find((t) => t.key === activeClient)?.label
+    ?? assets.find((a) => clientKey(a.project_client) === activeClient)?.project_client?.trim()
+    ?? ''
   // Default client for New Content: the selected tab (not All / No client).
   const defaultClient = activeClient === ALL_CLIENTS_KEY || activeClient === NO_CLIENT_KEY ? '' : activeClientLabel
 
@@ -451,17 +459,19 @@ export default function BoardPage() {
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopBar title={role === 'admin' && activeClient !== ALL_CLIENTS_KEY ? `Board: ${activeClient === NO_CLIENT_KEY ? 'No client' : activeClientLabel}` : 'Board'} icon={LayoutGrid}>
+        <TopBar title={showClientCtx && activeClient !== ALL_CLIENTS_KEY ? `Board: ${activeClient === NO_CLIENT_KEY ? 'No client' : activeClientLabel}` : 'Board'} icon={LayoutGrid}>
           <span className="font-mono text-[11px] text-th-muted hidden md:inline">
             {role === 'editor'
               ? 'Showing assets assigned to you'
-              : `${boardView === 'projects' ? `${visibleProjects.length} projects` : `${visibleAssets.length} cards`}${activeClient === ALL_CLIENTS_KEY ? ' (all clients)' : ''}`}
+              : boardView === 'editors'
+                ? 'Showing all workspace editors'
+                : `${boardView === 'projects' ? `${visibleProjects.length} projects` : `${visibleAssets.length} cards`}${activeClient === ALL_CLIENTS_KEY ? ' (all clients)' : ''}`}
           </span>
-          {role === 'admin' && activeClient !== ALL_CLIENTS_KEY && (
+          {showClientCtx && activeClient !== ALL_CLIENTS_KEY && (
             <Button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} size="sm" variant="secondary">Show all clients</Button>
           )}
           {role === 'admin' && (
-            <Button onClick={() => setShowNewContent(true)} size="sm">
+            <Button onClick={() => setShowNewContent(true)} size="sm" disabled={clientPending}>
               <Plus size={13} /> New
             </Button>
           )}
@@ -510,7 +520,7 @@ export default function BoardPage() {
                     ? 'No projects in this workspace yet.'
                     : activeClient === NO_CLIENT_KEY ? 'No projects without a client.' : `No projects for ${activeClientLabel} yet`}
                 </p>
-                <Button onClick={() => setShowNewContent(true)} size="sm"><Plus size={13} /> New{defaultClient ? ` for ${defaultClient}` : ''}</Button>
+                <Button onClick={() => setShowNewContent(true)} size="sm" disabled={clientPending}><Plus size={13} /> New{defaultClient ? ` for ${defaultClient}` : ''}</Button>
               </div>
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
@@ -686,7 +696,7 @@ export default function BoardPage() {
             {activeClient !== ALL_CLIENTS_KEY && visibleAssets.length === 0 && (
               <div className="shrink-0 mx-6 mt-4 flex items-center gap-3 px-4 py-3 rounded-th border border-dashed border-th-border text-[12px] text-th-muted">
                 <span>{activeClient === NO_CLIENT_KEY ? 'No cards without a client.' : `No cards for ${activeClientLabel} yet`}</span>
-                <Button onClick={() => setShowNewContent(true)} size="sm"><Plus size={13} /> New{defaultClient ? ` for ${defaultClient}` : ''}</Button>
+                <Button onClick={() => setShowNewContent(true)} size="sm" disabled={clientPending}><Plus size={13} /> New{defaultClient ? ` for ${defaultClient}` : ''}</Button>
               </div>
             )}
 

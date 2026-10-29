@@ -60,8 +60,7 @@ export default function DashboardPage() {
   // Same client selection as the Board page (shared per-workspace session
   // state); admins only. Editors keep the unfiltered view.
   const [workspaceId, setWorkspaceId] = useState('')
-  const [projectsLoaded, setProjectsLoaded] = useState(false) // fetched OK at least once
-  const { selectedClient, setSelectedClient, extraClients, addClient, hydrated } = useSelectedClient(workspaceId)
+  const { selectedClient, setSelectedClient, extraClients, addClient } = useSelectedClient(workspaceId)
 
   useEffect(() => {
     if (ready && session) checkAuthAndLoad()
@@ -112,7 +111,6 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json()
         setProjects(data.projects ?? [])
-        setProjectsLoaded(true)
       }
     } catch (err) {
       console.error('Failed to load projects', err)
@@ -176,12 +174,9 @@ export default function DashboardPage() {
   const activeClientLabel = clientTabs.find((t) => t.key === activeClient)?.label ?? ''
   const defaultClient = activeClient === ALL_CLIENTS_KEY || activeClient === NO_CLIENT_KEY ? '' : activeClientLabel
 
-  // Reset a stale stored selection (tab vanished) once projects have loaded.
-  useEffect(() => {
-    if (isAdmin && hydrated && projectsLoaded && !loading && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
-      setSelectedClient(ALL_CLIENTS_KEY)
-    }
-  }, [isAdmin, hydrated, projectsLoaded, loading, selectedClient, activeClient, setSelectedClient])
+  // No reset here: /api/projects only lists this user's own projects, so a
+  // missing client may still exist workspace-wide. The Board (workspace-wide
+  // data) owns clearing stale selections; here it just displays as All.
 
   const filtered = projects.filter((p) =>
     (!isAdmin || matchesClient(p.client, activeClient)) &&
