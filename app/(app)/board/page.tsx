@@ -74,12 +74,19 @@ export default function BoardPage() {
   // here: bounded by a timeout (covers the body read too) and stamped with a
   // generation so an older response can never overwrite a newer one.
   const projectsGenRef = useRef(0)
-  const fetchProjects = async (accessToken: string): Promise<boolean> => {
+  const projectsInFlightRef = useRef(false)
+  const fetchProjects = async (accessToken: string, opts?: { skipIfBusy?: boolean }): Promise<boolean> => {
+    // Polls skip while a request is still out so a slow endpoint can't pile up
+    // requests that each get superseded (starvation).
+    if (opts?.skipIfBusy && projectsInFlightRef.current) return false
     const gen = ++projectsGenRef.current
+    projectsInFlightRef.current = true
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
     try {
       const res = await fetch('/api/board/projects', {
         headers: { Authorization: `Bearer ${accessToken}` },
-        signal: AbortSignal.timeout(8000),
+        signal: controller.signal,
       })
       const data = await res.json()
       if (gen !== projectsGenRef.current || !res.ok) return false
@@ -88,6 +95,9 @@ export default function BoardPage() {
       return true
     } catch {
       return false // timeout / network: keep whatever we have
+    } finally {
+      clearTimeout(timer)
+      if (gen === projectsGenRef.current) projectsInFlightRef.current = false
     }
   }
   const [selectedEditor, setSelectedEditor] = useState<BoardEditorOption | null>(null)
@@ -167,7 +177,7 @@ export default function BoardPage() {
 
     // Keep project-derived client tabs fresh too. Not awaited: a slow
     // projects request must never delay the board's own polling cadence.
-    if (role === 'admin') void fetchProjects(token)
+    if (role === 'admin') void fetchProjects(token, { skipIfBusy: true })
   }, 3000, !loading && !error && boardView === 'board')
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, assetId: string) => {
@@ -383,13 +393,13 @@ export default function BoardPage() {
   const activeClient = clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
 
   // Actually reset (not just display All) so a stale key can't silently
-  // reselect if a client with that name reappears later. Only once tabs have
-  // loaded, so an empty initial list doesn't wipe a valid selection.
+  // reselect if a client with that name reappears later (also when the last
+  // client disappears). Waits for the initial load to finish.
   useEffect(() => {
-    if (clientTabs.length > 0 && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
+    if (!loading && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
       setSelectedClient(ALL_CLIENTS_KEY)
     }
-  }, [clientTabs, selectedClient, activeClient])
+  }, [loading, selectedClient, activeClient])
 
   const visibleAssets = useMemo(
     () => (role === 'admin' ? assets.filter((a) => matchesClient(a.project_client, activeClient)) : assets),
