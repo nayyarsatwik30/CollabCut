@@ -115,14 +115,27 @@ export function canonicalContentType(fileName: string, kind?: RawFileKind): stri
 }
 
 // Whether the browser can show/play this file inline.
-export function canPreviewRawFile(fileName: string, kind: RawFileKind): boolean {
+export const MAX_INLINE_PHOTO_BYTES = 25 * 1024 * 1024
+
+// Photos above MAX_INLINE_PHOTO_BYTES are not drawn inline (the thumbnail is
+// the full original); they show a file icon with a Download action instead.
+export function canPreviewRawFile(fileName: string, kind: RawFileKind, sizeBytes?: number | string | null): boolean {
   const ext = fileExtension(fileName)
-  return (kind === 'photo' && BROWSER_IMAGE_EXT.has(ext)) || (kind === 'audio' && BROWSER_AUDIO_EXT.has(ext))
+  const size = Number(sizeBytes ?? 0)
+  return (kind === 'photo' && BROWSER_IMAGE_EXT.has(ext) && size <= MAX_INLINE_PHOTO_BYTES) || (kind === 'audio' && BROWSER_AUDIO_EXT.has(ext))
 }
 
 // Leading-bytes check for formats with an unambiguous signature, so a renamed
 // non-image can't sit in the Photos column. Returns null for formats we don't
 // sniff (treated as fine).
+const SIGNATURE_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'wav', 'flac', 'ogg', 'oga', 'opus'])
+
+// True when matchesSignature() checks this extension (so a failed probe read
+// must not let the file through unverified).
+export function hasSignature(ext: string): boolean {
+  return SIGNATURE_EXT.has(ext.toLowerCase())
+}
+
 export function matchesSignature(fileName: string, head: Uint8Array): boolean | null {
   const ext = fileExtension(fileName)
   const at = (i: number, s: string) => s.split('').every((c, k) => head[i + k] === c.charCodeAt(0))

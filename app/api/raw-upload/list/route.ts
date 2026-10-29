@@ -53,12 +53,12 @@ export async function GET(req: NextRequest) {
     rawFiles.map(async ({ b2_key, ...f }) => {
       const kind = classifyRawFile(f.file_name, f.content_type)
       let preview_url: string | null = null
-      if (canPreviewRawFile(f.file_name, kind)) {
+      if (canPreviewRawFile(f.file_name, kind, f.file_size_bytes)) {
         preview_url = await getSignedUrl(b2, new GetObjectCommand({ Bucket: B2_BUCKET, Key: b2_key, ResponseContentType: canonicalContentType(f.file_name, kind), ResponseContentDisposition: 'inline' }), { expiresIn: 3600 }).catch(() => null)
       }
       return { ...f, kind, preview_url, profiles: profileById.get(f.uploaded_by) ?? null }
     }),
   )
 
-  return NextResponse.json({ rawFiles: result })
+  return NextResponse.json({ rawFiles: result }, { headers: { 'Cache-Control': 'no-store' } })
 }

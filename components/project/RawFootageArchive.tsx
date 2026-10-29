@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Archive, CloudUpload, CircleAlert, Download, File as FileIcon, Film, Image as ImageIcon, Music, Trash2 } from 'lucide-react'
+import { Archive, CheckCircle2, CloudUpload, CircleAlert, Download, X, File as FileIcon, Film, Image as ImageIcon, Music, Trash2 } from 'lucide-react'
 import { MAX_RAW_FILE_BYTES, classifyRawFile, type RawFileKind } from '@/lib/raw-files'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
 import { useConfirm, ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -35,6 +35,9 @@ const PART_CONCURRENCY = 3
 const URL_BATCH_SIZE = 3
 const PART_RETRIES = 3
 
+const GENERIC_ERROR = 'Something went wrong. Please try again.'
+const STORAGE_UNREACHABLE = "Couldn't reach storage. Check your internet connection and try again. If it keeps happening, contact support."
+
 // Reads any response as text first, so a non-JSON body (a proxy or platform
 // error page) becomes a readable message instead of a JSON.parse exception.
 async function readJson(res: Response): Promise<any> {
@@ -42,7 +45,7 @@ async function readJson(res: Response): Promise<any> {
   try {
     return JSON.parse(text)
   } catch {
-    return { error: `Request failed (${res.status})` }
+    return { error: GENERIC_ERROR }
   }
 }
 
@@ -58,8 +61,9 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function formatSize(bytes: number | null) {
   if (!bytes) return '—'
-  if (bytes > 1e9) return `${(bytes / 1e9).toFixed(2)} GB`
-  if (bytes > 1e6) return `${(bytes / 1e6).toFixed(0)} MB`
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(0)} MB`
+  if (bytes < 1e3) return '<1 KB'
   return `${(bytes / 1e3).toFixed(0)} KB`
 }
 
@@ -92,7 +96,19 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   const fileRef = useRef<HTMLInputElement>(null)
   const [files, setFiles] = useState<RawFile[]>([])
   const [state, setState] = useState<UploadState>('idle')
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState<{ id: number; text: string }[]>([])
+  const [notice, setNotice] = useState('')
+  const errorIdRef = useRef(0)
+  // '' clears all messages; anything else appends one dismissible line.
+  const setError = (text: string) => {
+    if (!text) { setErrors([]); return }
+    setErrors((prev) => [...prev, { id: ++errorIdRef.current, text }])
+  }
+  const uploading = state === 'uploading'
+  const queueRef = useRef<File[]>([])
+  const runningRef = useRef(false)
+  const cancelRef = useRef(false)
+  const batchRef = useRef({ done: 0, total: 0, ok: [] as string[] })
   const [progress, setProgress] = useState(0)
   const [queueLabel, setQueueLabel] = useState('')
   const [dragOver, setDragOver] = useState(false)
@@ -112,7 +128,11 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   const postJson = async (path: string, body: object) => {
     const res = await fetch(path, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) })
     const data = await readJson(res)
-    if (!res.ok) throw new UploadError(data.error ?? `Request failed (${res.status})`, res.status)
+    if (!res.ok) {
+      // 5xx / unknown bodies never reach the user as raw server text.
+      const message = res.status >= 500 || typeof data.error !== 'string' ? GENERIC_ERROR : data.error
+      throw new UploadError(message, res.status)
+    }
     return data
   }
 
@@ -151,6 +171,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     unmountedRef.current = false
     return () => {
       unmountedRef.current = true
+      queueRef.current = []
       const session = sessionRef.current
       if (!session) return
       session.cancelled = true
@@ -179,7 +200,11 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
         if (xhr.status >= 200 && xhr.status < 300) resolve()
         else reject(new UploadError(`Part upload failed (${xhr.status})`, xhr.status))
       }
-      xhr.onerror = () => { session.xhrs.delete(xhr); reject(new UploadError("Could not reach file storage: you may be offline, or the storage bucket's CORS settings are blocking this site.")) }
+      xhr.onerror = () => {
+        session.xhrs.delete(xhr)
+        console.warn('Part upload failed before a response (offline, or storage CORS blocking this origin)')
+        reject(new UploadError(STORAGE_UNREACHABLE))
+      }
       xhr.onabort = () => { session.xhrs.delete(xhr); reject(new UploadError('Upload cancelled')) }
       xhr.send(blob)
     })
@@ -234,7 +259,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
 
   // Uploads one file; throws on failure (after aborting its multipart upload).
   const uploadOne = async (file: File) => {
-    if (file.size > MAX_RAW_FILE_BYTES) throw new UploadError(`${file.name} exceeds the 750MB limit`)
+    if (file.size > MAX_RAW_FILE_BYTES) throw new UploadError('This file is over 750MB. Compress it or split it into smaller files.')
     setProgress(0)
     let session: UploadSession | null = null
     try {
@@ -268,28 +293,66 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     }
   }
 
-  // Files go up one at a time; a failure is reported but the rest continue.
+  // One queue for the whole component: files dropped or picked while an
+  // upload is running are appended to it. runningRef (not state) guards
+  // against two quick drops starting two queues.
   const handleFiles = async (list: File[]) => {
-    if (list.length === 0 || state === 'uploading') return
-    setError('')
+    if (list.length === 0) return
+    if (!runningRef.current) {
+      batchRef.current = { done: 0, total: 0, ok: [] }
+      cancelRef.current = false
+      setError('')
+      setNotice('')
+    }
+    queueRef.current.push(...list)
+    batchRef.current.total += list.length
+    if (runningRef.current) return
+
+    runningRef.current = true
     setState('uploading')
     const failures: string[] = []
-    for (let i = 0; i < list.length; i++) {
-      if (unmountedRef.current) return
-      setQueueLabel(list.length > 1 ? `File ${i + 1} of ${list.length}: ${list[i].name}` : list[i].name)
+    while (queueRef.current.length > 0 && !unmountedRef.current) {
+      const file = queueRef.current.shift()!
+      const batch = batchRef.current
+      batch.done++
+      setQueueLabel(batch.total > 1 ? `file ${batch.done} of ${batch.total}: ${file.name}` : file.name)
       try {
-        await uploadOne(list[i])
+        await uploadOne(file)
+        batch.ok.push(file.name)
       } catch (err: any) {
-        failures.push(`${list[i].name}: ${err?.message ?? 'Upload failed'}`)
+        if (!cancelRef.current) failures.push(`${file.name}: ${err?.message ?? GENERIC_ERROR}`)
       }
     }
+    runningRef.current = false
     if (unmountedRef.current) return
+    const { ok } = batchRef.current
     setQueueLabel('')
-    setState(failures.length ? 'error' : 'idle')
-    if (failures.length) setError(failures.join(' · '))
+    setState('idle')
+    failures.forEach((f) => setError(f))
+    if (cancelRef.current) setNotice(ok.length ? `Cancelled. ${ok.length} uploaded before cancelling.` : 'Upload cancelled.')
+    else if (ok.length === 1) setNotice(`Uploaded ${ok[0]}`)
+    else if (ok.length > 1) setNotice(`${ok.length} files uploaded`)
     invalidateStorageUsage()
     await loadFiles()
   }
+
+  const cancelUploads = () => {
+    cancelRef.current = true
+    queueRef.current = []
+    const session = sessionRef.current
+    if (!session) return
+    session.cancelled = true
+    session.xhrs.forEach((xhr) => xhr.abort())
+    postJson('/api/raw-upload/multipart/abort', { uploadToken: session.uploadToken }).catch(() => {})
+  }
+
+  // Warn before closing the tab mid-upload.
+  useEffect(() => {
+    if (!uploading) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [uploading])
 
   const pickFiles = (accept: string) => {
     setPickerAccept(accept)
@@ -306,7 +369,26 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
-    handleFiles(Array.from(e.dataTransfer.files))
+    const dropped: File[] = []
+    let sawFolder = false
+    const items = Array.from(e.dataTransfer.items ?? [])
+    if (items.length > 0 && typeof items[0].webkitGetAsEntry === 'function') {
+      // Entries must be read synchronously, before any await.
+      for (const item of items) {
+        if (item.kind !== 'file') continue
+        if (item.webkitGetAsEntry()?.isDirectory) { sawFolder = true; continue }
+        const file = item.getAsFile()
+        if (file) dropped.push(file)
+      }
+    } else {
+      for (const file of Array.from(e.dataTransfer.files)) {
+        if (file.size === 0 && file.type === '') sawFolder = true
+        else dropped.push(file)
+      }
+    }
+    // handleFiles resets messages synchronously, so add the folder note after.
+    handleFiles(dropped)
+    if (sawFolder) setError("Folders can't be uploaded - add the files inside instead.")
   }
 
   const fetchUrl = async (f: RawFile, download: boolean): Promise<string | null> => {
@@ -315,7 +397,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     })
     const data = await readJson(res)
     if (!res.ok) {
-      setError(data.error ?? 'Could not open file')
+      setError(res.status >= 500 || typeof data.error !== 'string' ? 'Could not open file. Please try again.' : data.error)
       return null
     }
     return data.url as string
@@ -362,11 +444,10 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
       invalidateStorageUsage()
     } else {
       const err = await readJson(res)
-      setError(err.error ?? 'Failed to delete file')
+      setError(res.status >= 500 || typeof err.error !== 'string' ? 'Failed to delete file. Please try again.' : err.error)
     }
   }
 
-  const uploading = state === 'uploading'
   const withKind = files.map((f) => ({ ...f, kind: f.kind ?? classifyRawFile(f.file_name, f.content_type) }))
 
   const columns: { kind: RawFileKind; title: string; hint: string; accept: string; icon: typeof Film; cta: string }[] = [
@@ -397,7 +478,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
 
   return (
     <div
-      className={`border rounded-th-lg bg-th-surface-alt p-4 transition-colors ${dragOver ? 'border-th-accent' : 'border-th-border'}`}
+      className={`border rounded-th-lg p-4 transition-colors ${dragOver ? 'border-th-accent border-dashed ring-2 ring-th-accent bg-th-surface-hov' : 'border-th-border bg-th-surface-alt'}`}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
       onDragLeave={(e) => { if (e.currentTarget === e.target) setDragOver(false) }}
       onDrop={handleDrop}>
@@ -421,7 +502,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
       <p className="text-[12px] text-th-muted mb-1">
         Camera originals, voice-over and music, and photos the client sent. Drag files anywhere in this box, or use an Add button below.
       </p>
-      <p className="text-[11px] text-th-faint mb-4">
+      <p className="text-[11px] text-th-muted mb-4">
         Stored privately for admins and counted toward your storage. Photos and audio can be previewed here; video is archived for download only. Reviewing a cut? Upload it under Assets instead. Max 750MB per file.
       </p>
 
@@ -434,19 +515,33 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
           <div className="h-1.5 rounded-full bg-th-border overflow-hidden">
             <div className="h-full bg-th-accent transition-[width] duration-200" style={{ width: `${progress}%` }} />
           </div>
-          <p className="text-[11px] text-th-faint mt-1.5">Keep this tab open until it finishes.</p>
+          <div className="flex items-center justify-between mt-1.5 gap-3">
+            <p className="text-[11px] text-th-muted">Keep this tab open until it finishes. Files you add now join the queue.</p>
+            <button onClick={cancelUploads}
+              className="shrink-0 h-6 px-2.5 rounded-th-full border border-th-border text-[11px] font-semibold btn-press hover:border-th-changes hover:text-th-changes transition-colors">
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
-      {error && (
-        <div className="mb-3 flex items-start gap-2 text-[12px] text-th-changes">
-          <CircleAlert size={13} className="mt-0.5 shrink-0" /> <span>{error}</span>
+      {notice && (
+        <div className="mb-3 flex items-start gap-2 text-[12px] text-th-text" role="status">
+          <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-th-accent" /> <span className="flex-1">{notice}</span>
+          <button onClick={() => setNotice('')} aria-label="Dismiss" className="text-th-muted hover:text-th-text"><X size={12} /></button>
         </div>
       )}
+
+      {errors.map((e) => (
+        <div key={e.id} className="mb-2 flex items-start gap-2 text-[12px] text-th-changes" role="alert">
+          <CircleAlert size={13} className="mt-0.5 shrink-0" /> <span className="flex-1">{e.text}</span>
+          <button onClick={() => setErrors((prev) => prev.filter((x) => x.id !== e.id))} aria-label="Dismiss" className="hover:opacity-70"><X size={12} /></button>
+        </div>
+      ))}
 
       {loaded && files.length === 0 && !uploading && (
         <div className="mb-4 rounded-th-sm border border-dashed border-th-border py-5 text-center">
-          <p className="text-[12px] text-th-muted">Nothing here yet. Drop files here or pick a type below to get started.</p>
+          <p className="text-[12px] text-th-text">Drop files here. They're sorted into Video, Audio or Photos automatically. Up to 750MB each.</p>
         </div>
       )}
 
@@ -476,7 +571,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
                 <div className="grid grid-cols-2 gap-2">
                   {items.map((f) => (
                     <div key={f.id} className="min-w-0 rounded-th-sm border border-th-border overflow-hidden">
-                      <button onClick={() => handleOpen(f)} className="block w-full aspect-square bg-th-surface-alt" title={`Open ${f.file_name}`}>
+                      <button onClick={() => (f.preview_url ? handleOpen(f) : handleDownload(f))} className="block w-full aspect-square bg-th-surface-alt" title={f.preview_url ? `Open ${f.file_name}` : `Download ${f.file_name}`}>
                         {f.preview_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={f.preview_url} alt={f.file_name} loading="lazy" onError={refreshOnMediaError} className="w-full h-full object-cover" />

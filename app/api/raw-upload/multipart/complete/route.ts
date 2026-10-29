@@ -11,7 +11,7 @@ import {
 import { requireAuth } from '@/lib/api-auth'
 import { migrationDb } from '@/lib/migrationDb'
 import { b2, B2_BUCKET } from '@/lib/b2'
-import { MAX_RAW_FILE_BYTES, matchesSignature } from '@/lib/raw-files'
+import { MAX_RAW_FILE_BYTES, fileExtension, hasSignature, matchesSignature } from '@/lib/raw-files'
 import { MIN_PART_SIZE, authorizeUpload } from '@/lib/raw-upload-token'
 
 async function listAllParts(key: string, uploadId: string): Promise<Part[]> {
@@ -39,6 +39,9 @@ export async function POST(req: NextRequest) {
   const existing = await migrationDb.query(`SELECT id, project_id, uploaded_by, file_name, file_size_bytes, content_type, created_at FROM raw_files WHERE b2_key = $1 LIMIT 1`, [payload.key])
   if (existing.rows[0]) return NextResponse.json({ rawFile: existing.rows[0] }, { status: 200 })
 
+  // Set once the object exists in B2; if anything after that throws, no row
+  // was recorded, so the object is removed rather than orphaned.
+  let completedObject: { versionId?: string } | null = null
   try {
     // The parts B2 actually holds are the only source of truth - nothing
     // about ETags or sizes is taken from the client.
@@ -66,6 +69,8 @@ export async function POST(req: NextRequest) {
       }),
     )
 
+    completedObject = { versionId: completed.VersionId }
+
     const headObj = await b2.send(new HeadObjectCommand({ Bucket: B2_BUCKET, Key: payload.key }))
     const size = headObj.ContentLength ?? 0
     if (size <= 0 || size > MAX_RAW_FILE_BYTES || size !== payload.declaredSize) {
@@ -78,7 +83,7 @@ export async function POST(req: NextRequest) {
     // the probe can't be read for such a format, the object is removed and the
     // client retries. Formats without a signature (null) skip the probe.
     let signatureOk: boolean | null = null
-    if (matchesSignature(payload.safeName, new Uint8Array(16)) !== null) {
+    if (hasSignature(fileExtension(payload.safeName))) {
       try {
         const probe = await b2.send(new GetObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, Range: 'bytes=0-15' }))
         signatureOk = matchesSignature(payload.safeName, (await probe.Body?.transformToByteArray()) ?? new Uint8Array())
@@ -102,6 +107,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ rawFile: insertResult.rows[0] }, { status: 201 })
   } catch (err) {
     console.error('raw-upload complete failed', (err as Error).name)
+    if (completedObject) {
+      await b2
+        .send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, VersionId: completedObject.versionId }))
+        .catch(() => {})
+    }
     return NextResponse.json({ error: 'Could not finish the upload. Please try again.' }, { status: 502 })
   }
 }
