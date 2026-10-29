@@ -384,9 +384,12 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
     const run = async () => {
       // A hung request must not block this lineage's queue forever: abort
-      // after 15s and treat it as a failure (rollback + toast).
+      // after 15s. Aborting the client fetch does not cancel the server's
+      // write, so a timeout is an UNKNOWN outcome: no rollback, the queue
+      // moves on, and a delayed reload shows what is actually stored.
+      let timedOut = false
       const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 15000)
+      const timer = setTimeout(() => { timedOut = true; controller.abort() }, 15000)
       try {
         const res = await fetch(`/api/assets/${assetId}/priority`, {
           method: 'PATCH',
@@ -397,12 +400,17 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         if (!res.ok) throw new Error('priority update failed')
         confirmedPriorityRef.current.set(key, priority)
       } catch (err) {
-        showToast('Failed to update priority.', 'error')
+        if (timedOut) {
+          showToast("Couldn't confirm the priority change - refreshing.", 'info')
+          setTimeout(() => { loadData() }, 1800)
+        } else {
+          showToast('Failed to update priority.', 'error')
+        }
       } finally {
         clearTimeout(timer)
         edit.pending = false
         edit.doneSeq = ++completionSeqRef.current
-        if (!priorityEditsRef.current.some((e) => e.key === key && e.pending)) {
+        if (!timedOut && !priorityEditsRef.current.some((e) => e.key === key && e.pending)) {
           const confirmed = confirmedPriorityRef.current.get(key)
           if (confirmed !== undefined) {
             setAssets((prev) => prev.map((a) => (priorityKey(a) === key ? { ...a, priority: confirmed } : a)))
