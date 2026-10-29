@@ -321,8 +321,22 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   }
 
   const handleOpen = async (f: RawFile) => {
-    const url = await fetchUrl(f, false)
-    if (url) window.open(url, '_blank', 'noopener,noreferrer')
+    // Open the tab synchronously (inside the click) so popup blockers allow it,
+    // then point it at the presigned URL once we have it.
+    const popup = window.open('', '_blank')
+    if (!popup) {
+      setError('Could not open file - allow pop-ups for this site.')
+      return
+    }
+    popup.opener = null
+    try {
+      const url = await fetchUrl(f, false)
+      if (url) popup.location.assign(url)
+      else popup.close()
+    } catch {
+      popup.close()
+      setError('Could not open file')
+    }
   }
 
   const handleDelete = async (f: RawFile) => {

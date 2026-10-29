@@ -79,13 +79,14 @@ export function sanitizeFileName(name: unknown): string {
 export async function authorizeUpload(
   token: unknown,
   userId: string,
+  opts: { allowDeletedProject?: boolean } = {},
 ): Promise<{ payload: UploadTokenPayload } | { error: NextResponse }> {
   const payload = verifyUploadToken(token, userId)
   if (!payload) {
     return { error: NextResponse.json({ error: 'Upload session is invalid or has expired. Please start the upload again.' }, { status: 401 }) }
   }
 
-  const projectResult = await migrationDb.query(`SELECT workspace_id FROM projects WHERE id = $1 AND deleted_at IS NULL`, [payload.projectId])
+  const projectResult = await migrationDb.query(`SELECT workspace_id FROM projects WHERE id = $1 ${opts.allowDeletedProject ? '' : 'AND deleted_at IS NULL'}`, [payload.projectId])
   const workspaceId = projectResult.rows[0]?.workspace_id
   if (!workspaceId) return { error: NextResponse.json({ error: 'Project not found' }, { status: 404 }) }
 

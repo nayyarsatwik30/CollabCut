@@ -46,7 +46,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         ResponseContentType: canonicalContentType(row.file_name, kind),
         ResponseContentDisposition: inline
           ? 'inline'
-          : `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(row.file_name)}`,
+          : `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(row.file_name).replace(/['()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase())}`,
       }),
       { expiresIn: 15 * 60 },
     )

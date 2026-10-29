@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const { user } = auth
 
   const body = await req.json().catch(() => null)
-  const gate = await authorizeUpload(body?.uploadToken, user.id)
+  const gate = await authorizeUpload(body?.uploadToken, user.id, { allowDeletedProject: true })
   if ('error' in gate) return gate.error
   const { payload } = gate
 
