@@ -39,24 +39,28 @@ export function VersionBadge({ assetId, versionCount, token, canManage, onChange
   const [versions, setVersions] = useState<VersionRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
   const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm()
 
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/assets/${assetId}/versions`, { headers: authHeaders })
-    if (!res.ok) {
+    setError(null)
+    setLoadFailed(false)
+    try {
+      const res = await fetch(`/api/assets/${assetId}/versions`, { headers: authHeaders })
+      if (!res.ok) throw new Error('load failed')
+      const data = await res.json()
+      setVersions(data.versions ?? [])
+    } catch {
+      setLoadFailed(true)
       setError('Could not load versions.')
-      return
     }
-    const data = await res.json()
-    setVersions(data.versions ?? [])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assetId, token])
 
   useEffect(() => {
     if (!open) return
-    setError(null)
     load()
   }, [open, load])
 
@@ -100,15 +104,20 @@ export function VersionBadge({ assetId, versionCount, token, canManage, onChange
     if (!ok) return
     setBusyId(v.id)
     setError(null)
-    const res = await fetch(`/api/assets/${v.id}/delete?scope=version`, { method: 'POST', headers: authHeaders })
-    setBusyId(null)
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      setError(data?.error ?? `Failed to delete v${v.version}`)
-      return
+    try {
+      const res = await fetch(`/api/assets/${v.id}/delete?scope=version`, { method: 'POST', headers: authHeaders })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setError(data?.error ?? `Failed to delete v${v.version}`)
+        return
+      }
+      setOpen(false)
+      onChanged()
+    } catch {
+      setError(`Failed to delete v${v.version}`)
+    } finally {
+      setBusyId(null)
     }
-    setOpen(false)
-    onChanged()
   }
 
   return (
@@ -140,7 +149,13 @@ export function VersionBadge({ assetId, versionCount, token, canManage, onChange
             </div>
             <div className="max-h-60 overflow-y-auto">
               {versions === null ? (
-                <p className="px-4 py-3 text-[11px] text-th-muted">Loading…</p>
+                loadFailed ? (
+                  <button type="button" onClick={load} className="px-4 py-3 text-[11px] text-th-muted underline btn-press">
+                    Try again
+                  </button>
+                ) : (
+                  <p className="px-4 py-3 text-[11px] text-th-muted">Loading…</p>
+                )
               ) : versions.map((v) => {
                 const canDelete = canManage && versions.length > 1 && v.id !== originId
                 return (

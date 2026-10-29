@@ -60,10 +60,37 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
         // Re-check "another live version exists" inside the UPDATE itself so two
         // concurrent version deletes can't both pass the check above.
+        //
+        // asset_editors pins an assignment to one version's row, and the board
+        // only counts assignments on live rows, so deleting an assigned version
+        // would silently cut the editor off from the whole lineage. Hand its
+        // assignments to the latest surviving version in the same statement
+        // (data-modifying CTEs are atomic). Editors already assigned to that
+        // version keep their existing row; their duplicate stays on the deleted one.
         const result = await migrationDb.query(
-            `UPDATE assets SET deleted_at = $1
-             WHERE id = $2 AND deleted_at IS NULL
-               AND EXISTS (SELECT 1 FROM assets o WHERE o.asset_group_id = assets.asset_group_id AND o.id <> assets.id AND o.deleted_at IS NULL)`,
+            `WITH del AS (
+               UPDATE assets SET deleted_at = $1
+               WHERE id = $2 AND deleted_at IS NULL
+                 AND EXISTS (SELECT 1 FROM assets o WHERE o.asset_group_id = assets.asset_group_id AND o.id <> assets.id AND o.deleted_at IS NULL)
+               RETURNING id, asset_group_id
+             ),
+             survivor AS (
+               SELECT a.id FROM assets a, del
+               WHERE a.asset_group_id = del.asset_group_id AND a.id <> del.id AND a.deleted_at IS NULL
+               ORDER BY a.version DESC
+               LIMIT 1
+             ),
+             moved AS (
+               UPDATE asset_editors ae SET asset_id = (SELECT id FROM survivor)
+               FROM del
+               WHERE ae.asset_id = del.id
+                 AND NOT EXISTS (
+                   SELECT 1 FROM asset_editors x
+                   WHERE x.asset_id = (SELECT id FROM survivor) AND x.editor_id = ae.editor_id
+                 )
+               RETURNING ae.id
+             )
+             SELECT id FROM del`,
             [new Date().toISOString(), params.id]
         )
         if (result.rowCount === 0) {
