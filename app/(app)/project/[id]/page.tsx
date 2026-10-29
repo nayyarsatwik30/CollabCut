@@ -295,7 +295,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   // id); a refresh re-applies every edit that is still pending or that
   // happened after the refresh started. A failed edit is dropped from the
   // log, so its rollback is never overridden.
-  const priorityEditsRef = useRef<{ seq: number; key: string; priority: number; pending: boolean }[]>([])
+  const priorityEditsRef = useRef<{ seq: number; key: string; priority: number; baseline: number; pending: boolean }[]>([])
   const priorityEditSeq = useRef(0)
   const priorityKey = (a: { id: string; asset_group_id?: string | null }) => a.asset_group_id ?? a.id
 
@@ -349,10 +349,14 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     const asset = assets.find((a) => a.id === assetId)
     if (!asset || asset.priority === priority) return
 
-    const previousPriority = asset.priority
     setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority } : a)))
 
-    const edit = { seq: ++priorityEditSeq.current, key: priorityKey(asset), priority, pending: true }
+    // baseline = the last server-confirmed priority to roll back to: the
+    // baseline of the newest still-pending edit for this lineage if there is
+    // one (its optimistic value is not confirmed), else what was displayed.
+    const key = priorityKey(asset)
+    const prior = [...priorityEditsRef.current].reverse().find((e) => e.key === key && e.pending)
+    const edit = { seq: ++priorityEditSeq.current, key, priority, baseline: prior ? prior.baseline : asset.priority, pending: true }
     priorityEditsRef.current.push(edit)
     try {
       const res = await fetch(`/api/assets/${assetId}/priority`, {
@@ -360,16 +364,17 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ priority }),
       })
-      if (!res.ok) {
-        if (!priorityEditsRef.current.some((e) => e.key === edit.key && e.seq > edit.seq)) {
-          setAssets((prev) => prev.map((a) => (priorityKey(a) === edit.key ? { ...a, priority: previousPriority } : a)))
-        }
-        priorityEditsRef.current = priorityEditsRef.current.filter((e) => e !== edit)
-        showToast('Failed to update priority.', 'error')
-      }
+      if (!res.ok) throw new Error('priority update failed')
+      // Confirmed: newer pending edits now roll back to this value.
+      for (const e of priorityEditsRef.current) if (e.key === edit.key && e.seq > edit.seq) e.baseline = edit.priority
     } catch (err) {
-      if (!priorityEditsRef.current.some((e) => e.key === edit.key && e.seq > edit.seq)) {
-        setAssets((prev) => prev.map((a) => (priorityKey(a) === edit.key ? { ...a, priority: previousPriority } : a)))
+      const newer = priorityEditsRef.current.filter((e) => e.key === edit.key && e.seq > edit.seq)
+      if (newer.length === 0) {
+        setAssets((prev) => prev.map((a) => (priorityKey(a) === edit.key ? { ...a, priority: edit.baseline } : a)))
+      } else {
+        // Hand the confirmed baseline to the newer edits so their own failure
+        // rolls back past this unsaved value.
+        for (const e of newer) e.baseline = edit.baseline
       }
       priorityEditsRef.current = priorityEditsRef.current.filter((e) => e !== edit)
       showToast('Failed to update priority.', 'error')
