@@ -58,7 +58,7 @@ export const hasNul = (v: string) => v.includes('\u0000')
 // Parses the `channel` input: '' (General) when absent, else a bounded "c:<label>" client key.
 export function parseChannel(v: unknown): string | null {
   if (v === undefined || v === null) return ''
-  if (typeof v !== 'string' || v.length > CHANNEL_MAX_LENGTH || hasNul(v)) return null
+  if (typeof v !== 'string' || v.length > CHANNEL_MAX_LENGTH * 2 || Array.from(v).length > CHANNEL_MAX_LENGTH || hasNul(v)) return null
   // '' = General; anything else must be a client key ("c:" + non-empty label).
   if (v !== '' && !(v.startsWith('c:') && v.length > 2)) return null
   return v

@@ -190,7 +190,16 @@ export default function ChatPage() {
     }
     if (!res.ok) {
       // Keep the last good messages and composer; just flag the problem.
-      if (messageRequestId.current === requestId) setFeedStatus(res.status === 403 ? 'denied' : 'reconnecting')
+      if (messageRequestId.current === requestId) {
+        if (res.status === 403) {
+          // Access revoked: drop the feed (composer is disabled via feedStatus).
+          messagesRef.current = []
+          setMessages([])
+          setFeedStatus('denied')
+        } else {
+          setFeedStatus('reconnecting')
+        }
+      }
       return
     }
     const data = await res.json()
@@ -236,7 +245,7 @@ export default function ChatPage() {
 
   const send = async () => {
     const text = draft.trim()
-    if (!text || !activeId || sending) return
+    if (!text || !activeId || sending || feedStatus === 'denied') return
     const draftAtSend = draft
     const sendKey = draftKey
     setSending(true)
@@ -417,6 +426,7 @@ export default function ChatPage() {
                     }
                   }}
                   maxLength={MAX_LENGTH}
+                  disabled={feedStatus === 'denied'}
                   rows={1}
                   placeholder="Message your team (Enter to send, Shift+Enter for a new line)"
                   aria-label="Message"
@@ -424,7 +434,7 @@ export default function ChatPage() {
                 />
                 <button
                   onClick={send}
-                  disabled={!draft.trim() || sending}
+                  disabled={!draft.trim() || sending || feedStatus === 'denied'}
                   aria-label="Send message"
                   className="h-9 w-9 shrink-0 rounded-th-sm bg-th-accent text-th-accent-fg flex items-center justify-center disabled:opacity-40 transition-opacity"
                 >

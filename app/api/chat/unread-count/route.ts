@@ -3,7 +3,7 @@ import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
 import { isMissingTable, messageVisibleSql } from '@/lib/chat'
 
-// Sidebar badge. Deliberately never errors on a missing table (returns 0) so
+// Sidebar badge. Returns 0 (not an error) only for a missing table so
 // the badge poll stays quiet on deployments that haven't run the migration.
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req)
@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
     )
     return NextResponse.json({ count: Number(result.rows[0].count) })
   } catch (err) {
-    if (!isMissingTable(err)) console.error('[chat] unread-count:', (err as Error).message)
-    return NextResponse.json({ count: 0 })
+    // Only a missing table (migration not applied) reads as "no unread"; any other
+    // failure must not clear the client's existing badge.
+    if (isMissingTable(err)) return NextResponse.json({ count: 0 })
+    console.error('[chat] unread-count:', (err as Error).message)
+    return NextResponse.json({ error: 'Chat is temporarily unavailable.' }, { status: 500 })
   }
 }

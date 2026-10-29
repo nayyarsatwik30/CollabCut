@@ -80,11 +80,15 @@ export function Sidebar() {
     }
   }
 
+  // Sequence number: only the latest request may update the badge.
+  const chatUnreadReq = useRef(0)
   const fetchChatUnread = async () => {
+    const reqId = ++chatUnreadReq.current
     try {
       const res = await fetch('/api/chat/unread-count')
       if (res.ok) {
         const data = await res.json()
+        if (chatUnreadReq.current !== reqId) return
         setChatUnread((prev) => (prev === (data.count ?? 0) ? prev : data.count ?? 0))
       }
     } catch {
