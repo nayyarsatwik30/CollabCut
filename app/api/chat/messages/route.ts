@@ -3,7 +3,7 @@ import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
 import {
   CHAT_MAX_LENGTH, CHAT_PAGE_SIZE, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SECONDS,
-  chatErrorResponse, isUuid, isWorkspaceMember,
+  canAccessChannel, chatErrorResponse, isUuid, parseChannel,
 } from '@/lib/chat'
 
 // Latest messages of a workspace conversation, oldest first. Members only.
@@ -13,22 +13,23 @@ export async function GET(req: NextRequest) {
   const { user } = auth
 
   const workspaceId = req.nextUrl.searchParams.get('workspaceId')
-  if (!isUuid(workspaceId)) return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 })
+  const channel = parseChannel(req.nextUrl.searchParams.get('channel') ?? '')
+  if (!isUuid(workspaceId) || channel === null) return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 })
 
   try {
-    if (!(await isWorkspaceMember(workspaceId, user.id))) {
-      return NextResponse.json({ error: 'Not a member of this workspace' }, { status: 403 })
+    if (!(await canAccessChannel(workspaceId, user.id, channel))) {
+      return NextResponse.json({ error: 'No access to this channel' }, { status: 403 })
     }
     const result = await migrationDb.query(
       `SELECT * FROM (
          SELECT m.id, m.body, m.created_at, m.sender_id, COALESCE(p.name, 'Former member') AS sender_name
          FROM chat_messages m
          LEFT JOIN profiles p ON p.id = m.sender_id
-         WHERE m.workspace_id = $1
+         WHERE m.workspace_id = $1 AND m.channel = $2
          ORDER BY m.created_at DESC, m.id DESC
-         LIMIT $2
+         LIMIT $3
        ) latest ORDER BY created_at ASC, id ASC`,
-      [workspaceId, CHAT_PAGE_SIZE],
+      [workspaceId, channel, CHAT_PAGE_SIZE],
     )
     return NextResponse.json({
       messages: result.rows.map((r) => ({
@@ -54,16 +55,17 @@ export async function POST(req: NextRequest) {
 
   const payload = await req.json().catch(() => null)
   const workspaceId = payload?.workspaceId
+  const channel = parseChannel(payload?.channel)
   const text = typeof payload?.body === 'string' ? payload.body.trim() : ''
-  if (!isUuid(workspaceId)) return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 })
+  if (!isUuid(workspaceId) || channel === null) return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 })
   if (!text) return NextResponse.json({ error: 'Message cannot be empty' }, { status: 400 })
   if (text.length > CHAT_MAX_LENGTH) {
     return NextResponse.json({ error: `Message is too long (max ${CHAT_MAX_LENGTH} characters)` }, { status: 400 })
   }
 
   try {
-    if (!(await isWorkspaceMember(workspaceId, user.id))) {
-      return NextResponse.json({ error: 'Not a member of this workspace' }, { status: 403 })
+    if (!(await canAccessChannel(workspaceId, user.id, channel))) {
+      return NextResponse.json({ error: 'No access to this channel' }, { status: 403 })
     }
 
     const recent = await migrationDb.query(
@@ -78,15 +80,15 @@ export async function POST(req: NextRequest) {
     }
 
     const inserted = await migrationDb.query(
-      `INSERT INTO chat_messages (workspace_id, sender_id, body) VALUES ($1, $2, $3) RETURNING id, body, created_at, sender_id`,
-      [workspaceId, user.id, text],
+      `INSERT INTO chat_messages (workspace_id, channel, sender_id, body) VALUES ($1, $2, $3, $4) RETURNING id, body, created_at, sender_id`,
+      [workspaceId, channel, user.id, text],
     )
     const row = inserted.rows[0]
     // Sending counts as having read everything up to now.
     await migrationDb.query(
-      `INSERT INTO chat_reads (workspace_id, user_id, last_read_at) VALUES ($1, $2, now())
-       ON CONFLICT (workspace_id, user_id) DO UPDATE SET last_read_at = now()`,
-      [workspaceId, user.id],
+      `INSERT INTO chat_reads (workspace_id, user_id, channel, last_read_at) VALUES ($1, $2, $3, now())
+       ON CONFLICT (workspace_id, user_id, channel) DO UPDATE SET last_read_at = now()`,
+      [workspaceId, user.id, channel],
     ).catch(() => {})
     return NextResponse.json({ message: { ...row, sender_name: '', mine: true } }, { status: 201 })
   } catch (err) {

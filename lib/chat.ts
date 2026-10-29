@@ -11,14 +11,49 @@ export const CHAT_PAGE_SIZE = 150
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const isUuid = (v: unknown): v is string => typeof v === 'string' && UUID_RE.test(v)
 
-// True if `userId` is an admin or editor of `workspaceId`. Checked on every
-// request, so removing someone from a workspace cuts off chat immediately.
-export async function isWorkspaceMember(workspaceId: string, userId: string): Promise<boolean> {
-  const result = await migrationDb.query(
-    `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 LIMIT 1`,
+export const CHANNEL_MAX_LENGTH = 200
+
+// SQL predicate: "message `m` is visible to the user in `wm`". `wm` must be a
+// workspace_members row of that user for m.workspace_id; `userParam` is the
+// placeholder holding the user id. The General channel ('') is open to every
+// member. A client channel is open to workspace admins, and to editors only
+// when they uploaded or are assigned an asset in a live project of that
+// client - the same visibility the board gives editors. Trashed projects and
+// assets never grant access. Client identity must match the SQL expression
+// in CLIENT_KEY_SQL (also used by the board's client tabs).
+export const CLIENT_KEY_SQL = (col: string) => `lower(regexp_replace(btrim(${col}), '\\s+', ' ', 'g'))`
+export const EDITOR_CLIENT_ACCESS_SQL = (projectAlias: string, userParam: string) => `EXISTS (
+  SELECT 1 FROM assets a WHERE a.project_id = ${projectAlias}.id AND a.deleted_at IS NULL
+    AND (a.uploaded_by = ${userParam} OR EXISTS (SELECT 1 FROM asset_editors ae WHERE ae.asset_id = a.id AND ae.editor_id = ${userParam})))`
+export const messageVisibleSql = (wmAlias: string, userParam: string) => `(m.channel = '' OR EXISTS (
+  SELECT 1 FROM projects p WHERE p.workspace_id = m.workspace_id AND p.deleted_at IS NULL
+    AND ${CLIENT_KEY_SQL('p.client')} = m.channel
+    AND (${wmAlias}.role = 'admin' OR ${EDITOR_CLIENT_ACCESS_SQL('p', userParam)})))`
+
+// True if `userId` may read/post `channel` in `workspaceId`. Checked on every request.
+export async function canAccessChannel(workspaceId: string, userId: string, channel: string): Promise<boolean> {
+  const member = await migrationDb.query(
+    `SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 LIMIT 1`,
     [workspaceId, userId],
   )
+  const role = member.rows[0]?.role
+  if (!role) return false
+  if (channel === '') return true
+  const result = await migrationDb.query(
+    `SELECT 1 FROM projects p
+     WHERE p.workspace_id = $1 AND p.deleted_at IS NULL AND ${CLIENT_KEY_SQL('p.client')} = $2
+       AND ($3::text = 'admin' OR ${EDITOR_CLIENT_ACCESS_SQL('p', '$4')})
+     LIMIT 1`,
+    [workspaceId, channel, role, userId],
+  )
   return result.rows.length > 0
+}
+
+// Parses the `channel` input: '' (General) when absent, else a bounded string.
+export function parseChannel(v: unknown): string | null {
+  if (v === undefined || v === null) return ''
+  if (typeof v !== 'string' || v.length > CHANNEL_MAX_LENGTH) return null
+  return v
 }
 
 // Postgres "undefined_table": the chat migration hasn't been applied yet.

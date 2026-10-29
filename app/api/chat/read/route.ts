@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth } from '@/lib/api-auth'
-import { chatErrorResponse, isUuid, isWorkspaceMember } from '@/lib/chat'
+import { canAccessChannel, chatErrorResponse, isUuid, parseChannel } from '@/lib/chat'
 
 // Marks the caller's conversation as read up to now.
 export async function POST(req: NextRequest) {
@@ -11,16 +11,17 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null)
   const workspaceId = body?.workspaceId
-  if (!isUuid(workspaceId)) return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 })
+  const channel = parseChannel(body?.channel)
+  if (!isUuid(workspaceId) || channel === null) return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 })
 
   try {
-    if (!(await isWorkspaceMember(workspaceId, user.id))) {
-      return NextResponse.json({ error: 'Not a member of this workspace' }, { status: 403 })
+    if (!(await canAccessChannel(workspaceId, user.id, channel))) {
+      return NextResponse.json({ error: 'No access to this channel' }, { status: 403 })
     }
     await migrationDb.query(
-      `INSERT INTO chat_reads (workspace_id, user_id, last_read_at) VALUES ($1, $2, now())
-       ON CONFLICT (workspace_id, user_id) DO UPDATE SET last_read_at = now()`,
-      [workspaceId, user.id],
+      `INSERT INTO chat_reads (workspace_id, user_id, channel, last_read_at) VALUES ($1, $2, $3, now())
+       ON CONFLICT (workspace_id, user_id, channel) DO UPDATE SET last_read_at = now()`,
+      [workspaceId, user.id, channel],
     )
     return NextResponse.json({ ok: true })
   } catch (err) {

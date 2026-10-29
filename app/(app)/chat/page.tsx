@@ -11,7 +11,8 @@ import { cn } from '@/lib/utils'
 
 const MAX_LENGTH = 2000
 
-interface Conversation { id: string; name: string; role: string; unread: number }
+interface Channel { key: string; label: string; unread: number }
+interface Workspace { id: string; name: string; role: string; channels: Channel[] }
 interface ChatMessage { id: string; body: string; created_at: string; sender_id: string; sender_name: string; mine: boolean }
 
 function formatTime(iso: string) {
@@ -22,8 +23,9 @@ function formatTime(iso: string) {
 
 export default function ChatPage() {
   const { ready } = useSessionGuard()
-  const [conversations, setConversations] = useState<Conversation[] | null>(null)
+  const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [channel, setChannel] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [setupError, setSetupError] = useState<string | null>(null)
@@ -36,65 +38,76 @@ export default function ChatPage() {
   const lastReadMarker = useRef<string | null>(null)
   const activeRef = useRef<string | null>(null)
   activeRef.current = activeId
+  const channelRef = useRef('')
+  channelRef.current = channel
+  const [convoVersion, setConvoVersion] = useState(0)
 
-  // Workspaces the user belongs to. Rarely more than one; if so, a switcher shows.
-  useEffect(() => {
-    if (!ready) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/chat/conversations')
-        const data = await res.json().catch(() => ({}))
-        if (cancelled) return
-        if (!res.ok) {
-          setSetupError(data.error ?? 'Could not load chat.')
-        } else {
-          const list: Conversation[] = data.conversations ?? []
-          setConversations(list)
-          setActiveId((cur) => cur ?? list[0]?.id ?? null)
-        }
-      } catch {
-        if (!cancelled) setSetupError('Could not load chat.')
+  // Workspaces (with their channels + unread counts). Rarely more than one
+  // workspace; if so, a switcher shows. Polled so new client channels and
+  // unread dots on other channels appear without a reload.
+  const loadWorkspaces = useCallback(async () => {
+    try {
+      const res = await fetch('/api/chat/conversations')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setSetupError(data.error ?? 'Could not load chat.')
+      } else {
+        const list: Workspace[] = data.workspaces ?? []
+        setSetupError(null)
+        setWorkspaces((prev) => (sameData(prev, list) ? prev : list))
+        setActiveId((cur) => cur ?? list[0]?.id ?? null)
+        // Drop a stale channel selection (e.g. the client's last project was trashed).
+        const ws = list.find((w) => w.id === (activeRef.current ?? list[0]?.id))
+        if (ws && !ws.channels.some((c) => c.key === channelRef.current)) setChannel('')
       }
-      if (!cancelled) setLoading(false)
-    })()
-    return () => { cancelled = true }
-  }, [ready])
+    } catch {
+      setSetupError('Could not load chat.')
+    }
+    setLoading(false)
+  }, [])
 
-  const markRead = useCallback(async (workspaceId: string, list: ChatMessage[]) => {
+  useEffect(() => {
+    if (ready) loadWorkspaces()
+  }, [ready, convoVersion, loadWorkspaces])
+  usePolling(loadWorkspaces, 8000, ready && !setupError)
+
+  const markRead = useCallback(async (workspaceId: string, ch: string, list: ChatMessage[]) => {
     const latestOther = [...list].reverse().find((m) => !m.mine)
-    if (!latestOther || lastReadMarker.current === `${workspaceId}:${latestOther.id}`) return
-    lastReadMarker.current = `${workspaceId}:${latestOther.id}`
+    if (!latestOther || lastReadMarker.current === `${workspaceId}:${ch}:${latestOther.id}`) return
+    lastReadMarker.current = `${workspaceId}:${ch}:${latestOther.id}`
     try {
       await fetch('/api/chat/read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId }),
+        body: JSON.stringify({ workspaceId, channel: ch }),
       })
       window.dispatchEvent(new Event('chat:updated'))
+      setConvoVersion((v) => v + 1)
     } catch {}
   }, [])
 
   const fetchMessages = useCallback(async () => {
     const workspaceId = activeRef.current
+    const ch = channelRef.current
     if (!workspaceId) return
-    const res = await fetch(`/api/chat/messages?workspaceId=${workspaceId}`)
+    const res = await fetch(`/api/chat/messages?workspaceId=${workspaceId}&channel=${encodeURIComponent(ch)}`)
     if (!res.ok) return
     const data = await res.json()
-    if (activeRef.current !== workspaceId) return // switched conversation mid-flight
+    if (activeRef.current !== workspaceId || channelRef.current !== ch) return // switched conversation mid-flight
     const next: ChatMessage[] = data.messages ?? []
     setMessages((prev) => (sameData(prev, next) ? prev : next))
-    if (document.visibilityState === 'visible') markRead(workspaceId, next)
+    if (document.visibilityState === 'visible') markRead(workspaceId, ch, next)
   }, [markRead])
 
   // Switching conversation: reset, load immediately.
   useEffect(() => {
     if (!activeId) return
     setMessages([])
+    setSendError(null)
     stickToBottom.current = true
     lastReadMarker.current = null
     fetchMessages().catch(() => {})
-  }, [activeId, fetchMessages])
+  }, [activeId, channel, fetchMessages])
 
   // Same live-update layer as the board/notifications: pauses on hidden tabs.
   usePolling(fetchMessages, 5000, !!activeId)
@@ -119,7 +132,7 @@ export default function ChatPage() {
       const res = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId: activeId, body: text }),
+        body: JSON.stringify({ workspaceId: activeId, channel, body: text }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -136,7 +149,7 @@ export default function ChatPage() {
     setSending(false)
   }
 
-  const active = conversations?.find((c) => c.id === activeId)
+  const active = workspaces?.find((w) => w.id === activeId)
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -144,14 +157,14 @@ export default function ChatPage() {
         title="Chat"
         icon={MessageCircle}
         leading={
-          conversations && conversations.length > 1 ? (
+          workspaces && workspaces.length > 1 ? (
             <select
               value={activeId ?? ''}
-              onChange={(e) => setActiveId(e.target.value)}
+              onChange={(e) => { setActiveId(e.target.value); setChannel('') }}
               aria-label="Workspace"
               className="ml-2 max-w-[220px] truncate rounded-th-sm border border-th-border bg-th-surface px-2 py-1 text-[12px]"
             >
-              {conversations.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {workspaces.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           ) : active ? (
             <span className="ml-2 text-[12px] text-th-muted truncate">{active.name}</span>
@@ -171,6 +184,25 @@ export default function ChatPage() {
         </div>
       ) : (
         <>
+          {active && active.channels.length > 1 && (
+            <div role="tablist" aria-label="Channels" className="shrink-0 flex gap-1.5 overflow-x-auto border-b border-th-border px-6 py-2">
+              {active.channels.map((c) => (
+                <button
+                  key={c.key || 'general'}
+                  role="tab"
+                  aria-selected={c.key === channel}
+                  onClick={() => setChannel(c.key)}
+                  className={cn(
+                    'shrink-0 flex items-center gap-1.5 rounded-th-full px-3 py-1 text-[12px] transition-colors',
+                    c.key === channel ? 'bg-th-accent text-th-accent-fg font-semibold' : 'text-th-muted hover:bg-th-surface-alt',
+                  )}
+                >
+                  {c.label}
+                  {c.unread > 0 && c.key !== channel && <span className="w-1.5 h-1.5 rounded-full bg-th-accent" />}
+                </button>
+              ))}
+            </div>
+          )}
           <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-6 py-4">
             {messages.length === 0 ? (
               <p className="text-center text-[13px] text-th-muted pt-10">No messages yet. Say hello to your team.</p>
