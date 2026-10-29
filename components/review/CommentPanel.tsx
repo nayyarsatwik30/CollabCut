@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Plus, MessageSquare } from 'lucide-react'
 import { Comment, CommentStatus } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
@@ -45,12 +45,19 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
     ? comments
     : comments.filter((c) => c.status === filter)
 
+  const postingRef = useRef(false)
+
   const handleSubmit = async () => {
-    if (!draftText.trim() || drafts.busy) return
-    const ok = await onAdd(draftText.trim(), draftStatus, drafts.ids)
-    if (ok) {
-      setDraftText('')
-      drafts.clearPosted()
+    if (!draftText.trim() || drafts.busy || drafts.errorCount > 0 || postingRef.current) return
+    postingRef.current = true
+    try {
+      const ok = await onAdd(draftText.trim(), draftStatus, drafts.ids)
+      if (ok) {
+        setDraftText('')
+        drafts.clearPosted()
+      }
+    } finally {
+      postingRef.current = false
     }
   }
 
@@ -142,13 +149,28 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
           style={{ borderColor: draftText ? 'var(--th-accent)' : 'var(--th-border)' }}
         />
 
-        <DraftAttachmentList items={drafts.items} onRemove={drafts.remove} />
+        {attachments && (
+          <p className="mt-1.5 text-[10px] text-th-faint">
+            {drafts.full
+              ? 'Remove one to add another.'
+              : 'Attach up to 3 files (images, video, audio, PDF), 250MB each'}
+          </p>
+        )}
+        <DraftAttachmentList items={drafts.items} onRemove={drafts.remove} onRetry={drafts.retry} />
+        {drafts.errorCount > 0 && (
+          <p className="mt-1.5 text-[11px] text-th-changes">
+            {drafts.errorCount} file{drafts.errorCount > 1 ? 's' : ''} didn&apos;t attach - remove or retry.
+          </p>
+        )}
+        {!draftText.trim() && drafts.ids.length > 0 && (
+          <p className="mt-1.5 text-[11px] text-th-muted">Add a note to post your file.</p>
+        )}
 
         {/* Submit — only visible when typing */}
         {draftText.trim() && (
           <button
             onClick={handleSubmit}
-            disabled={drafts.busy}
+            disabled={drafts.busy || drafts.errorCount > 0}
             className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:bg-th-accent-hover transition-colors animate-fade-in disabled:opacity-60"
             style={{ boxShadow: '0 4px 14px color-mix(in srgb, var(--th-accent) 40%, transparent)' }}
           >

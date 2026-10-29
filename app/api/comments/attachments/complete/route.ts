@@ -50,6 +50,17 @@ export async function POST(req: NextRequest) {
     const client = await migrationDb.connect()
     try {
       await client.query('BEGIN')
+      // Serialize concurrent completes of the same upload (raw_files.b2_key is
+      // not unique): the loser waits, then sees the winner's row and replays it.
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [payload.key])
+      const replay = await client.query(
+        `${attachmentSelect()} WHERE rf.b2_key = $1 AND ca.uploaded_by = $2`,
+        [payload.key, user.id],
+      )
+      if (replay.rows[0]) {
+        await client.query('COMMIT')
+        return NextResponse.json({ attachment: replay.rows[0] })
+      }
       const raw = await client.query(
         `INSERT INTO raw_files (project_id, uploaded_by, file_name, b2_key, file_size_bytes, content_type)
          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,

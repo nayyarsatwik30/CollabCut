@@ -31,7 +31,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `File exceeds the ${MAX_COMMENT_ATTACHMENT_BYTES / 1024 / 1024}MB attachment limit` }, { status: 400 })
   }
 
-  const safeName = sanitizeFileName(body?.fileName)
+  // sanitizeFileName caps at 120 chars and would cut the extension off a long
+  // name (then the type check rejects it) - shorten the base name instead.
+  const rawName = typeof body?.fileName === 'string' ? body.fileName : ''
+  const dot = rawName.lastIndexOf('.')
+  const ext = dot > 0 && rawName.length - dot <= 10 ? rawName.slice(dot) : ''
+  const safeName = sanitizeFileName(rawName.length > 110 ? rawName.slice(0, dot > 0 ? Math.max(1, 110 - ext.length) : 110) + ext : rawName)
   const contentType = attachmentContentType(safeName)
   if (!contentType) {
     return NextResponse.json({ error: 'This file type is not allowed. Use an image, video, audio, PDF or text file.' }, { status: 400 })

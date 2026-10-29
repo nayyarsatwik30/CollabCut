@@ -22,7 +22,7 @@ export function isMissingTable(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === '42P01'
 }
 
-export const MIGRATION_MESSAGE = 'File attachments are not enabled yet (database update pending).'
+export const MIGRATION_MESSAGE = "Attachments aren't available right now."
 
 export interface CommentAttachment {
   id: string

@@ -38,6 +38,8 @@ function iconFor(type: string | null) {
   return FileText
 }
 
+const FRIENDLY_FAILURE = "Upload didn't finish. Check your connection and try again."
+
 async function readJson(res: Response): Promise<any> {
   const text = await res.text()
   try { return JSON.parse(text) } catch { return { error: `Request failed (${res.status})` } }
@@ -65,8 +67,16 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
       .then(() => invalidateStorageUsage())
       .catch(() => {})
 
+  // Keys removed/abandoned by the user: checked after every await so a
+  // cancelled item never starts (or completes) an upload.
+  const cancelled = useRef(new Set<string>())
+  const fileStore = useRef(new Map<string, File>())
+
   const upload = async (file: File, key: string) => {
-    const fail = (error: string) => patch(key, { state: 'error', error })
+    const fail = (error: string, detail?: unknown) => {
+      if (detail) console.warn('attachment upload failed:', detail)
+      patch(key, { state: 'error', error })
+    }
     try {
       const initRes = await fetch('/api/comments/attachments/initiate', {
         method: 'POST',
@@ -74,24 +84,26 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
         body: JSON.stringify({ assetId, fileName: file.name, fileSize: file.size }),
       })
       const init = await readJson(initRes)
-      if (!initRes.ok) return fail(init.error ?? 'Could not start the upload')
+      // 4xx messages are written for users; 5xx / unparsable become the generic one.
+      if (!initRes.ok) return fail(initRes.status < 500 || initRes.status === 503 ? init.error ?? FRIENDLY_FAILURE : FRIENDLY_FAILURE, init)
+      if (cancelled.current.has(key)) return // minted but never used: nothing recorded, nothing to clean up
 
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
-        xhrs.current.set(key, xhr)
         xhr.open('PUT', init.url)
         xhr.upload.onprogress = (e) => patch(key, { progress: Math.min(99, Math.floor((e.loaded / file.size) * 100)) })
-        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)))
-        xhr.onerror = () => reject(new Error('Network error while uploading'))
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`PUT status ${xhr.status}`)))
+        xhr.onerror = () => reject(new Error('PUT network error'))
         xhr.onabort = () => reject(new Error('cancelled'))
+        if (cancelled.current.has(key)) return reject(new Error('cancelled'))
+        xhrs.current.set(key, xhr)
         // Blob with an empty type: XHR then sends no Content-Type, so the CORS
         // preflight needs no extra allowed header (same as the raw-footage parts).
         xhr.send(file.slice(0, file.size, ''))
       })
       xhrs.current.delete(key)
 
-      // Removed while the last bytes were in flight - nothing was recorded yet.
-      if (!itemsRef.current.some((i) => i.key === key)) return
+      if (cancelled.current.has(key)) return // removed while the last bytes were in flight - not completed
 
       const doneRes = await fetch('/api/comments/attachments/complete', {
         method: 'POST',
@@ -99,9 +111,9 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
         body: JSON.stringify({ uploadToken: init.uploadToken }),
       })
       const done = await readJson(doneRes)
-      if (!doneRes.ok) return fail(done.error ?? 'Could not finish the upload')
+      if (!doneRes.ok) return fail(FRIENDLY_FAILURE, done)
 
-      if (!itemsRef.current.some((i) => i.key === key)) {
+      if (cancelled.current.has(key)) {
         discardRemote(done.attachment.id) // user hit remove during the final request
         return
       }
@@ -110,7 +122,7 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
     } catch (err) {
       xhrs.current.delete(key)
       const message = (err as Error).message
-      if (message !== 'cancelled') fail(message || 'Upload failed')
+      if (message !== 'cancelled') fail(FRIENDLY_FAILURE, message)
     }
   }
 
@@ -129,6 +141,7 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
         continue
       }
       slots--
+      fileStore.current.set(key, file)
       setItems((prev) => [...prev, { key, name: file.name, size: file.size, state: 'uploading', progress: 0 }])
       void upload(file, key)
     }
@@ -136,18 +149,28 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
 
   const remove = (key: string) => {
     const item = itemsRef.current.find((i) => i.key === key)
+    cancelled.current.add(key)
+    fileStore.current.delete(key)
     xhrs.current.get(key)?.abort()
     xhrs.current.delete(key)
     setItems((prev) => prev.filter((i) => i.key !== key))
     if (item?.attachmentId) void discardRemote(item.attachmentId)
   }
 
-  // After a successful post the files belong to the comment - forget them
-  // without deleting anything.
-  const clearPosted = () => setItems([])
+  const retry = (key: string) => {
+    const file = fileStore.current.get(key)
+    if (!file) return
+    patch(key, { state: 'uploading', progress: 0, error: undefined })
+    void upload(file, key)
+  }
+
+  // After a successful post the uploaded files belong to the comment - forget
+  // them without deleting anything. Failed rows stay so the user sees them.
+  const clearPosted = () => setItems((prev) => prev.filter((i) => i.state === 'error'))
 
   // Drop unposted uploads when the draft goes away (asset switch / unmount).
   const abandon = () => {
+    itemsRef.current.forEach((i) => cancelled.current.add(i.key))
     xhrs.current.forEach((x) => x.abort())
     xhrs.current.clear()
     itemsRef.current.forEach((i) => { if (i.attachmentId) void discardRemote(i.attachmentId, true) })
@@ -161,7 +184,9 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
     items,
     addFiles,
     remove,
+    retry,
     clearPosted,
+    errorCount: items.filter((i) => i.state === 'error').length,
     busy: items.some((i) => i.state === 'uploading'),
     ids: items.filter((i) => i.state === 'done' && i.attachmentId).map((i) => i.attachmentId as string),
     full: items.filter((i) => i.state !== 'error').length >= MAX_ATTACHMENTS_PER_COMMENT,
@@ -176,7 +201,7 @@ export function AttachButton({ onFiles, disabled }: { onFiles: (files: FileList)
         type="button"
         onClick={() => ref.current?.click()}
         disabled={disabled}
-        title={`Attach a reference file (max ${MAX_COMMENT_ATTACHMENT_BYTES / 1024 / 1024}MB)`}
+        title="Attach a reference file"
         className="flex items-center gap-1 h-6 px-2 rounded-th-full border border-th-border text-[10px] font-semibold text-th-muted hover:text-th-text hover:border-th-accent transition-colors btn-press disabled:opacity-40"
       >
         <Paperclip size={11} /> Attach
@@ -193,7 +218,7 @@ export function AttachButton({ onFiles, disabled }: { onFiles: (files: FileList)
   )
 }
 
-export function DraftAttachmentList({ items, onRemove }: { items: DraftItem[]; onRemove: (key: string) => void }) {
+export function DraftAttachmentList({ items, onRemove, onRetry }: { items: DraftItem[]; onRemove: (key: string) => void; onRetry?: (key: string) => void }) {
   if (items.length === 0) return null
   return (
     <div className="flex flex-col gap-1 mt-2">
@@ -216,7 +241,14 @@ export function DraftAttachmentList({ items, onRemove }: { items: DraftItem[]; o
               <div className="h-full bg-th-accent transition-all" style={{ width: `${i.progress}%` }} />
             </div>
           )}
-          {i.state === 'error' && <p className="mt-0.5 text-[10px] text-th-changes">{i.error}</p>}
+          {i.state === 'error' && (
+            <p className="mt-0.5 text-[10px] text-th-changes">
+              {i.error}
+              {onRetry && i.error?.startsWith('Upload didn') && (
+                <button type="button" onClick={() => onRetry(i.key)} className="ml-2 underline font-semibold">Retry</button>
+              )}
+            </p>
+          )}
         </div>
       ))}
     </div>
