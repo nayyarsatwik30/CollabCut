@@ -139,6 +139,8 @@ export default function ChatPage() {
     const draftAtSend = draft
     setSending(true)
     setSendError(null)
+    let released = false
+    const release = () => { if (!released) { released = true; setSending(false) } }
     try {
       const res = await fetch('/api/chat/messages', {
         method: 'POST',
@@ -152,7 +154,7 @@ export default function ChatPage() {
         // Keep anything typed while the request was in flight.
         setDraft((current) => (current === draftAtSend ? '' : current))
         stickToBottom.current = true
-        setSending(false) // the POST is done; don't block the composer on the refresh
+        release() // the POST is done; don't block the composer on the refresh
         try {
           await fetchMessages()
         } catch {
@@ -163,7 +165,7 @@ export default function ChatPage() {
     } catch {
       setSendError('Message could not be sent.')
     }
-    setSending(false)
+    release()
   }
 
   const active = workspaces?.find((w) => w.id === activeId)
