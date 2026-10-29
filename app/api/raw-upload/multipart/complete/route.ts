@@ -75,9 +75,16 @@ export async function POST(req: NextRequest) {
 
     // Cheap content sniff for formats with a fixed signature (photos, wav,
     // flac, ogg): the first bytes must agree with the extension.
-    const probe = await b2.send(new GetObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, Range: 'bytes=0-15' }))
-    const head = (await probe.Body?.transformToByteArray()) ?? new Uint8Array()
-    if (matchesSignature(payload.safeName, head) === false) {
+    // Best effort: the object is already committed, so a failed read must not
+    // strand it without a row - skip the sniff and record the file.
+    let signatureOk: boolean | null = null
+    try {
+      const probe = await b2.send(new GetObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, Range: 'bytes=0-15' }))
+      signatureOk = matchesSignature(payload.safeName, (await probe.Body?.transformToByteArray()) ?? new Uint8Array())
+    } catch (err) {
+      console.error('raw-upload signature read failed', (err as Error).name)
+    }
+    if (signatureOk === false) {
       await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key })).catch(() => {})
       return NextResponse.json({ error: "The file's contents don't match its file type." }, { status: 400 })
     }

@@ -32,6 +32,8 @@ export const BROWSER_AUDIO_EXT = new Set(['mp3', 'wav', 'm4a', 'aac', 'flac', 'o
 // Never accepted: would be active content if ever opened from storage.
 const BLOCKED_EXT = new Set(['html', 'htm', 'xhtml', 'svg', 'svgz', 'js', 'mjs', 'exe', 'bat', 'cmd', 'sh', 'msi', 'dll', 'php', 'jsp'])
 
+const AMBIGUOUS_EXT = new Set(['mp4', 'webm', 'ogg', 'm4a'])
+
 export function fileExtension(name: string): string {
   const m = /\.([A-Za-z0-9]{1,8})$/.exec(name.trim())
   return m ? m[1].toLowerCase() : ''
@@ -55,9 +57,14 @@ function kindFromMime(mime: string | null | undefined): RawFileKind | null {
 // Extension wins; the MIME type is only a fallback for extension-less or
 // unknown-extension names.
 export function classifyRawFile(fileName: string, contentType?: string | null): RawFileKind {
-  const byExt = kindFromExtension(fileExtension(fileName))
+  const ext = fileExtension(fileName)
+  const byExt = kindFromExtension(ext)
+  const byMime = kindFromMime(contentType)
+  // Containers that can hold either (audio-only .webm, video .ogg...) follow
+  // the reported MIME type.
+  if (AMBIGUOUS_EXT.has(ext) && (byMime === 'audio' || byMime === 'video')) return byMime
   if (byExt !== 'other') return byExt
-  return kindFromMime(contentType) ?? 'other'
+  return byMime ?? 'other'
 }
 
 export type RawFileCheck = { ok: true; kind: RawFileKind; contentType: string } | { ok: false; error: string }
@@ -77,13 +84,12 @@ export function validateRawFile(fileName: string, reportedType: unknown): RawFil
   // know (.heic, .mxf, .flac on some OSes): trust the extension then.
   if (extKind !== 'other' && mimeKind && mimeKind !== extKind) {
     // A few containers are legitimately audio-or-video (.mp4/.webm/.ogg/.m4a).
-    const ambiguous = new Set(['mp4', 'webm', 'ogg', 'm4a'])
-    if (!(ambiguous.has(ext) && (mimeKind === 'audio' || mimeKind === 'video'))) {
+    if (!(AMBIGUOUS_EXT.has(ext) && (mimeKind === 'audio' || mimeKind === 'video'))) {
       return { ok: false, error: `"${fileName}" looks like a ${extKind} file but was sent as ${mimeKind}.` }
     }
   }
 
-  const kind = extKind !== 'other' ? extKind : mimeKind ?? 'other'
+  const kind = classifyRawFile(fileName, reported)
   if (kind === 'photo' && ext === 'svg') return { ok: false, error: "SVG files can't be uploaded." }
 
   let contentType = 'application/octet-stream'

@@ -103,6 +103,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   // Live upload session, so unmounting mid-upload can cancel it and abort the
   // multipart upload instead of leaving orphaned parts in the bucket.
   const sessionRef = useRef<UploadSession | null>(null)
+  const unmountedRef = useRef(false)
   const tokenRef = useRef(token)
   tokenRef.current = token
 
@@ -131,8 +132,25 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, token])
 
+  // Presigned preview URLs last an hour: re-list well before that, and when a
+  // thumbnail/player fails to load (laptop slept, tab left open).
   useEffect(() => {
+    const id = setInterval(() => { if (!sessionRef.current) loadFiles() }, 40 * 60 * 1000)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, token])
+
+  const lastRefreshRef = useRef(0)
+  const refreshOnMediaError = () => {
+    if (Date.now() - lastRefreshRef.current < 30_000) return
+    lastRefreshRef.current = Date.now()
+    loadFiles()
+  }
+
+  useEffect(() => {
+    unmountedRef.current = false
     return () => {
+      unmountedRef.current = true
       const session = sessionRef.current
       if (!session) return
       session.cancelled = true
@@ -251,6 +269,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     setState('uploading')
     const failures: string[] = []
     for (let i = 0; i < list.length; i++) {
+      if (unmountedRef.current) return
       setQueueLabel(list.length > 1 ? `File ${i + 1} of ${list.length}: ${list[i].name}` : list[i].name)
       try {
         await uploadOne(list[i])
@@ -258,6 +277,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
         failures.push(`${list[i].name}: ${err?.message ?? 'Upload failed'}`)
       }
     }
+    if (unmountedRef.current) return
     setQueueLabel('')
     setState(failures.length ? 'error' : 'idle')
     if (failures.length) setError(failures.join(' · '))
@@ -301,7 +321,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
   }
 
   const handleOpen = async (f: RawFile) => {
-    const url = f.preview_url ?? (await fetchUrl(f, false))
+    const url = await fetchUrl(f, false)
     if (url) window.open(url, '_blank', 'noopener,noreferrer')
   }
 
@@ -439,7 +459,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
                       <button onClick={() => handleOpen(f)} className="block w-full aspect-square bg-th-surface-alt" title={`Open ${f.file_name}`}>
                         {f.preview_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={f.preview_url} alt={f.file_name} loading="lazy" className="w-full h-full object-cover" />
+                          <img src={f.preview_url} alt={f.file_name} loading="lazy" onError={refreshOnMediaError} className="w-full h-full object-cover" />
                         ) : (
                           <span className="flex w-full h-full items-center justify-center text-th-faint"><ImageIcon size={22} /></span>
                         )}
@@ -464,7 +484,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
                       </div>
                       {meta(f)}
                       {kind === 'audio' && f.preview_url && (
-                        <audio controls preload="none" src={f.preview_url} className="w-full h-8 mt-1.5" />
+                        <audio controls preload="none" onError={refreshOnMediaError} src={f.preview_url} className="w-full h-8 mt-1.5" />
                       )}
                     </div>
                   ))}
