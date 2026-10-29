@@ -69,7 +69,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (ready) loadWorkspaces()
   }, [ready, convoVersion, loadWorkspaces])
-  usePolling(loadWorkspaces, 8000, ready && !setupError)
+  usePolling(loadWorkspaces, 8000, ready)
 
   const markRead = useCallback(async (workspaceId: string, ch: string, list: ChatMessage[]) => {
     const latestOther = [...list].reverse().find((m) => !m.mine)
@@ -80,7 +80,7 @@ export default function ChatPage() {
       const res = await fetch('/api/chat/read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId, channel: ch }),
+        body: JSON.stringify({ workspaceId, channel: ch, lastReadId: latestOther.id }),
       })
       if (!res.ok) throw new Error('read failed')
       window.dispatchEvent(new Event('chat:updated'))
@@ -131,6 +131,7 @@ export default function ChatPage() {
   const send = async () => {
     const text = draft.trim()
     if (!text || !activeId || sending) return
+    const draftAtSend = draft
     setSending(true)
     setSendError(null)
     try {
@@ -143,9 +144,14 @@ export default function ChatPage() {
         const data = await res.json().catch(() => ({}))
         setSendError(data.error ?? 'Message could not be sent.')
       } else {
-        setDraft('')
+        // Keep anything typed while the request was in flight.
+        setDraft((current) => (current === draftAtSend ? '' : current))
         stickToBottom.current = true
-        await fetchMessages()
+        try {
+          await fetchMessages()
+        } catch {
+          // The POST already committed; polling will refresh the conversation.
+        }
         window.dispatchEvent(new Event('chat:updated'))
       }
     } catch {

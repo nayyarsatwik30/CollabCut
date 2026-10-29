@@ -92,12 +92,6 @@ export async function POST(req: NextRequest) {
         [workspaceId, channel, user.id, text],
       )
       row = inserted.rows[0]
-      // Sending counts as having read everything up to now.
-      await client.query(
-        `INSERT INTO chat_reads (workspace_id, user_id, channel, last_read_at) VALUES ($1, $2, $3, now())
-         ON CONFLICT (workspace_id, user_id, channel) DO UPDATE SET last_read_at = now()`,
-        [workspaceId, user.id, channel],
-      )
       await client.query('COMMIT')
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {})
