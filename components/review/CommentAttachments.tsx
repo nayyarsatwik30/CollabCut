@@ -14,7 +14,7 @@ export interface PostedAttachment {
   content_type: string | null
 }
 
-interface DraftItem {
+export interface DraftItem {
   key: string
   name: string
   size: number
@@ -22,6 +22,8 @@ interface DraftItem {
   progress: number
   attachmentId?: string
   error?: string
+  /** Failure was transient (network/5xx): offer Retry. 4xx/validation errors are not retryable. */
+  retryable?: boolean
 }
 
 function formatSize(bytes: number | null) {
@@ -73,9 +75,9 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
   const fileStore = useRef(new Map<string, File>())
 
   const upload = async (file: File, key: string) => {
-    const fail = (error: string, detail?: unknown) => {
+    const fail = (error: string, detail?: unknown, retryable = false) => {
       if (detail) console.warn('attachment upload failed:', detail)
-      patch(key, { state: 'error', error })
+      patch(key, { state: 'error', error, retryable })
     }
     try {
       const initRes = await fetch('/api/comments/attachments/initiate', {
@@ -85,7 +87,10 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
       })
       const init = await readJson(initRes)
       // 4xx messages are written for users; 5xx / unparsable become the generic one.
-      if (!initRes.ok) return fail(initRes.status < 500 || initRes.status === 503 ? init.error ?? FRIENDLY_FAILURE : FRIENDLY_FAILURE, init)
+      if (!initRes.ok) {
+        const userFacing = initRes.status < 500 || initRes.status === 503
+        return fail(userFacing ? init.error ?? FRIENDLY_FAILURE : FRIENDLY_FAILURE, init, !userFacing)
+      }
       if (cancelled.current.has(key)) return // minted but never used: nothing recorded, nothing to clean up
 
       await new Promise<void>((resolve, reject) => {
@@ -111,7 +116,10 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
         body: JSON.stringify({ uploadToken: init.uploadToken }),
       })
       const done = await readJson(doneRes)
-      if (!doneRes.ok) return fail(FRIENDLY_FAILURE, done)
+      if (!doneRes.ok) {
+        // 4xx carries a user-facing reason (e.g. too many unposted files); retrying can't help.
+        return doneRes.status < 500 ? fail(done.error ?? FRIENDLY_FAILURE, done) : fail(FRIENDLY_FAILURE, done, true)
+      }
 
       if (cancelled.current.has(key)) {
         discardRemote(done.attachment.id) // user hit remove during the final request
@@ -122,7 +130,7 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
     } catch (err) {
       xhrs.current.delete(key)
       const message = (err as Error).message
-      if (message !== 'cancelled') fail(FRIENDLY_FAILURE, message)
+      if (message !== 'cancelled') fail(FRIENDLY_FAILURE, message, true)
     }
   }
 
@@ -162,10 +170,10 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
     if (!file) return
     // Failed rows don't hold a slot, so re-check the per-note limit first.
     if (itemsRef.current.filter((i) => i.state !== 'error').length >= MAX_ATTACHMENTS_PER_COMMENT) {
-      patch(key, { error: `Up to ${MAX_ATTACHMENTS_PER_COMMENT} files per note - remove one to retry this file.` })
+      patch(key, { retryable: true, error: `Up to ${MAX_ATTACHMENTS_PER_COMMENT} files per note - remove one to retry this file.` })
       return
     }
-    patch(key, { state: 'uploading', progress: 0, error: undefined })
+    patch(key, { state: 'uploading', progress: 0, error: undefined, retryable: undefined })
     void upload(file, key)
   }
 
@@ -177,6 +185,7 @@ export function useCommentAttachments(assetId: string | null, token: string | nu
   // Drop unposted uploads when the draft goes away (asset switch / unmount).
   const abandon = () => {
     itemsRef.current.forEach((i) => cancelled.current.add(i.key))
+    fileStore.current.clear()
     xhrs.current.forEach((x) => x.abort())
     xhrs.current.clear()
     itemsRef.current.forEach((i) => { if (i.attachmentId) void discardRemote(i.attachmentId, true) })
@@ -238,7 +247,7 @@ export function DraftAttachmentList({ items, onRemove, onRetry }: { items: Draft
             <span className="font-mono text-[10px] text-th-faint shrink-0">
               {i.state === 'uploading' ? `${i.progress}%` : formatSize(i.size)}
             </span>
-            <button type="button" onClick={() => onRemove(i.key)} title="Remove" className="text-th-muted hover:text-th-changes shrink-0">
+            <button type="button" aria-label={`Remove ${i.name}`} onClick={() => onRemove(i.key)} title="Remove" className="text-th-muted hover:text-th-changes shrink-0">
               <X size={12} />
             </button>
           </div>
@@ -248,10 +257,10 @@ export function DraftAttachmentList({ items, onRemove, onRetry }: { items: Draft
             </div>
           )}
           {i.state === 'error' && (
-            <p className="mt-0.5 text-[10px] text-th-changes">
+            <p role="alert" className="mt-0.5 text-[10px] text-th-changes">
               {i.error}
-              {onRetry && i.error?.startsWith('Upload didn') && (
-                <button type="button" onClick={() => onRetry(i.key)} className="ml-2 underline font-semibold">Retry</button>
+              {onRetry && i.retryable && (
+                <button type="button" aria-label={`Retry ${i.name}`} onClick={() => onRetry(i.key)} className="ml-2 underline font-semibold">Retry</button>
               )}
             </p>
           )}

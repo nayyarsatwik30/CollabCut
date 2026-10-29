@@ -5,6 +5,7 @@ import { Plus, MessageSquare } from 'lucide-react'
 import { Comment, CommentStatus } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { CommentCard } from './CommentCard'
+import { MAX_ATTACHMENTS_PER_COMMENT, MAX_COMMENT_ATTACHMENT_BYTES } from '@/lib/comment-attachment-rules'
 import { AttachButton, DraftAttachmentList, useCommentAttachments } from './CommentAttachments'
 
 type Filter = 'all' | CommentStatus
@@ -151,15 +152,15 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
         />
 
         {attachments && (
-          <p className="mt-1.5 text-[10px] text-th-faint">
+          <p aria-live="polite" className="mt-1.5 text-[10px] text-th-faint">
             {drafts.full
               ? 'Remove one to add another.'
-              : 'Attach up to 3 files (images, video, audio, PDF), 250MB each'}
+              : `Attach up to ${MAX_ATTACHMENTS_PER_COMMENT} files (images, video, audio, PDF, text), ${MAX_COMMENT_ATTACHMENT_BYTES / 1024 / 1024}MB each`}
           </p>
         )}
         <DraftAttachmentList items={drafts.items} onRemove={drafts.remove} onRetry={drafts.retry} />
         {drafts.errorCount > 0 && (
-          <p className="mt-1.5 text-[11px] text-th-changes">
+          <p role="alert" className="mt-1.5 text-[11px] text-th-changes">
             {drafts.errorCount} file{drafts.errorCount > 1 ? 's' : ''} didn&apos;t attach - remove or retry.
           </p>
         )}
