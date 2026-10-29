@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'The uploaded file did not match its declared size.' }, { status: 400 })
     }
 
-    await b2.send(
+    const completed = await b2.send(
       new CompleteMultipartUploadCommand({
         Bucket: B2_BUCKET,
         Key: payload.key,
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const headObj = await b2.send(new HeadObjectCommand({ Bucket: B2_BUCKET, Key: payload.key }))
     const size = headObj.ContentLength ?? 0
     if (size <= 0 || size > MAX_RAW_FILE_BYTES || size !== payload.declaredSize) {
-      await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key })).catch(() => {})
+      await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, VersionId: completed.VersionId })).catch(() => {})
       return NextResponse.json({ error: 'The uploaded file did not match its declared size.' }, { status: 400 })
     }
 
@@ -84,12 +84,12 @@ export async function POST(req: NextRequest) {
         signatureOk = matchesSignature(payload.safeName, (await probe.Body?.transformToByteArray()) ?? new Uint8Array())
       } catch (err) {
         console.error('raw-upload signature read failed', (err as Error).name)
-        await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key })).catch(() => {})
+        await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, VersionId: completed.VersionId })).catch(() => {})
         return NextResponse.json({ error: 'Could not verify the file. Please try the upload again.' }, { status: 502 })
       }
     }
     if (signatureOk === false) {
-      await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key })).catch(() => {})
+      await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: payload.key, VersionId: completed.VersionId })).catch(() => {})
       return NextResponse.json({ error: "The file's contents don't match its file type." }, { status: 400 })
     }
 
