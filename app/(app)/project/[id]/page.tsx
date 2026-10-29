@@ -362,14 +362,14 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       })
       if (!res.ok) {
         if (!priorityEditsRef.current.some((e) => e.key === edit.key && e.seq > edit.seq)) {
-          setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
+          setAssets((prev) => prev.map((a) => (priorityKey(a) === edit.key ? { ...a, priority: previousPriority } : a)))
         }
         priorityEditsRef.current = priorityEditsRef.current.filter((e) => e !== edit)
         showToast('Failed to update priority.', 'error')
       }
     } catch (err) {
       if (!priorityEditsRef.current.some((e) => e.key === edit.key && e.seq > edit.seq)) {
-        setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, priority: previousPriority } : a)))
+        setAssets((prev) => prev.map((a) => (priorityKey(a) === edit.key ? { ...a, priority: previousPriority } : a)))
       }
       priorityEditsRef.current = priorityEditsRef.current.filter((e) => e !== edit)
       showToast('Failed to update priority.', 'error')
