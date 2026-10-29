@@ -74,16 +74,21 @@ export default function ChatPage() {
   const markRead = useCallback(async (workspaceId: string, ch: string, list: ChatMessage[]) => {
     const latestOther = [...list].reverse().find((m) => !m.mine)
     if (!latestOther || lastReadMarker.current === `${workspaceId}:${ch}:${latestOther.id}`) return
-    lastReadMarker.current = `${workspaceId}:${ch}:${latestOther.id}`
+    const key = `${workspaceId}:${ch}:${latestOther.id}`
+    lastReadMarker.current = key
     try {
-      await fetch('/api/chat/read', {
+      const res = await fetch('/api/chat/read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workspaceId, channel: ch }),
       })
+      if (!res.ok) throw new Error('read failed')
       window.dispatchEvent(new Event('chat:updated'))
       setConvoVersion((v) => v + 1)
-    } catch {}
+    } catch {
+      // Let the next poll retry instead of staying marked as done.
+      if (lastReadMarker.current === key) lastReadMarker.current = null
+    }
   }, [])
 
   const fetchMessages = useCallback(async () => {

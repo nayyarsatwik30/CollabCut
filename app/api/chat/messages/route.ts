@@ -68,28 +68,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No access to this channel' }, { status: 403 })
     }
 
-    const recent = await migrationDb.query(
-      `SELECT COUNT(*) FROM chat_messages WHERE sender_id = $1 AND created_at > now() - make_interval(secs => $2)`,
-      [user.id, CHAT_RATE_WINDOW_SECONDS],
-    )
-    if (Number(recent.rows[0].count) >= CHAT_RATE_LIMIT) {
-      return NextResponse.json(
-        { error: 'You are sending messages too quickly. Wait a moment and try again.' },
-        { status: 429, headers: { 'Retry-After': String(CHAT_RATE_WINDOW_SECONDS) } },
+    // Rate-limit check and insert run in one transaction under a per-user
+    // advisory lock, so concurrent POSTs (even across serverless instances)
+    // can't all read a count below the cap and then all insert.
+    const client = await migrationDb.connect()
+    let row
+    try {
+      await client.query('BEGIN')
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`chat-send:${user.id}`])
+      const recent = await client.query(
+        `SELECT COUNT(*) FROM chat_messages WHERE sender_id = $1 AND created_at > now() - make_interval(secs => $2)`,
+        [user.id, CHAT_RATE_WINDOW_SECONDS],
       )
+      if (Number(recent.rows[0].count) >= CHAT_RATE_LIMIT) {
+        await client.query('ROLLBACK')
+        return NextResponse.json(
+          { error: 'You are sending messages too quickly. Wait a moment and try again.' },
+          { status: 429, headers: { 'Retry-After': String(CHAT_RATE_WINDOW_SECONDS) } },
+        )
+      }
+      const inserted = await client.query(
+        `INSERT INTO chat_messages (workspace_id, channel, sender_id, body) VALUES ($1, $2, $3, $4) RETURNING id, body, created_at, sender_id`,
+        [workspaceId, channel, user.id, text],
+      )
+      row = inserted.rows[0]
+      // Sending counts as having read everything up to now.
+      await client.query(
+        `INSERT INTO chat_reads (workspace_id, user_id, channel, last_read_at) VALUES ($1, $2, $3, now())
+         ON CONFLICT (workspace_id, user_id, channel) DO UPDATE SET last_read_at = now()`,
+        [workspaceId, user.id, channel],
+      )
+      await client.query('COMMIT')
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {})
+      throw err
+    } finally {
+      client.release()
     }
-
-    const inserted = await migrationDb.query(
-      `INSERT INTO chat_messages (workspace_id, channel, sender_id, body) VALUES ($1, $2, $3, $4) RETURNING id, body, created_at, sender_id`,
-      [workspaceId, channel, user.id, text],
-    )
-    const row = inserted.rows[0]
-    // Sending counts as having read everything up to now.
-    await migrationDb.query(
-      `INSERT INTO chat_reads (workspace_id, user_id, channel, last_read_at) VALUES ($1, $2, $3, now())
-       ON CONFLICT (workspace_id, user_id, channel) DO UPDATE SET last_read_at = now()`,
-      [workspaceId, user.id, channel],
-    ).catch(() => {})
     return NextResponse.json({ message: { ...row, sender_name: '', mine: true } }, { status: 201 })
   } catch (err) {
     return chatErrorResponse(err)
