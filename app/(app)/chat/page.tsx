@@ -87,10 +87,17 @@ export default function ChatPage() {
         const list: Workspace[] = data.workspaces ?? []
         setSetupError(null)
         setWorkspaces((prev) => (sameData(prev, list) ? prev : list))
-        setActiveId((cur) => (cur && list.some((w) => w.id === cur) ? cur : list[0]?.id ?? null))
-        // Drop a stale channel selection (e.g. the client's last project was trashed).
-        const ws = list.find((w) => w.id === (activeRef.current ?? list[0]?.id))
-        if (ws && !ws.channels.some((c) => c.key === channelRef.current)) setChannel('')
+        // Resolve the effective workspace once and use it for everything below,
+        // so this pass never keeps using an id the user no longer belongs to.
+        const current = activeRef.current
+        const effectiveId = current && list.some((w) => w.id === current) ? current : list[0]?.id ?? null
+        if (effectiveId !== current) {
+          activeRef.current = effectiveId
+          setActiveId(effectiveId)
+        }
+        const ws = list.find((w) => w.id === effectiveId)
+        // Also drop a stale channel selection (e.g. the client's last project was trashed).
+        if (effectiveId !== current || (ws && !ws.channels.some((c) => c.key === channelRef.current))) setChannel('')
       }
     } catch {
       if (workspaceRequestId.current === requestId) setSetupError('Could not load chat.')
