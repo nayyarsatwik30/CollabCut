@@ -10,7 +10,7 @@ import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { NewContentModal } from '@/components/board/NewContentModal'
 import { useSessionGuard } from '@/lib/useSessionGuard'
-import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
+import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, countLabel, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
 import { useSelectedClient } from '@/lib/useSelectedClient'
 import { ClientTabStrip } from '@/components/board/ClientTabStrip'
 import { priorityMeta } from '@/lib/priority'
@@ -198,6 +198,9 @@ export default function DashboardPage() {
   }, [isAdmin, wsProjects, extraClients])
 
   const activeClient = isAdmin && clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
+  // Hold the heading back until the stored selection is restored so it never
+  // flashes "All Projects" before switching to "Projects: <client>".
+  const headingReady = role !== null && (!isAdmin || hydrated || wsLookupFailed)
   const activeClientLabel = clientTabs.find((t) => t.key === activeClient)?.label ?? ''
   const defaultClient = activeClient === ALL_CLIENTS_KEY || activeClient === NO_CLIENT_KEY ? '' : activeClientLabel
 
@@ -401,12 +404,16 @@ export default function DashboardPage() {
             </>
           ) : (
             <>
-              <div className="flex items-center justify-between mb-5">
-                <h1 className="text-[18px] font-extrabold">
-                  {activeClient === ALL_CLIENTS_KEY ? 'All Projects' : `Projects: ${activeClient === NO_CLIENT_KEY ? 'No client' : activeClientLabel}`}
-                </h1>
-                <span className="flex items-center gap-3 font-mono text-[11px] text-th-muted">
-                  {filtered.length} projects
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-5">
+                {headingReady ? (
+                  <h1 className="min-w-0 break-words text-[18px] font-extrabold">
+                    {activeClient === ALL_CLIENTS_KEY ? 'All Projects' : `Projects: ${activeClient === NO_CLIENT_KEY ? 'No client' : activeClientLabel}`}
+                  </h1>
+                ) : (
+                  <div aria-hidden className="h-6 w-40 rounded bg-th-surface animate-pulse" />
+                )}
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-th-muted">
+                  Showing {countLabel(filtered.length, 'projects')}
                   {activeClient !== ALL_CLIENTS_KEY && (
                     <button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} className="underline hover:text-th-text btn-press">
                       Show all clients

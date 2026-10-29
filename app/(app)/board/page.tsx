@@ -13,7 +13,7 @@ import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import { priorityMeta } from '@/lib/priority'
-import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, clientKey, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
+import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, clientKey, countLabel, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
 import { useSelectedClient } from '@/lib/useSelectedClient'
 import { ClientTabStrip } from '@/components/board/ClientTabStrip'
 import { Orb } from '@/components/ui/Orb'
@@ -401,6 +401,16 @@ export default function BoardPage() {
   // keep the stored selection active instead of flashing back to All, and
   // hold off creating content so New can't open with the wrong client.
   const tabsReady = hydrated && projectsLoaded
+  // Reveal the strip only once both tab sources have loaded (or after the same
+  // 8s bound the project fetch uses) so a project-only tab can't appear late
+  // and reorder it after first paint.
+  const [stripBound, setStripBound] = useState(false)
+  useEffect(() => {
+    if (role !== 'admin') return
+    const t = setTimeout(() => setStripBound(true), 8000)
+    return () => clearTimeout(t)
+  }, [role])
+  const stripReady = tabsReady || stripBound
   const clientPending = role === 'admin' && !tabsReady && selectedClient !== ALL_CLIENTS_KEY
     && !clientTabs.some((t) => t.key === selectedClient)
   const activeClient = clientPending || clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
@@ -451,6 +461,13 @@ export default function BoardPage() {
     return map
   }, [visibleAssets])
 
+  const boardTitleClient = activeClient === NO_CLIENT_KEY ? 'No client' : activeClientLabel
+  const ctxText = role === 'editor'
+    ? 'Showing assets assigned to you'
+    : boardView === 'editors'
+      ? 'Showing all workspace editors'
+      : `Showing ${boardView === 'projects' ? countLabel(visibleProjects.length, 'projects') : countLabel(visibleAssets.length, 'cards')}${activeClient === ALL_CLIENTS_KEY ? ' (all clients)' : ''}`
+
   if (loading) {
     return (
       <>
@@ -462,16 +479,10 @@ export default function BoardPage() {
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopBar title={showClientCtx && activeClient !== ALL_CLIENTS_KEY ? `Board: ${activeClient === NO_CLIENT_KEY ? 'No client' : activeClientLabel}` : 'Board'} icon={LayoutGrid}>
-          <span className="font-mono text-[11px] text-th-muted hidden md:inline">
-            {role === 'editor'
-              ? 'Showing assets assigned to you'
-              : boardView === 'editors'
-                ? 'Showing all workspace editors'
-                : `${boardView === 'projects' ? `${visibleProjects.length} projects` : `${visibleAssets.length} cards`}${activeClient === ALL_CLIENTS_KEY ? ' (all clients)' : ''}`}
-          </span>
+        <TopBar title={showClientCtx && activeClient !== ALL_CLIENTS_KEY ? `Board: ${boardTitleClient}` : 'Board'} icon={LayoutGrid}>
+          <span className="font-mono text-[11px] text-th-muted hidden md:inline">{ctxText}</span>
           {showClientCtx && activeClient !== ALL_CLIENTS_KEY && (
-            <Button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} size="sm" variant="secondary">Show all clients</Button>
+            <Button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} size="sm" variant="secondary" className="hidden md:inline-flex">Show all clients</Button>
           )}
           {role === 'admin' && (
             <Button onClick={() => setShowNewContent(true)} size="sm" disabled={clientPending}>
@@ -479,6 +490,14 @@ export default function BoardPage() {
             </Button>
           )}
         </TopBar>
+        {/* Narrow screens: the count text and "Show all clients" move out of the
+            top bar (which would squeeze the title to nothing) onto their own line. */}
+        <div className="md:hidden shrink-0 px-4 py-2 border-b border-th-border flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] text-th-muted">
+          <span className="min-w-0 break-words">{ctxText}</span>
+          {showClientCtx && activeClient !== ALL_CLIENTS_KEY && (
+            <Button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} size="sm" variant="secondary">Show all clients</Button>
+          )}
+        </div>
 
         {role === 'admin' && (
           <div className="shrink-0 bg-th-surface border-b border-th-border px-6 flex gap-1">
@@ -671,7 +690,7 @@ export default function BoardPage() {
               >
                 <div className="flex items-center" style={{ gap: 8, padding: '9px 16px' }}>
                   <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--th-text)' }}>{visibleAssets.length}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--th-muted)' }}>total</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--th-muted)' }}>{visibleAssets.length === 1 ? 'card' : 'cards'} total</span>
                 </div>
                 <div style={{ width: 1, height: 20, background: 'var(--th-border)', margin: '0 2px' }} />
                 {COLUMNS.map((col) => (
@@ -756,7 +775,10 @@ export default function BoardPage() {
           </>
         )}
 
-        {role === 'admin' && !error && boardView !== 'editors' && (
+        {role === 'admin' && !error && boardView !== 'editors' && !stripReady && (
+          <div aria-hidden className="shrink-0 h-9 bg-th-surface border-t border-th-border" />
+        )}
+        {role === 'admin' && !error && boardView !== 'editors' && stripReady && (
           <ClientTabStrip
             tabs={clientTabs}
             allCount={tabCount(ALL_CLIENTS_KEY)}

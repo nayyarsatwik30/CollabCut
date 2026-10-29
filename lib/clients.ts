@@ -69,3 +69,8 @@ export function mergeExtraClients(tabs: ClientTab[], extras: string[]): ClientTa
   }
   return sortClientTabs(out)
 }
+
+// "1 card" / "2 cards", "1 project" / "0 projects".
+export function countLabel(n: number, unit: 'cards' | 'projects'): string {
+  return `${n} ${n === 1 ? unit.slice(0, -1) : unit}`
+}
