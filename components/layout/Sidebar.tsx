@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { LayoutGrid, SquareKanban, Clock, Bell, Settings, ChevronDown, Trash2, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { LayoutGrid, SquareKanban, Clock, Bell, MessageCircle, Settings, ChevronDown, Trash2, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStorageUsage } from '@/lib/useStorageUsage'
 import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: '/board', icon: SquareKanban, label: 'Board' },
   { href: '/dashboard', icon: LayoutGrid, label: 'Projects' },
   { href: '/recent', icon: Clock, label: 'Recent' },
+  { href: '/chat', icon: MessageCircle, label: 'Chat' },
   { href: '/notifications', icon: Bell, label: 'Notifications' },
 ]
 
@@ -50,6 +51,7 @@ export function Sidebar() {
   }
   const { data: session, status } = useSession()
   const [unreadCount, setUnreadCount] = useState(0)
+  const [chatUnread, setChatUnread] = useState(0)
   const { usedBytes, workspacePlan, loading: usageLoading } = useStorageUsage()
 
   const name = session?.user?.name ?? session?.user?.email ?? ''
@@ -77,6 +79,21 @@ export function Sidebar() {
       setUnreadCount((prev) => (prev === (data.count ?? 0) ? prev : data.count ?? 0))
     }
   }
+
+  const fetchChatUnread = async () => {
+    const res = await fetch('/api/chat/unread-count')
+    if (res.ok) {
+      const data = await res.json()
+      setChatUnread((prev) => (prev === (data.count ?? 0) ? prev : data.count ?? 0))
+    }
+  }
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    fetchChatUnread()
+    window.addEventListener('chat:updated', fetchChatUnread)
+    return () => window.removeEventListener('chat:updated', fetchChatUnread)
+  }, [status])
+  usePolling(fetchChatUnread, 8000, status === 'authenticated')
 
   // Badge picks up new notifications (e.g. a collaborator's comment) while
   // the user sits on any sidebar page - pauses when the tab is hidden.
@@ -109,6 +126,7 @@ export function Sidebar() {
 
   const renderItem = ({ href, icon: Icon, label }: (typeof NAV_ITEMS)[number]) => {
     const active = pathname.startsWith(href)
+    const badge = href === '/notifications' ? unreadCount : href === '/chat' ? chatUnread : 0
     return (
       <Link
         key={href}
@@ -126,12 +144,12 @@ export function Sidebar() {
         {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-[var(--th-chrome-text)]" />}
         <Icon size={16} strokeWidth={1.75} className={active ? 'text-[var(--th-chrome-text)]' : ''} />
         <span className={cn('overflow-hidden whitespace-nowrap transition-opacity duration-200', collapsed ? 'w-0 opacity-0' : 'flex-1 opacity-100')}>{label}</span>
-        {href === '/notifications' && unreadCount > 0 && collapsed && (
+        {badge > 0 && collapsed && (
           <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-th-accent" />
         )}
-        {href === '/notifications' && unreadCount > 0 && !collapsed && (
+        {badge > 0 && !collapsed && (
           <span className="min-w-[16px] h-4 px-1 rounded-th-full flex items-center justify-center text-[9px] font-bold shrink-0 bg-th-accent text-th-accent-fg">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {badge > 99 ? '99+' : badge}
           </span>
         )}
       </Link>
