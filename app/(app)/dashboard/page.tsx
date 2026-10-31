@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { Search, LayoutGrid, List, Plus, Upload, Film, Check, FolderKanban } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -91,7 +91,7 @@ export default function DashboardPage() {
     if (currentRole === 'editor') {
       loadAssignedAssets(session.access_token)
     } else {
-      loadProjects(session.access_token)
+      loadProjects(session.access_token, { initial: true })
       // Workspace id only keys the client-selection storage; best-effort.
       try {
         // Bounded without AbortController: a hung lookup falls back to no tabs.
@@ -116,12 +116,19 @@ export default function DashboardPage() {
   }
 
   const [projectsError, setProjectsError] = useState(false)
-  const loadProjects = async (accessToken: string) => {
-    setLoading(true)
-    setProjectsError(false)
+  const [retrying, setRetrying] = useState(false)
+  const projectsGenRef = useRef(0)
+  // `initial` (first load) shows the skeleton and blocks New; later refreshes
+  // (after creating a project, Retry) run in the background. Only the newest
+  // request may update state, so overlapping refreshes can't clear `loading` early.
+  const loadProjects = async (accessToken: string, opts?: { initial?: boolean }) => {
+    const gen = ++projectsGenRef.current
+    if (opts?.initial) setLoading(true)
     // Bounded (covers the body read) so a hung request can't leave the page
     // loading, and New disabled, forever.
     let timer: ReturnType<typeof setTimeout> | undefined
+    let failed = false
+    let projectsData: Project[] | null = null
     try {
       const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
       const timeout = new Promise<never>((_, reject) => {
@@ -137,14 +144,23 @@ export default function DashboardPage() {
       })()
       load.catch(() => {}) // late failure after the timeout is already handled
       const data = await Promise.race([load, timeout])
-      setProjects(data.projects ?? [])
+      projectsData = data.projects ?? []
     } catch (err) {
       console.error('Failed to load projects', err)
-      setProjectsError(true)
+      failed = true
     } finally {
       if (timer) clearTimeout(timer)
     }
+    if (gen !== projectsGenRef.current) return // superseded by a newer refresh
+    if (projectsData) setProjects(projectsData)
+    setProjectsError(failed)
     setLoading(false)
+  }
+  const retryProjects = async () => {
+    if (retrying) return
+    setRetrying(true)
+    await loadProjects(token ?? '')
+    setRetrying(false)
   }
 
   const loadAssignedAssets = async (accessToken: string) => {
@@ -431,7 +447,7 @@ export default function DashboardPage() {
                   <div aria-hidden className="h-6 w-40 rounded bg-th-surface animate-pulse" />
                 )}
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-th-muted">
-                  Showing {countLabel(filtered.length, 'projects')}
+                  {projectsError && projects.length === 0 ? 'Showing projects (count unavailable)' : `Showing ${countLabel(filtered.length, 'projects')}`}
                   {activeClient !== ALL_CLIENTS_KEY && (
                     <button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} className="underline hover:text-th-text btn-press">
                       Show all clients
@@ -443,12 +459,12 @@ export default function DashboardPage() {
               {projectsError && !loading && (
                 <div role="alert" className="mb-4 flex flex-wrap items-center gap-3 text-[13px] text-th-changes">
                   Couldn&apos;t load your projects.
-                  <button onClick={() => loadProjects(token ?? '')} className="underline btn-press">Retry</button>
+                  <button onClick={retryProjects} aria-busy={retrying} aria-disabled={retrying} className="underline btn-press">{retrying ? 'Retrying...' : 'Retry'}</button>
                 </div>
               )}
               {loading ? (
                 <CardGridSkeleton count={8} minWidth={240} />
-              ) : filtered.length === 0 && !search ? (
+              ) : filtered.length === 0 && !search && projectsError ? null : filtered.length === 0 && !search ? (
                 <EmptyState
                   icon={Film}
                   title={activeClient === ALL_CLIENTS_KEY ? 'No projects yet' : activeClient === NO_CLIENT_KEY ? 'No projects without a client' : `No projects for ${activeClientLabel} yet`}

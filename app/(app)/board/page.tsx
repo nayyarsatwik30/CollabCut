@@ -79,10 +79,13 @@ export default function BoardPage() {
   // Last fetch on entering/retrying the Projects view failed (shown instead of
   // the empty state when nothing is cached).
   const [projectsFailed, setProjectsFailed] = useState(false)
+  const [projectsRetrying, setProjectsRetrying] = useState(false)
+  // The Retry button stays mounted (aria-disabled, not unmounted) so focus stays on it.
   const retryProjects = async () => {
-    setProjectsLoading(true)
-    setProjectsFailed(!(await fetchProjects(token)))
-    setProjectsLoading(false)
+    if (projectsRetrying) return
+    setProjectsRetrying(true)
+    await fetchProjects(token)
+    setProjectsRetrying(false)
   }
 
   // Every project fetch (initial load, poll, entering Projects) goes through
@@ -103,14 +106,16 @@ export default function BoardPage() {
       projectsInFlightRef.current = false
       setProjects([])
       setProjectsLoaded(false)
+      setProjectsFailed(false)
+      setProjectsLoading(false)
     }
     workspaceRef.current = id
     setWorkspaceId(id)
   }
-  const fetchProjects = async (accessToken: string, opts?: { skipIfBusy?: boolean }): Promise<boolean> => {
+  const fetchProjects = async (accessToken: string, opts?: { skipIfBusy?: boolean }): Promise<'ok' | 'failed' | 'stale'> => {
     // Polls skip while a request is still out so a slow endpoint can't pile up
     // requests that each get superseded (starvation).
-    if (opts?.skipIfBusy && projectsInFlightRef.current) return false
+    if (opts?.skipIfBusy && projectsInFlightRef.current) return 'stale'
     const gen = ++projectsGenRef.current
     const issuedFor = workspaceRef.current
     projectsInFlightRef.current = true
@@ -124,13 +129,19 @@ export default function BoardPage() {
         signal: controller?.signal,
       })
       const data = await res.json()
-      if (gen !== projectsGenRef.current || issuedFor !== workspaceRef.current || !res.ok) return false
+      // Superseded / other-workspace responses are 'stale', not failures.
+      if (gen !== projectsGenRef.current || issuedFor !== workspaceRef.current) return 'stale'
+      if (!res.ok) { setProjectsFailed(true); return 'failed' }
       const next: WorkspaceProject[] = data.projects ?? []
       setProjects((prev) => (sameData(prev, next) ? prev : next))
       setProjectsLoaded(true)
-      return true
+      setProjectsFailed(false)
+      return 'ok'
     } catch {
-      return false // timeout / network: keep whatever we have
+      // timeout / network: keep whatever we have
+      if (gen !== projectsGenRef.current || issuedFor !== workspaceRef.current) return 'stale'
+      setProjectsFailed(true)
+      return 'failed'
     } finally {
       if (timer) clearTimeout(timer)
       if (gen === projectsGenRef.current) projectsInFlightRef.current = false
@@ -391,8 +402,8 @@ export default function BoardPage() {
       // Always refetch on entry so the grid and client tabs are never stale;
       // only show the spinner when there is nothing to show yet.
       setProjectsLoading(projects.length === 0)
-      setProjectsFailed(!(await fetchProjects(token)))
-      setProjectsLoading(false)
+      const result = await fetchProjects(token)
+      if (result !== 'stale') setProjectsLoading(false)
     }
   }
 
@@ -489,11 +500,12 @@ export default function BoardPage() {
   }, [visibleAssets])
 
   const boardTitleClient = activeClient === NO_CLIENT_KEY ? 'No client' : activeClientLabel
+  const countsUnavailable = boardView === 'projects' && projectsFailed && projects.length === 0
   const ctxText = role === 'editor'
     ? 'Showing assets assigned to you'
     : boardView === 'editors'
       ? 'Showing all workspace editors'
-      : `Showing ${boardView === 'projects' ? countLabel(visibleProjects.length, 'projects') : countLabel(visibleAssets.length, 'cards')}${activeClient === ALL_CLIENTS_KEY ? ' (all clients)' : ''}`
+      : `Showing ${boardView === 'projects' ? (countsUnavailable ? 'projects (count unavailable)' : countLabel(visibleProjects.length, 'projects')) : countLabel(visibleAssets.length, 'cards')}${activeClient === ALL_CLIENTS_KEY ? ' (all clients)' : ''}`
 
   if (loading) {
     return (
@@ -557,16 +569,19 @@ export default function BoardPage() {
           </div>
         ) : boardView === 'projects' ? (
           <div className="flex-1 overflow-y-auto p-6">
+            {projectsFailed && (
+              <div role="alert" className="mb-4 flex flex-wrap items-center gap-3 text-[13px] text-th-changes">
+                Couldn&apos;t load projects. Check your connection and try again.
+                <Button onClick={retryProjects} size="sm" variant="secondary" aria-busy={projectsRetrying} aria-disabled={projectsRetrying}>
+                  {projectsRetrying ? 'Retrying...' : 'Retry'}
+                </Button>
+              </div>
+            )}
             {projectsLoading ? (
               <div className="flex items-center justify-center py-16">
                 <Orb state="composing" size={64} label="Loading" />
               </div>
-            ) : projectsFailed && projects.length === 0 ? (
-              <div role="alert" className="flex flex-col items-center justify-center py-16 gap-2 text-center">
-                <p className="text-[13px] text-th-changes">Couldn&apos;t load projects. Check your connection and try again.</p>
-                <Button onClick={retryProjects} size="sm" variant="secondary">Retry</Button>
-              </div>
-            ) : visibleProjects.length === 0 ? (
+            ) : visibleProjects.length === 0 && projectsFailed ? null : visibleProjects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
                 <FolderKanban size={32} className="text-th-faint" />
                 <p className="text-[13px] text-th-muted">
@@ -819,6 +834,7 @@ export default function BoardPage() {
             onSelect={setSelectedClient}
             onAdd={(name) => addClient(name, clientTabs.map((t) => t.key))}
             unit={boardView === 'projects' ? 'projects' : 'cards'}
+            countsUnavailable={countsUnavailable}
           />
         )}
       </div>

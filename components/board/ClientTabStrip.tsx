@@ -12,11 +12,12 @@ interface ClientTabStripProps {
   activeKey: string
   onSelect: (key: string) => void
   onAdd: (name: string) => string | null // error message or null
+  countsUnavailable?: boolean // show an em dash instead of numbers (data failed to load)
   unit: 'cards' | 'projects' // what the per-tab numbers count (named in tooltips; the page header states it in words)
 }
 
 // Footer client switcher shared by the Board and Projects pages.
-export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, onAdd, unit }: ClientTabStripProps) {
+export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, onAdd, unit, countsUnavailable }: ClientTabStripProps) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [error, setError] = useState('')
@@ -64,7 +65,7 @@ export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, 
           <button
             key={tab.key}
             aria-pressed={active}
-            title={`${tab.label}: ${countLabel(tab.key === ALL_CLIENTS_KEY ? allCount : countFor(tab.key), unit)}`}
+            title={`${tab.label}: ${countsUnavailable ? 'count unavailable' : countLabel(tab.key === ALL_CLIENTS_KEY ? allCount : countFor(tab.key), unit)}`}
             onClick={() => onSelect(tab.key)}
             className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 text-[12px] border-t-2 btn-press transition-colors max-w-[200px]"
             style={{
@@ -75,7 +76,7 @@ export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, 
             }}
           >
             <span className="truncate">{tab.label}</span>
-            <span className="font-mono text-[10px] opacity-70">{tab.key === ALL_CLIENTS_KEY ? allCount : countFor(tab.key)}</span>
+            <span className="font-mono text-[10px] opacity-70">{countsUnavailable ? '—' : tab.key === ALL_CLIENTS_KEY ? allCount : countFor(tab.key)}</span>
           </button>
         )
       })}
