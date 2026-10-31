@@ -13,6 +13,9 @@ import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import { priorityMeta } from '@/lib/priority'
+import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, clientKey, countLabel, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
+import { useSelectedClient } from '@/lib/useSelectedClient'
+import { ClientTabStrip } from '@/components/board/ClientTabStrip'
 import { Orb } from '@/components/ui/Orb'
 import { Button, ButtonIcon } from '@/components/ui/Button'
 
@@ -54,8 +57,17 @@ export default function BoardPage() {
   const [role, setRole] = useState<'admin' | 'editor' | null>(null)
   const [assets, setAssets] = useState<BoardAsset[]>([])
   const [editors, setEditors] = useState<BoardEditorOption[]>([])
+  // Footer client tabs (admin only). A client is the projects.client label
+  // inside this workspace (see lib/clients.ts); selecting one only filters
+  // what is rendered, it never changes what the API returns.
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [showNewContent, setShowNewContent] = useState(false)
+
+  const [workspaceId, setWorkspaceId] = useState('')
+  // True once /api/board/projects has succeeded at least once: tab data is
+  // only trustworthy (safe to reset a stored selection against) after that.
+  const [projectsLoaded, setProjectsLoaded] = useState(false)
+  const { selectedClient, setSelectedClient, extraClients, addClient, hydrated } = useSelectedClient(workspaceId)
 
   // Admin-only Projects/Editors views alongside the regular Kanban - gated
   // both by not rendering the tab bar for non-admins (below) and by the
@@ -64,6 +76,77 @@ export default function BoardPage() {
   const [boardView, setBoardView] = useState<BoardView>('board')
   const [projects, setProjects] = useState<WorkspaceProject[]>([])
   const [projectsLoading, setProjectsLoading] = useState(false)
+  // Last fetch on entering/retrying the Projects view failed (shown instead of
+  // the empty state when nothing is cached).
+  const [projectsFailed, setProjectsFailed] = useState(false)
+  const [projectsRetrying, setProjectsRetrying] = useState(false)
+  // The Retry button stays mounted (aria-disabled, not unmounted) so focus stays on it.
+  const retryProjects = async () => {
+    if (projectsRetrying) return
+    setProjectsRetrying(true)
+    await fetchProjects(token)
+    setProjectsRetrying(false)
+  }
+
+  // Every project fetch (initial load, poll, entering Projects) goes through
+  // here: bounded by a timeout (covers the body read too) and stamped with a
+  // generation so an older response can never overwrite a newer one.
+  const projectsGenRef = useRef(0)
+  // Workspace the board currently shows; project requests are tagged with it
+  // and dropped if it changed while they were in flight.
+  const workspaceRef = useRef('')
+  const projectsInFlightRef = useRef(false)
+  // Shared by loadBoard and polling: if /api/board resolves a different
+  // workspace (multi-membership admin), drop the previous workspace's project
+  // state and invalidate in-flight project requests before using the new data.
+  const applyWorkspace = (id: string | undefined) => {
+    if (!id) return
+    if (workspaceRef.current && workspaceRef.current !== id) {
+      projectsGenRef.current += 1
+      projectsInFlightRef.current = false
+      setProjects([])
+      setProjectsLoaded(false)
+      setProjectsFailed(false)
+      setProjectsLoading(false)
+    }
+    workspaceRef.current = id
+    setWorkspaceId(id)
+  }
+  const fetchProjects = async (accessToken: string, opts?: { skipIfBusy?: boolean }): Promise<'ok' | 'failed' | 'stale'> => {
+    // Polls skip while a request is still out so a slow endpoint can't pile up
+    // requests that each get superseded (starvation).
+    if (opts?.skipIfBusy && projectsInFlightRef.current) return 'stale'
+    const gen = ++projectsGenRef.current
+    const issuedFor = workspaceRef.current
+    projectsInFlightRef.current = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      // AbortController is missing on very old browsers: skip the timeout there.
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+      if (controller) timer = setTimeout(() => controller.abort(), 8000)
+      const res = await fetch('/api/board/projects', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: controller?.signal,
+      })
+      const data = await res.json()
+      // Superseded / other-workspace responses are 'stale', not failures.
+      if (gen !== projectsGenRef.current || issuedFor !== workspaceRef.current) return 'stale'
+      if (!res.ok) { setProjectsFailed(true); return 'failed' }
+      const next: WorkspaceProject[] = data.projects ?? []
+      setProjects((prev) => (sameData(prev, next) ? prev : next))
+      setProjectsLoaded(true)
+      setProjectsFailed(false)
+      return 'ok'
+    } catch {
+      // timeout / network: keep whatever we have
+      if (gen !== projectsGenRef.current || issuedFor !== workspaceRef.current) return 'stale'
+      setProjectsFailed(true)
+      return 'failed'
+    } finally {
+      if (timer) clearTimeout(timer)
+      if (gen === projectsGenRef.current) projectsInFlightRef.current = false
+    }
+  }
   const [selectedEditor, setSelectedEditor] = useState<BoardEditorOption | null>(null)
   const [editorAssets, setEditorAssets] = useState<BoardAsset[] | null>(null)
   const [editorAssetsLoading, setEditorAssetsLoading] = useState(false)
@@ -91,6 +174,7 @@ export default function BoardPage() {
       }
 
       setRole(data.role)
+      applyWorkspace(data.workspace_id)
       setAssets(data.assets ?? [])
 
       if (data.role === 'admin') {
@@ -99,6 +183,11 @@ export default function BoardPage() {
         })
         const editorsData = await editorsRes.json()
         if (editorsRes.ok) setEditors(editorsData.editors ?? [])
+
+        // Projects feed the client tabs so a client with no cards yet still
+        // gets a tab. Best-effort: tabs fall back to the board's assets.
+        // Not awaited: a slow/hung projects request must not hold the skeleton.
+        void fetchProjects(session.access_token)
       }
     } catch (err) {
       setError('Failed to load board')
@@ -129,11 +218,16 @@ export default function BoardPage() {
     if (!res.ok) return
     const data = await res.json()
     if (m.pending > 0 || m.dragging || m.generation !== generation) return
+    applyWorkspace(data.workspace_id)
     const next: BoardAsset[] = data.assets ?? []
     // /api/board has no ORDER BY, so compare order-insensitively - a mere
     // row reshuffle from Postgres isn't a change worth re-rendering for.
     const byId = (list: BoardAsset[]) => [...list].sort((a, b) => a.id.localeCompare(b.id))
     setAssets((prev) => (sameData(byId(prev), byId(next)) ? prev : next))
+
+    // Keep project-derived client tabs fresh too. Not awaited: a slow
+    // projects request must never delay the board's own polling cadence.
+    if (role === 'admin') void fetchProjects(token, { skipIfBusy: true })
   }, 3000, !loading && !error && boardView === 'board')
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, assetId: string) => {
@@ -304,18 +398,12 @@ export default function BoardPage() {
     setSelectedEditor(null)
     setEditorAssets(null)
 
-    if (view === 'projects' && projects.length === 0) {
-      setProjectsLoading(true)
-      try {
-        const res = await fetch('/api/board/projects', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const data = await res.json()
-        if (res.ok) setProjects(data.projects ?? [])
-      } catch (err) {
-        // leave projects empty - the grid will just show nothing to pick
-      }
-      setProjectsLoading(false)
+    if (view === 'projects') {
+      // Always refetch on entry so the grid and client tabs are never stale;
+      // only show the spinner when there is nothing to show yet.
+      setProjectsLoading(projects.length === 0)
+      const result = await fetchProjects(token)
+      if (result !== 'stale') setProjectsLoading(false)
     }
   }
 
@@ -335,10 +423,71 @@ export default function BoardPage() {
     setEditorAssetsLoading(false)
   }
 
+  const clientTabs = useMemo<ClientTab[]>(() => {
+    if (role !== 'admin') return []
+    const tabs = buildClientTabs(assets.map((a) => ({ client: a.project_client })))
+    const known = new Set(tabs.map((t) => t.key))
+    for (const t of buildClientTabs(projects.map((p) => ({ client: p.client })))) {
+      if (!known.has(t.key)) { tabs.push({ ...t, count: 0 }); known.add(t.key) }
+    }
+    return mergeExtraClients(tabs, extraClients)
+  }, [role, assets, projects, extraClients])
+
+  // A tab can vanish (last card moved/deleted); fall back to All rather than
+  // showing an empty board for a client that no longer exists.
+  // Until the tab data is trustworthy (selection restored + projects fetched),
+  // keep the stored selection active instead of flashing back to All, and
+  // hold off creating content so New can't open with the wrong client.
+  const tabsReady = hydrated && projectsLoaded
+  // Reveal the strip only once both tab sources have loaded (or after the same
+  // 8s bound the project fetch uses) so a project-only tab can't appear late
+  // and reorder it after first paint.
+  const [stripBound, setStripBound] = useState(false)
+  useEffect(() => {
+    if (role !== 'admin') return
+    const t = setTimeout(() => setStripBound(true), 8000)
+    return () => clearTimeout(t)
+  }, [role])
+  const stripReady = tabsReady || stripBound
+  const clientPending = role === 'admin' && !tabsReady && selectedClient !== ALL_CLIENTS_KEY
+    && !clientTabs.some((t) => t.key === selectedClient)
+  const activeClient = clientPending || clientTabs.some((t) => t.key === selectedClient) ? selectedClient : ALL_CLIENTS_KEY
+  const showClientCtx = role === 'admin' && boardView !== 'editors'
+
+  // Actually reset (not just display All) so a stale key can't silently
+  // reselect if a client with that name reappears later (also when the last
+  // client disappears). Waits for the initial load to finish.
+  useEffect(() => {
+    if (tabsReady && !loading && role === 'admin' && selectedClient !== ALL_CLIENTS_KEY && activeClient === ALL_CLIENTS_KEY) {
+      setSelectedClient(ALL_CLIENTS_KEY)
+    }
+  }, [tabsReady, loading, role, selectedClient, activeClient, setSelectedClient])
+
+  const visibleAssets = useMemo(
+    () => (role === 'admin' ? assets.filter((a) => matchesClient(a.project_client, activeClient)) : assets),
+    [role, assets, activeClient]
+  )
+  // Tab counts follow the active view so a tab never promises more (or fewer)
+  // items than the grid/board beneath it shows.
+  const tabCount = (key: string) =>
+    boardView === 'projects'
+      ? projects.filter((p) => matchesClient(p.client, key)).length
+      : key === ALL_CLIENTS_KEY ? assets.length : (clientTabs.find((t) => t.key === key)?.count ?? 0)
+  const activeClientLabel = clientTabs.find((t) => t.key === activeClient)?.label
+    ?? assets.find((a) => clientKey(a.project_client) === activeClient)?.project_client?.trim()
+    ?? ''
+  // Default client for New Content: the selected tab (not All / No client).
+  const defaultClient = activeClient === ALL_CLIENTS_KEY || activeClient === NO_CLIENT_KEY ? '' : activeClientLabel
+
+  const visibleProjects = useMemo(
+    () => projects.filter((p) => matchesClient(p.client, activeClient)),
+    [projects, activeClient]
+  )
+
   const grouped = useMemo(() => {
     const map: Record<string, BoardAsset[]> = {}
     for (const col of COLUMNS) map[col.key] = []
-    for (const asset of assets) {
+    for (const asset of visibleAssets) {
       const key = map[asset.pipeline_status] ? asset.pipeline_status : 'idea'
       map[key].push(asset)
     }
@@ -348,7 +497,15 @@ export default function BoardPage() {
       map[key].sort((a, b) => a.priority - b.priority)
     }
     return map
-  }, [assets])
+  }, [visibleAssets])
+
+  const boardTitleClient = activeClient === NO_CLIENT_KEY ? 'No client' : activeClientLabel
+  const countsUnavailable = boardView === 'projects' && projectsFailed && projects.length === 0
+  const ctxText = role === 'editor'
+    ? 'Showing assets assigned to you'
+    : boardView === 'editors'
+      ? 'Showing all workspace editors'
+      : `Showing ${boardView === 'projects' ? (countsUnavailable ? 'projects (count unavailable)' : countLabel(visibleProjects.length, 'projects')) : countLabel(visibleAssets.length, 'cards')}${activeClient === ALL_CLIENTS_KEY ? ' (all clients)' : ''}`
 
   if (loading) {
     return (
@@ -361,16 +518,25 @@ export default function BoardPage() {
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopBar title="Board" icon={LayoutGrid}>
-          <span className="font-mono text-[11px] text-th-muted hidden md:inline">
-            {role === 'editor' ? 'Showing assets assigned to you' : 'Showing all workspace assets'}
-          </span>
+        <TopBar title={showClientCtx && activeClient !== ALL_CLIENTS_KEY ? `Board: ${boardTitleClient}` : 'Board'} icon={LayoutGrid}>
+          <span className="font-mono text-[11px] text-th-muted hidden md:inline">{ctxText}</span>
+          {showClientCtx && activeClient !== ALL_CLIENTS_KEY && (
+            <Button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} size="sm" variant="secondary" className="hidden md:inline-flex">Show all clients</Button>
+          )}
           {role === 'admin' && (
-            <Button onClick={() => setShowNewContent(true)} size="sm">
+            <Button onClick={() => setShowNewContent(true)} size="sm" disabled={clientPending}>
               <Plus size={13} /> New
             </Button>
           )}
         </TopBar>
+        {/* Narrow screens: the count text and "Show all clients" move out of the
+            top bar (which would squeeze the title to nothing) onto their own line. */}
+        <div className="md:hidden shrink-0 px-4 py-2 border-b border-th-border flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] text-th-muted">
+          <span className="min-w-0 break-words">{ctxText}</span>
+          {showClientCtx && activeClient !== ALL_CLIENTS_KEY && (
+            <Button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} size="sm" variant="secondary">Show all clients</Button>
+          )}
+        </div>
 
         {role === 'admin' && (
           <div className="shrink-0 bg-th-surface border-b border-th-border px-6 flex gap-1">
@@ -403,18 +569,31 @@ export default function BoardPage() {
           </div>
         ) : boardView === 'projects' ? (
           <div className="flex-1 overflow-y-auto p-6">
+            {projectsFailed && (
+              <div role="alert" className="mb-4 flex flex-wrap items-center gap-3 text-[13px] text-th-changes">
+                Couldn&apos;t load projects. Check your connection and try again.
+                <Button onClick={retryProjects} size="sm" variant="secondary" aria-busy={projectsRetrying} aria-disabled={projectsRetrying}>
+                  {projectsRetrying ? 'Retrying...' : 'Retry'}
+                </Button>
+              </div>
+            )}
             {projectsLoading ? (
               <div className="flex items-center justify-center py-16">
                 <Orb state="composing" size={64} label="Loading" />
               </div>
-            ) : projects.length === 0 ? (
+            ) : visibleProjects.length === 0 && projectsFailed ? null : visibleProjects.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
                 <FolderKanban size={32} className="text-th-faint" />
-                <p className="text-[13px] text-th-muted">No projects in this workspace yet.</p>
+                <p className="text-[13px] text-th-muted">
+                  {activeClient === ALL_CLIENTS_KEY
+                    ? 'No projects in this workspace yet.'
+                    : activeClient === NO_CLIENT_KEY ? 'No projects without a client.' : `No projects for ${activeClientLabel} yet`}
+                </p>
+                <Button onClick={() => setShowNewContent(true)} size="sm" disabled={clientPending}><Plus size={13} /> New{defaultClient ? ` for ${defaultClient}` : ''}</Button>
               </div>
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
-                {projects.map((p) => (
+                {visibleProjects.map((p) => (
                   <ProjectCard key={p.id} project={{ ...p, client: p.client ?? '' }} view="grid" />
                 ))}
               </div>
@@ -557,8 +736,8 @@ export default function BoardPage() {
                 }}
               >
                 <div className="flex items-center" style={{ gap: 8, padding: '9px 16px' }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--th-text)' }}>{assets.length}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--th-muted)' }}>total</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--th-text)' }}>{visibleAssets.length}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--th-muted)' }}>{visibleAssets.length === 1 ? 'card' : 'cards'} total</span>
                 </div>
                 <div style={{ width: 1, height: 20, background: 'var(--th-border)', margin: '0 2px' }} />
                 {COLUMNS.map((col) => (
@@ -582,6 +761,13 @@ export default function BoardPage() {
                 ))}
               </div>
             </div>
+
+            {activeClient !== ALL_CLIENTS_KEY && visibleAssets.length === 0 && (
+              <div className="shrink-0 mx-6 mt-4 flex items-center gap-3 px-4 py-3 rounded-th border border-dashed border-th-border text-[12px] text-th-muted">
+                <span>{activeClient === NO_CLIENT_KEY ? 'No cards without a client.' : `No cards for ${activeClientLabel} yet`}</span>
+                <Button onClick={() => setShowNewContent(true)} size="sm" disabled={clientPending}><Plus size={13} /> New{defaultClient ? ` for ${defaultClient}` : ''}</Button>
+              </div>
+            )}
 
             {/* Columns */}
             <div className="flex-1 overflow-x-auto overflow-y-hidden p-6">
@@ -635,6 +821,22 @@ export default function BoardPage() {
             </div>
           </>
         )}
+
+        {role === 'admin' && !error && boardView !== 'editors' && !stripReady && (
+          <div aria-hidden className="shrink-0 h-9 bg-th-surface border-t border-th-border" />
+        )}
+        {role === 'admin' && !error && boardView !== 'editors' && stripReady && (
+          <ClientTabStrip
+            tabs={clientTabs}
+            allCount={tabCount(ALL_CLIENTS_KEY)}
+            countFor={tabCount}
+            activeKey={activeClient}
+            onSelect={setSelectedClient}
+            onAdd={(name) => addClient(name, clientTabs.map((t) => t.key))}
+            unit={boardView === 'projects' ? 'projects' : 'cards'}
+            countsUnavailable={countsUnavailable}
+          />
+        )}
       </div>
 
       <Toast toast={toast} onDismiss={dismissToast} />
@@ -642,6 +844,7 @@ export default function BoardPage() {
 
       {showNewContent && (
         <NewContentModal
+          defaultClient={defaultClient}
           onClose={() => setShowNewContent(false)}
           onCreated={() => {
             setShowNewContent(false)
