@@ -38,7 +38,7 @@ export function buildClientTabs(items: { client: string | null | undefined }[]):
   tabs.sort((a, b) => {
     if (a.key === NO_CLIENT_KEY) return 1
     if (b.key === NO_CLIENT_KEY) return -1
-    return a.label.localeCompare(b.label)
+    return a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })
   })
   return tabs
 }
@@ -52,7 +52,7 @@ export function sortClientTabs(tabs: ClientTab[]): ClientTab[] {
   return [...tabs].sort((a, b) => {
     if (a.key === NO_CLIENT_KEY) return 1
     if (b.key === NO_CLIENT_KEY) return -1
-    return a.label.localeCompare(b.label)
+    return a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })
   })
 }
 

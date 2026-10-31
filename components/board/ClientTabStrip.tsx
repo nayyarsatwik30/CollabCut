@@ -29,6 +29,9 @@ export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, 
   const stripRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const refocusPlus = useRef(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const addingRef = useRef(false)
+  const [popRight, setPopRight] = useState(12)
   const doneRef = useRef(false) // guards against Enter + blur both submitting
 
   const close = (returnFocus: boolean) => {
@@ -42,14 +45,52 @@ export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, 
   }, [adding])
 
   useEffect(() => {
+    addingRef.current = adding
     if (adding) inputRef.current?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
   }, [adding])
+
+  // Anchor the hint/error overlay above the inline input (right-aligned to it,
+  // kept inside the footer). Absolute + out of flow, so height never changes.
+  useEffect(() => {
+    if (!adding) return
+    const place = () => {
+      const root = rootRef.current?.getBoundingClientRect()
+      const inp = inputRef.current?.getBoundingClientRect()
+      if (!root || !inp) return
+      setPopRight(Math.max(12, Math.round(root.right - inp.right)))
+    }
+    place()
+    const list = stripRef.current
+    list?.addEventListener('scroll', place)
+    window.addEventListener('resize', place)
+    return () => { list?.removeEventListener('scroll', place); window.removeEventListener('resize', place) }
+  }, [adding, error, name])
+
+  // Vertical wheel scrolls the tab list sideways (only when it overflows and
+  // can still move that way; otherwise the page keeps the event).
+  useEffect(() => {
+    const el = stripRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+      const max = el.scrollWidth - el.clientWidth
+      if (max <= 0) return
+      if ((e.deltaY < 0 && el.scrollLeft <= 0) || (e.deltaY > 0 && el.scrollLeft >= max)) return
+      el.scrollLeft += e.deltaY
+      e.preventDefault()
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
 
   // Keep the active tab visible in the scrolling list, on change and after a
   // viewport resize (the list's visible width changes).
   useEffect(() => {
-    const reveal = () =>
+    const reveal = () => {
+      // While the input is open keep IT in view instead of the active tab.
+      if (addingRef.current) { inputRef.current?.scrollIntoView({ inline: 'nearest', block: 'nearest' }); return }
       stripRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+    }
     reveal()
     window.addEventListener('resize', reveal)
     return () => window.removeEventListener('resize', reveal)
@@ -57,9 +98,14 @@ export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, 
 
   const startAdd = () => { doneRef.current = false; setAdding(true) }
 
-  const submit = (returnFocus: boolean) => {
+  // fromBlur: an empty/whitespace name just cancels; Enter shows feedback instead.
+  const submit = (returnFocus: boolean, fromBlur = false) => {
     if (doneRef.current) return
-    if (!name.trim()) { doneRef.current = true; close(returnFocus); return }
+    if (!name.trim()) {
+      if (fromBlur) { doneRef.current = true; close(returnFocus) }
+      else setError('Enter a client name')
+      return
+    }
     const err = onAdd(name)
     if (err) { setError(err); return }
     doneRef.current = true
@@ -67,7 +113,7 @@ export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, 
   }
 
   return (
-    <div className="relative shrink-0 h-9 bg-th-surface border-t border-th-border flex items-stretch overflow-visible">
+    <div ref={rootRef} className="relative shrink-0 h-9 bg-th-surface border-t border-th-border flex items-stretch overflow-visible">
       <div
         ref={stripRef}
         role="group"
@@ -108,12 +154,14 @@ export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, 
                 if (e.key === 'Enter') { e.preventDefault(); submit(true) }
                 else if (e.key === 'Escape') { doneRef.current = true; close(true) }
               }}
-              onBlur={() => submit(false)}
+              onBlur={() => submit(false, true)}
               placeholder="Client name"
               aria-label="New client name"
               aria-invalid={!!error}
               title={error || ADD_HINT}
-              className={`w-[140px] h-6 px-2 text-[12px] rounded-th bg-th-bg border text-th-text ${error ? 'border-th-changes ring-1 ring-th-changes' : 'border-th-border'}`}
+              // Inline style so the error state beats the global input:focus rule.
+              style={error ? { borderColor: 'var(--th-changes)', boxShadow: '0 0 0 2px color-mix(in srgb, var(--th-changes) 35%, transparent)' } : undefined}
+              className="w-[140px] h-6 px-2 text-[12px] rounded-th bg-th-bg border border-th-border text-th-text"
             />
             {error && <span role="alert" className="sr-only">{error}</span>}
           </div>
@@ -133,7 +181,8 @@ export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, 
       {adding && (
         <div
           aria-hidden
-          className={`pointer-events-none absolute bottom-full left-3 mb-1 max-w-[calc(100%-1.5rem)] z-20 rounded-th border px-2 py-1 text-[11px] bg-th-surface ${error ? 'border-th-changes text-th-changes' : 'border-th-border text-th-muted'}`}
+          style={{ right: popRight }}
+          className={`pointer-events-none absolute bottom-full mb-1 max-w-[calc(100%-1.5rem)] z-20 rounded-th border px-2 py-1 text-[11px] bg-th-surface ${error ? 'border-th-changes text-th-changes' : 'border-th-border text-th-muted'}`}
         >
           {error || 'Saved on this device only until a project uses this name'}
         </div>
