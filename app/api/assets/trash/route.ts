@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
+import { deleteB2Objects } from '@/lib/comment-attachments'
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req)
@@ -111,10 +112,36 @@ export async function DELETE(req: NextRequest) {
   const check = await authorizeAsset(asset_id, user.id)
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status })
 
+  // Reference files attached to this asset's comments live in raw_files; the
+  // asset delete only cascades the link rows. In one transaction: lock the
+  // asset row (an in-flight attachment insert needs a share lock on it via its
+  // foreign key, so it serializes with this), collect the files, delete them
+  // and the asset, commit - then remove the B2 objects best-effort.
+  let attachmentKeys: string[] = []
+  const client = await migrationDb.connect()
   try {
-    await migrationDb.query(`DELETE FROM assets WHERE id = $1`, [asset_id])
+    await client.query('BEGIN')
+    await client.query(`SELECT id FROM assets WHERE id = $1 FOR UPDATE`, [asset_id])
+    const hasTable = (await client.query(`SELECT to_regclass('public.comment_attachments') AS t`)).rows[0].t
+    if (hasTable) {
+      const attachments = await client.query(
+        `SELECT rf.id, rf.b2_key FROM comment_attachments ca JOIN raw_files rf ON rf.id = ca.raw_file_id
+         WHERE ca.asset_id = $1`,
+        [asset_id]
+      )
+      if (attachments.rows.length > 0) {
+        await client.query(`DELETE FROM raw_files WHERE id = ANY($1::uuid[])`, [attachments.rows.map((f) => f.id)])
+        attachmentKeys = attachments.rows.map((f) => f.b2_key)
+      }
+    }
+    await client.query(`DELETE FROM assets WHERE id = $1`, [asset_id])
+    await client.query('COMMIT')
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
     return NextResponse.json({ error: (err as Error).message }, { status: 500 })
+  } finally {
+    client.release()
   }
+  await deleteB2Objects(attachmentKeys)
   return NextResponse.json({ success: true })
 }
