@@ -72,11 +72,15 @@ export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, 
     const el = stripRef.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) return // pinch-zoom / Ctrl+wheel: never hijack
       if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
       const max = el.scrollWidth - el.clientWidth
       if (max <= 0) return
-      if ((e.deltaY < 0 && el.scrollLeft <= 0) || (e.deltaY > 0 && el.scrollLeft >= max)) return
-      el.scrollLeft += e.deltaY
+      // deltaY isn't always pixels: DOM_DELTA_LINE (1) and DOM_DELTA_PAGE (2)
+      // need converting first.
+      const delta = e.deltaMode === 1 ? e.deltaY * 18 : e.deltaMode === 2 ? e.deltaY * el.clientWidth : e.deltaY
+      if ((delta < 0 && el.scrollLeft <= 0) || (delta > 0 && el.scrollLeft >= max)) return
+      el.scrollLeft += delta
       e.preventDefault()
     }
     el.addEventListener('wheel', onWheel, { passive: false })
