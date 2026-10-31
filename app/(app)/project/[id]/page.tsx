@@ -19,7 +19,7 @@ type Tab = 'assets' | 'raw-footage' | 'members' | 'brief'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'assets', label: 'Assets' },
-  { id: 'raw-footage', label: 'Raw Footage' },
+  { id: 'raw-footage', label: 'Raw Files' },
   { id: 'members', label: 'Members' },
   { id: 'brief', label: 'Brief' },
 ]
@@ -454,6 +454,12 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     <Upload size={13} /> Upload
                   </button>
                 </div>
+                {project?.viewer_is_admin && (
+                  <p className="text-[11px] text-th-faint -mt-1 mb-3">
+                    Have audio, photos or camera originals instead of a cut?{' '}
+                    <button onClick={() => setTab('raw-footage')} className="underline hover:text-th-text">Add them under Raw Files</button>.
+                  </p>
+                )}
 
                 {customAssets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 gap-3 text-center border border-dashed border-th-border rounded-th-lg">
