@@ -10,10 +10,10 @@ import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { NewContentModal } from '@/components/board/NewContentModal'
 import { useSessionGuard } from '@/lib/useSessionGuard'
+import { PriorityBadge } from '@/components/PriorityBadge'
 import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, countLabel, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
 import { useSelectedClient } from '@/lib/useSelectedClient'
 import { ClientTabStrip } from '@/components/board/ClientTabStrip'
-import { priorityMeta } from '@/lib/priority'
 import type { Project } from '@/lib/types'
 
 interface AssignedAsset {
@@ -397,12 +397,7 @@ export default function DashboardPage() {
                         <div className="p-3.5 flex-1 flex flex-col justify-center gap-1.5 min-h-[56px]">
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-[13px] font-semibold truncate">{a.name}</p>
-                            <span
-                              className="app-pill shrink-0 font-mono text-[10px]"
-                              style={{ color: priorityMeta(a.priority).color, background: `color-mix(in srgb, ${priorityMeta(a.priority).color} 16%, transparent)` }}
-                            >
-                              {priorityMeta(a.priority).label}
-                            </span>
+                            <PriorityBadge priority={a.priority} />
                           </div>
                           <p className="text-[11px] text-th-muted truncate">{a.project_client}</p>
                           <span
