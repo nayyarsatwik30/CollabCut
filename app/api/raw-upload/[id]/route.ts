@@ -9,6 +9,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if ('error' in auth) return auth.error
   const { user } = auth
 
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id)) {
+    return NextResponse.json({ error: 'File not found' }, { status: 404 })
+  }
+
   const rawFileResult = await migrationDb.query(
     `SELECT rf.id, rf.b2_key, rf.project_id, p.workspace_id
      FROM raw_files rf

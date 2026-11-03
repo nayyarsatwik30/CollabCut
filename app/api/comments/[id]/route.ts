@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { requireAuth, hasWorkspaceRole, isAssignedEditor } from '@/lib/api-auth'
+import { deleteB2Objects, isMissingTable } from '@/lib/comment-attachments'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireAuth(req)
@@ -76,7 +77,37 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   if (!authorized) return NextResponse.json({ error: 'Not authorized to delete this comment' }, { status: 403 })
 
-  await migrationDb.query(`DELETE FROM comments WHERE id = $1`, [params.id])
+  // Files attached to the note go with it (storage rows + B2 objects), so a
+  // deleted comment leaves nothing reachable or counted against quota.
+  let attachmentFiles: { id: string; b2_key: string }[] = []
+  try {
+    const attachments = await migrationDb.query(
+      `SELECT rf.id, rf.b2_key FROM comment_attachments ca JOIN raw_files rf ON rf.id = ca.raw_file_id
+       WHERE ca.comment_id = $1`,
+      [params.id]
+    )
+    attachmentFiles = attachments.rows
+  } catch (err) {
+    if (!isMissingTable(err)) throw err
+  }
+
+  // One transaction: the note and its raw_files rows go together or not at
+  // all; B2 objects are removed only after the commit.
+  const client = await migrationDb.connect()
+  try {
+    await client.query('BEGIN')
+    if (attachmentFiles.length > 0) {
+      await client.query(`DELETE FROM raw_files WHERE id = ANY($1::uuid[])`, [attachmentFiles.map((f) => f.id)])
+    }
+    await client.query(`DELETE FROM comments WHERE id = $1`, [params.id])
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
+  await deleteB2Objects(attachmentFiles.map((f) => f.b2_key))
 
   return NextResponse.json({ success: true })
 }

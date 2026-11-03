@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Plus, MessageSquare } from 'lucide-react'
 import { Comment, CommentStatus } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { CommentCard } from './CommentCard'
+import { MAX_ATTACHMENTS_PER_COMMENT, MAX_COMMENT_ATTACHMENT_BYTES } from '@/lib/comment-attachment-rules'
+import { AttachButton, DraftAttachmentList, useCommentAttachments } from './CommentAttachments'
 
 type Filter = 'all' | CommentStatus
 
@@ -12,7 +14,9 @@ interface CommentPanelProps {
   comments: Comment[]
   currentTime: number
   onSeek: (time: number) => void
-  onAdd: (text: string, status: CommentStatus) => Promise<boolean>
+  onAdd: (text: string, status: CommentStatus, attachmentIds?: string[]) => Promise<boolean>
+  /** Enables the Attach button (logged-in review screen only). */
+  attachments?: { assetId: string; token: string | null }
   onResolve: (id: string) => void
   onDelete: (id: string) => void
   onReply: (id: string, text: string) => void
@@ -31,19 +35,32 @@ const DRAFT_STATUS_OPTIONS: { key: CommentStatus; label: string; color: string }
   { key: 'resolved', label: 'Done',    color: 'var(--th-resolved)' },
 ]
 
-export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, onDelete, onReply }: CommentPanelProps) {
+export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, onDelete, onReply, attachments }: CommentPanelProps) {
   const [filter,       setFilter]       = useState<Filter>('all')
   const [draftText,    setDraftText]    = useState('')
   const [draftStatus,  setDraftStatus]  = useState<CommentStatus>('open')
+
+  const drafts = useCommentAttachments(attachments?.assetId ?? null, attachments?.token ?? null)
 
   const filtered = filter === 'all'
     ? comments
     : comments.filter((c) => c.status === filter)
 
+  const postingRef = useRef(false)
+
   const handleSubmit = async () => {
-    if (!draftText.trim()) return
-    const ok = await onAdd(draftText.trim(), draftStatus)
-    if (ok) setDraftText('')
+    if (!draftText.trim() || drafts.busy || drafts.errorCount > 0 || postingRef.current) return
+    postingRef.current = true
+    try {
+      const submittedIds = [...drafts.ids] // snapshot: files added during the request aren't part of this post
+      const ok = await onAdd(draftText.trim(), draftStatus, submittedIds)
+      if (ok) {
+        setDraftText('')
+        drafts.clearPosted(submittedIds)
+      }
+    } finally {
+      postingRef.current = false
+    }
   }
 
   return (
@@ -105,6 +122,7 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
             AT {formatTimecode(currentTime)}
           </span>
           <div className="ml-auto flex items-center gap-1">
+            {attachments && <AttachButton onFiles={drafts.addFiles} disabled={drafts.full} />}
             {DRAFT_STATUS_OPTIONS.map(({ key, label, color }) => (
               <button
                 key={key}
@@ -133,14 +151,32 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
           style={{ borderColor: draftText ? 'var(--th-accent)' : 'var(--th-border)' }}
         />
 
+        {attachments && (
+          <p aria-live="polite" className="mt-1.5 text-[10px] text-th-faint">
+            {drafts.full
+              ? 'Remove one to add another.'
+              : `Attach up to ${MAX_ATTACHMENTS_PER_COMMENT} files (images, video, audio, PDF, text), ${MAX_COMMENT_ATTACHMENT_BYTES / 1024 / 1024}MB each`}
+          </p>
+        )}
+        <DraftAttachmentList items={drafts.items} onRemove={drafts.remove} onRetry={drafts.retry} />
+        {drafts.errorCount > 0 && (
+          <p role="alert" className="mt-1.5 text-[11px] text-th-changes">
+            {drafts.errorCount} file{drafts.errorCount > 1 ? 's' : ''} didn&apos;t attach - remove or retry.
+          </p>
+        )}
+        {!draftText.trim() && drafts.ids.length > 0 && (
+          <p className="mt-1.5 text-[11px] text-th-muted">Add a note to post your file.</p>
+        )}
+
         {/* Submit — only visible when typing */}
         {draftText.trim() && (
           <button
             onClick={handleSubmit}
-            className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:bg-th-accent-hover transition-colors animate-fade-in"
+            disabled={drafts.busy || drafts.errorCount > 0}
+            className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:bg-th-accent-hover transition-colors animate-fade-in disabled:opacity-60"
             style={{ boxShadow: '0 4px 14px color-mix(in srgb, var(--th-accent) 40%, transparent)' }}
           >
-            <Plus size={14} /> Post note at {formatTimecode(currentTime)}
+            <Plus size={14} /> {drafts.busy ? 'Uploading file…' : `Post note at ${formatTimecode(currentTime)}`}
           </button>
         )}
       </div>

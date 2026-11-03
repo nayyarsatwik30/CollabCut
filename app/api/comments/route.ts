@@ -4,6 +4,10 @@ import { createNotification } from '@/lib/notifications'
 import { syncProjectStatus } from '@/lib/project-status'
 import { requireAuth, hasWorkspaceRole, canAccessAsset } from '@/lib/api-auth'
 import { verifyShareAccess } from '@/lib/share-access'
+import {
+  MAX_ATTACHMENTS_PER_COMMENT, MIGRATION_MESSAGE, assetIsLive, attachmentSelect, isMissingTable,
+  type CommentAttachment,
+} from '@/lib/comment-attachments'
 
 // Comments are readable by a logged-in admin/assigned editor (the review
 // screen) OR by anyone holding a valid, non-expired, correctly-passworded
@@ -42,6 +46,25 @@ export async function GET(req: NextRequest) {
     repliesByComment.get(reply.comment_id)!.push(reply)
   }
 
+  // Reference files attached to comments are for logged-in members only -
+  // a public share link never sees them (and the download route refuses it).
+  // Skipped quietly when the migration has not been applied yet.
+  const attachmentsByComment = new Map<string, CommentAttachment[]>()
+  if (!shareToken && comments.length > 0 && (await assetIsLive(asset_id))) {
+    try {
+      const attachmentsResult = await migrationDb.query(
+        `${attachmentSelect()} WHERE ca.comment_id = ANY($1::uuid[]) ORDER BY ca.created_at ASC`,
+        [comments.map((c) => c.id)]
+      )
+      for (const a of attachmentsResult.rows) {
+        if (!attachmentsByComment.has(a.comment_id)) attachmentsByComment.set(a.comment_id, [])
+        attachmentsByComment.get(a.comment_id)!.push(a)
+      }
+    } catch (err) {
+      if (!isMissingTable(err)) throw err
+    }
+  }
+
   // author_id is an internal user UUID; a share-token caller has no use for
   // it and it would hand a public link holder real user ids.
   const hideAuthorId = !!shareToken
@@ -54,6 +77,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     comments: comments.map((c) => ({
       ...strip(c),
+      ...(shareToken ? {} : { attachments: attachmentsByComment.get(c.id) ?? [] }),
       replies: (repliesByComment.get(c.id) ?? []).map((r) => strip(r as { author_id?: unknown })),
     })),
   })
@@ -67,7 +91,7 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { asset_id, time_sec, text, status } = await req.json()
+  const { asset_id, time_sec, text, status, attachment_ids } = await req.json()
 
   if (!asset_id || time_sec === undefined || !text) {
     return NextResponse.json({ error: 'asset_id, time_sec and text required' }, { status: 400 })
@@ -76,18 +100,72 @@ export async function POST(req: NextRequest) {
   const authorized = await canAccessAsset(user.id, asset_id)
   if (!authorized) return NextResponse.json({ error: 'Not authorized to comment on this asset' }, { status: 403 })
 
+  // Optional reference files, uploaded beforehand through
+  // /api/comments/attachments/*. Only the caller's own unposted uploads on
+  // this very asset can be linked.
+  const attachmentIds: string[] = Array.isArray(attachment_ids)
+    ? Array.from(new Set(attachment_ids.filter((id): id is string => typeof id === 'string')))
+    : []
+  if (attachmentIds.length > MAX_ATTACHMENTS_PER_COMMENT) {
+    return NextResponse.json({ error: `At most ${MAX_ATTACHMENTS_PER_COMMENT} attachments per note` }, { status: 400 })
+  }
+  if (attachmentIds.length > 0) {
+    try {
+      const owned = await migrationDb.query(
+        `SELECT id FROM comment_attachments
+         WHERE id = ANY($1::uuid[]) AND asset_id = $2 AND uploaded_by = $3 AND comment_id IS NULL`,
+        [attachmentIds, asset_id, user.id]
+      )
+      if (owned.rows.length !== attachmentIds.length) {
+        return NextResponse.json({ error: 'An attachment is no longer available. Remove it and try again.' }, { status: 400 })
+      }
+    } catch (err) {
+      if (isMissingTable(err)) return NextResponse.json({ error: MIGRATION_MESSAGE }, { status: 503 })
+      if ((err as { code?: string }).code === '22P02') return NextResponse.json({ error: 'Invalid attachment' }, { status: 400 })
+      throw err
+    }
+  }
+
   // Always attributed to the caller's own profile - never a name from the
   // request body, which anyone could set to someone else's.
   const profileResult = await migrationDb.query(`SELECT name, email FROM profiles WHERE id = $1`, [user.id])
   const profile = profileResult.rows[0]
   const authorName = profile?.name || profile?.email || user.email || 'Unknown'
 
-  const insertResult = await migrationDb.query(
-    `INSERT INTO comments (asset_id, time_sec, text, status, author_id, author_name)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [asset_id, time_sec, text, status ?? 'open', user.id, authorName]
-  )
-  const data = insertResult.rows[0]
+  // Comment + attachment link in one transaction: a double submit that loses
+  // the race rolls back instead of leaving a note without its files.
+  const client = await migrationDb.connect()
+  let data
+  try {
+    await client.query('BEGIN')
+    const insertResult = await client.query(
+      `INSERT INTO comments (asset_id, time_sec, text, status, author_id, author_name)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [asset_id, time_sec, text, status ?? 'open', user.id, authorName]
+    )
+    data = insertResult.rows[0]
+
+    if (attachmentIds.length > 0) {
+      const linked = await client.query(
+        `UPDATE comment_attachments SET comment_id = $1
+         WHERE id = ANY($2::uuid[]) AND asset_id = $3 AND uploaded_by = $4 AND comment_id IS NULL
+         RETURNING id`,
+        [data.id, attachmentIds, asset_id, user.id]
+      )
+      if (linked.rows.length !== attachmentIds.length) {
+        await client.query('ROLLBACK')
+        return NextResponse.json({ error: 'An attachment is no longer available. Remove it and try again.' }, { status: 409 })
+      }
+      const attached = await client.query(`${attachmentSelect()} WHERE ca.comment_id = $1 ORDER BY ca.created_at ASC`, [data.id])
+      data.attachments = attached.rows
+    }
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
 
   // Single lookup, reused below for both the pipeline_status transition and
   // Trigger 3 (notification). Same asset/project/workspace_id shape either
