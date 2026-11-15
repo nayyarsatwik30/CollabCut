@@ -27,6 +27,13 @@ module.exports = {
         'th-resolved':    'var(--th-resolved)',
         'th-changes':     'var(--th-changes)',
         'th-info':        'var(--th-info)',
+        // Landing tokens — defined in components/landing/landing.css
+        'lp-bg':     'var(--bg)',
+        'lp-fg':     'var(--fg)',
+        'lp-muted':  'var(--muted)',
+        'lp-line':   'var(--line)',
+        'lp-accent': 'var(--accent)',
+        'lp-glow':   'var(--glow)',
       },
       borderRadius: {
         'th':    'var(--th-r)',

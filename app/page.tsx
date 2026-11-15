@@ -1,10 +1,10 @@
-import { AgencyLanding } from '@/components/collabcut-landing'
+import { LandingPage } from '@/components/landing/LandingPage'
 
-// Individual landing hidden until agency phase completes; restore by
-// rendering <GeneralLanding /> here (still exported from
-// components/collabcut-landing) instead of <AgencyLanding />.
+// Redesigned landing (components/landing). The previous one is still in
+// components/collabcut-landing (AgencyLanding / GeneralLanding) and still
+// serves /agencies until the redesign is complete.
 export default function Page() {
-  return <AgencyLanding />
+  return <LandingPage />
 }
 
 export const metadata = {
@@ -19,4 +19,4 @@ export const metadata = {
   },
 }
 
-export const viewport = { themeColor: [{ media: '(prefers-color-scheme: light)', color: '#ffffff' }, { media: '(prefers-color-scheme: dark)', color: '#17191f' }] }
+export const viewport = { themeColor: '#000000' }
