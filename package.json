@@ -15,6 +15,7 @@
     "@mux/mux-uploader": "^1.5.0",
     "@mux/upchunk": "^3.5.0",
     "@radix-ui/react-slot": "^1.5.0",
+    "@react-three/fiber": "8.17.10",
     "@vercel/functions": "^3.10.3",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
@@ -30,7 +31,8 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "tailwind-merge": "^2.3.0",
-    "thinking-orbs": "0.3.2"
+    "thinking-orbs": "0.3.2",
+    "three": "0.169.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -39,6 +41,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/three": "0.169.0",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
