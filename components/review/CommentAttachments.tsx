@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Paperclip, X, Eye, FileText, Film, Music, Image as ImageIcon, CircleAlert, Loader2 } from 'lucide-react'
+import { Paperclip, X, Eye, FileText, Film, Music, Image as ImageIcon, CircleAlert, Loader2 } from '@/components/ui/icons'
 import { DownloadIcon } from '@/components/ui/icons'
 import {
   ATTACHMENT_ACCEPT, MAX_ATTACHMENTS_PER_COMMENT, MAX_COMMENT_ATTACHMENT_BYTES, attachmentContentType, isInlineSafe,
 } from '@/lib/comment-attachment-rules'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 export interface PostedAttachment {
   id: string
@@ -213,15 +215,16 @@ export function AttachButton({ onFiles, disabled }: { onFiles: (files: FileList)
   const ref = useRef<HTMLInputElement>(null)
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="xs"
         onClick={() => ref.current?.click()}
         disabled={disabled}
         title="Attach a reference file"
-        className="flex items-center gap-1 h-6 px-2 rounded-th-full border border-th-border text-[10px] font-semibold text-th-muted hover:text-th-text hover:border-th-accent-line transition-colors btn-press disabled:opacity-40"
       >
         <Paperclip size={11} /> Attach
-      </button>
+      </Button>
       <input
         ref={ref}
         type="file"
@@ -248,9 +251,9 @@ export function DraftAttachmentList({ items, onRemove, onRetry }: { items: Draft
             <span className="font-mono text-[10px] text-th-faint shrink-0">
               {i.state === 'uploading' ? `${i.progress}%` : formatSize(i.size)}
             </span>
-            <button type="button" aria-label={`Remove ${i.name}`} onClick={() => onRemove(i.key)} title="Remove" className="text-th-muted hover:text-th-changes shrink-0">
+            <IconButton type="button" size="xs" variant="danger" label={`Remove ${i.name}`} onClick={() => onRemove(i.key)} className="shrink-0">
               <X size={12} />
-            </button>
+            </IconButton>
           </div>
           {i.state === 'uploading' && (
             <div className="mt-1 h-1 rounded-full bg-th-border overflow-hidden">
@@ -261,7 +264,7 @@ export function DraftAttachmentList({ items, onRemove, onRetry }: { items: Draft
             <p role="alert" className="mt-0.5 text-[10px] text-th-changes">
               {i.error}
               {onRetry && i.retryable && (
-                <button type="button" aria-label={`Retry ${i.name}`} onClick={() => onRetry(i.key)} className="ml-2 underline font-semibold">Retry</button>
+                <Button type="button" variant="link" aria-label={`Retry ${i.name}`} onClick={() => onRetry(i.key)} className="ml-2 text-[inherit] align-baseline">Retry</Button>
               )}
             </p>
           )}
@@ -323,11 +326,9 @@ export function CommentAttachmentList({ attachments }: { attachments: PostedAtta
             <span className="text-[11px] truncate flex-1" title={a.file_name}>{a.file_name}</span>
             <span className="font-mono text-[10px] text-th-faint shrink-0">{formatSize(a.file_size_bytes)}</span>
             {isInlineSafe(a.content_type) && (
-              <button type="button" onClick={() => openPreview(a)} disabled={busyId === a.id} title="Preview"
-                className="text-th-muted hover:text-th-text shrink-0 disabled:opacity-40"><Eye size={12} /></button>
+              <IconButton type="button" size="xs" onClick={() => openPreview(a)} disabled={busyId === a.id} label="Preview" className="shrink-0"><Eye size={12} /></IconButton>
             )}
-            <button type="button" onClick={() => download(a)} disabled={busyId === a.id} title="Download"
-              className="text-th-muted hover:text-th-text shrink-0 disabled:opacity-40"><DownloadIcon size={12} /></button>
+            <IconButton type="button" size="xs" onClick={() => download(a)} disabled={busyId === a.id} label="Download" className="shrink-0"><DownloadIcon size={12} /></IconButton>
           </div>
         )
       })}
@@ -335,9 +336,9 @@ export function CommentAttachmentList({ attachments }: { attachments: PostedAtta
 
       {preview && (
         <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-6" onClick={() => setPreview(null)}>
-          <button type="button" onClick={() => setPreview(null)} className="absolute top-4 right-4 text-white/80 hover:text-white" title="Close">
+          <IconButton type="button" variant="glass" size="lg" onClick={() => setPreview(null)} label="Close" className="absolute top-4 right-4">
             <X size={20} />
-          </button>
+          </IconButton>
           <div className="max-w-[90vw] max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
             {preview.type.startsWith('image/') ? (
               // eslint-disable-next-line @next/next/no-img-element

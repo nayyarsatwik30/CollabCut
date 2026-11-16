@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, UserPlus, CircleCheck, Check, CheckCheck } from 'lucide-react'
+import { Bell, UserPlus, CircleCheck, Check, CheckCheck } from '@/components/ui/icons'
 import { CommentIcon, UploadIcon } from '@/components/ui/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TopBar } from '@/components/layout/TopBar'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { Orb } from '@/components/ui/Orb'
 import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 interface Notification {
   id: string
@@ -146,14 +147,9 @@ export default function NotificationsPage() {
                     </div>
                   </button>
                   {!n.read && (
-                    <button
-                      onClick={() => markAsRead(n.id)}
-                      title="Mark as read"
-                      className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-1.5 text-th-accent-text hover:bg-th-accent hover:text-th-accent-fg transition-colors btn-press"
-                      style={{ background: 'color-mix(in srgb, var(--th-accent) 16%, transparent)' }}
-                    >
+                    <IconButton size="xs" variant="subtle" onClick={() => markAsRead(n.id)} label="Mark as read" className="shrink-0 mt-1.5">
                       <Check size={11} strokeWidth={3} />
-                    </button>
+                    </IconButton>
                   )}
                 </div>
               )

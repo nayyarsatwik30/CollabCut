@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronDown, Check, Pencil, Square, Circle, Minus, Trash2, Clock, X, FileText, ExternalLink, StickyNote, Link2 } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Check, Pencil, Square, Circle, Minus, Trash2, Clock, X, FileText, ExternalLink, StickyNote, Link2 } from '@/components/ui/icons'
 import { ApproveIcon, CommentIcon, ReviewLinkIcon, UploadIcon, VersionsIcon } from '@/components/ui/icons'
 import { TopBar } from '@/components/layout/TopBar'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
@@ -498,19 +498,21 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                               key={v.id}
                               className="flex items-center border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors"
                             >
-                              <button
+                              <Button
+                                variant="nav"
                                 onClick={() => handleSwitchVersion(v.id)}
-                                className="flex-1 min-w-0 flex items-center gap-2.5 pl-4 pr-2 py-3 text-left btn-press"
+                                aria-current={v.id === asset.id ? 'true' : undefined}
+                                className="flex-1 min-w-0 gap-2.5 text-left [--btn-h:52px] [--nav-px:16px]"
                               >
-                                <VersionsIcon size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
+                                <VersionsIcon size={12} />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-text)' }}>
                                     v{v.version}
                                   </p>
                                   <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
                                 </div>
-                                {v.id === asset.id && <Check size={12} className="text-th-accent-text shrink-0" />}
-                              </button>
+                                {v.id === asset.id && <Check size={12} className="shrink-0" />}
+                              </Button>
                               {canDelete ? (
                                 <IconButton
                                   onClick={() => handleDeleteVersion(v)}
@@ -622,26 +624,24 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         <div className="h-10 shrink-0 bg-th-surface border-b border-th-border flex items-center gap-2 px-4">
           <span className="font-mono text-[10px] uppercase tracking-wider text-th-muted mr-1">Annotate</span>
           {DRAW_TOOLS.map(({ key, icon: Icon, label }) => (
-            <button
+            <Button
               key={String(key)}
+              variant="chip"
+              aria-pressed={drawTool === key}
               onClick={() => setDrawTool(drawTool === key ? null : key)}
-              className="flex items-center gap-1.5 h-7 px-3 rounded-th-full text-[11px] btn-press transition-all"
-              style={{
-                background: drawTool === key ? 'color-mix(in srgb, var(--th-accent) 18%, transparent)' : 'transparent',
-                color: drawTool === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
-                border: `1px solid ${drawTool === key ? 'var(--th-accent-line)' : 'var(--th-border)'}`,
-              }}
             >
               <Icon size={12} /> {label}
-            </button>
+            </Button>
           ))}
           {hasAnnotations && (
-            <button
+            <Button
+              variant="dangerOutline"
+              size="xs"
               onClick={() => { setHasAnnotations(false); setDrawTool(null) }}
-              className="flex items-center gap-1.5 h-7 px-3 rounded-th-full text-[11px] text-th-changes border border-th-changes/40 hover:bg-th-changes/10 transition-colors btn-press ml-1"
+              className="ml-1"
             >
               <Trash2 size={11} /> Clear
-            </button>
+            </Button>
           )}
         </div>
       )}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check } from 'lucide-react'
+import { Check } from '@/components/ui/icons'
 import { PRIORITY_OPTIONS, priorityMeta } from '@/lib/priority'
 import { PriorityBars } from '@/components/PriorityBadge'
 

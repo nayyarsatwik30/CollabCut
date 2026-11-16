@@ -2,13 +2,15 @@
 
 import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
 import Hls from 'hls.js'
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2 } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2 } from '@/components/ui/icons'
 import { DownloadIcon } from '@/components/ui/icons'
 import { Comment } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { startBrowserDownload } from '@/lib/download-client'
 import { FilmScrubber } from './FilmScrubber'
 import { Orb } from '@/components/ui/Orb'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 interface VideoPlayerProps {
   src?: string
@@ -257,12 +259,14 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
             <div className="text-center px-4">
               <p className="text-white text-[13px] font-medium mb-1">Couldn't load this video</p>
               <p className="text-white/60 text-[11px] mb-3">The stream failed to load. Try again, or refresh the page.</p>
-              <button
+              <Button
+                variant="glass"
+                size="sm"
                 onClick={(e) => { e.stopPropagation(); setReloadKey((k) => k + 1) }}
-                className="pointer-events-auto px-3.5 py-1.5 rounded-th-sm bg-white/10 border border-white/20 text-white text-[12px] hover:bg-white/20 transition-colors"
+                className="pointer-events-auto"
               >
                 Retry
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -275,8 +279,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
         {src && videoReady && !videoError && !playing && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center">
-              <Play size={22} className="text-white ml-0.5" />
+            {/* The key Play overlay: 72px lime disc with the soft ring and glow (a lime fill, so the icon is Ink in both themes). */}
+            <div className="disc disc-huge disc-primary pointer-events-none">
+              <Play size={30} className="ml-1" fill="currentColor" />
             </div>
           </div>
         )}
@@ -290,34 +295,30 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           onSeek={seekTo}
         />
 
-        <div className="flex items-center gap-2 px-4 pb-3">
-          <button onClick={() => skip(-10)} title="Back 10s (Shift+←)"
-            className="relative w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text hover:bg-th-surface-hov transition-colors btn-press">
+        <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
+          <IconButton variant="outline" size="sm" onClick={() => skip(-10)} label="Back 10s (Shift+←)" className="relative">
             <SkipBack size={14} />
             <span className="absolute bottom-0 right-0.5 text-[8px] font-bold leading-none pointer-events-none">10</span>
-          </button>
+          </IconButton>
 
-          <button onClick={togglePlay} title="Play/Pause (Space)"
-            className="w-9 h-9 rounded-full bg-th-accent flex items-center justify-center btn-press hover:opacity-90 transition-opacity">
+          <IconButton variant="primary" size="md" onClick={togglePlay} label={playing ? 'Pause (Space)' : 'Play (Space)'}>
             {playing
-              ? <Pause size={16} className="text-th-accent-fg" />
-              : <Play size={16} className="text-th-accent-fg ml-0.5" />
+              ? <Pause size={16} fill="currentColor" />
+              : <Play size={16} className="ml-0.5" fill="currentColor" />
             }
-          </button>
+          </IconButton>
 
-          <button onClick={() => skip(10)} title="Forward 10s (Shift+→)"
-            className="relative w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text hover:bg-th-surface-hov transition-colors btn-press">
+          <IconButton variant="outline" size="sm" onClick={() => skip(10)} label="Forward 10s (Shift+→)" className="relative">
             <SkipForward size={14} />
             <span className="absolute bottom-0 right-0.5 text-[8px] font-bold leading-none pointer-events-none">10</span>
-          </button>
+          </IconButton>
 
           <div className="relative flex items-center gap-1.5"
             onMouseEnter={() => setShowVolume(true)}
             onMouseLeave={() => setShowVolume(false)}>
-            <button onClick={toggleMute}
-              className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press">
+            <IconButton variant="outline" size="sm" onClick={toggleMute} label={muted || volume === 0 ? 'Unmute' : 'Mute'}>
               {muted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
-            </button>
+            </IconButton>
             {showVolume && (
               <div className="absolute left-0 bottom-full mb-2 bg-th-surface border border-th-border rounded-th-sm p-2 shadow-panel">
                 <input
@@ -341,20 +342,19 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
               <span className="text-[11px] text-th-changes max-w-[220px] truncate" title={downloadError}>{downloadError}</span>
             )}
             {!hideDownload && getDownloadUrl && (
-              <button
+              <IconButton
+                variant="outline"
+                size="sm"
                 onClick={handleDownload}
                 disabled={downloading}
-                className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press disabled:opacity-50"
-                title={downloading ? 'Preparing download…' : 'Download'}
+                label={downloading ? 'Preparing download…' : 'Download'}
               >
                 <DownloadIcon size={13} />
-              </button>
+              </IconButton>
             )}
-            <button onClick={toggleFullscreen}
-              className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press"
-              title="Fullscreen">
+            <IconButton variant="outline" size="sm" onClick={toggleFullscreen} label="Fullscreen">
               <Maximize2 size={13} />
-            </button>
+            </IconButton>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowUpRight, ChevronRight } from 'lucide-react'
+import { ArrowUpRight, ChevronRight } from '@/components/ui/icons'
 import { LandingScrollUnlock } from '@/components/collabcut-landing-scroll-unlock'
 import { About, LandingFooter, Pricing } from './Closing'
 import { FeatureMarquee } from './FeatureMarquee'
@@ -43,8 +43,8 @@ export function LandingPage() {
                 <p className="lp-eyebrow">{HERO.eyebrow}</p>
                 <p className="lp-hero-copy">{HERO.copy}</p>
                 <div className="lp-hero-actions">
-                  <Link className="lp-btn" href={HERO.primary.href}>{HERO.primary.label} <ArrowUpRight size={16} aria-hidden="true" /></Link>
-                  <Link className="lp-link" href={HERO.secondary.href}>{HERO.secondary.label} <ChevronRight size={15} aria-hidden="true" /></Link>
+                  <Link className="lp-btn" href={HERO.primary.href}>{HERO.primary.label} <ArrowUpRight tone="inherit" size={16} aria-hidden="true" /></Link>
+                  <Link className="lp-link" href={HERO.secondary.href}>{HERO.secondary.label} <ChevronRight tone="inherit" size={15} aria-hidden="true" /></Link>
                 </div>
               </div>
             </>

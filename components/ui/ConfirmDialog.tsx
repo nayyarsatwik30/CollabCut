@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { Button } from '@/components/ui/Button'
 
 interface ConfirmOptions {
   title: string
@@ -56,18 +57,12 @@ export function ConfirmDialog({ state, onConfirm, onCancel }: ConfirmDialogProps
         <h2 className="text-[15px] font-bold mb-1.5">{state.title}</h2>
         {state.message && <p className="text-[13px] text-th-muted mb-5">{state.message}</p>}
         <div className="flex items-center justify-end gap-2.5 mt-4">
-          <button
-            onClick={onCancel}
-            className="btn btn-outline [--btn-h:36px] [--btn-px:16px] [--btn-fs:13px]"
-          >
+          <Button variant="outline" size="sm" onClick={onCancel}>
             {state.cancelLabel ?? 'Cancel'}
-          </button>
-          <button
-            onClick={onConfirm}
-            className="btn btn-danger [--btn-h:36px] [--btn-px:16px] [--btn-fs:13px]"
-          >
+          </Button>
+          <Button variant="danger" size="sm" onClick={onConfirm}>
             {state.confirmLabel ?? 'Confirm'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

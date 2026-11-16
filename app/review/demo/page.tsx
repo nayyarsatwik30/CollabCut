@@ -2,9 +2,10 @@
 
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import Link from 'next/link'
-import { ChevronLeft, Play, ArrowRight } from 'lucide-react'
+import { ChevronLeft, Play, ArrowRight } from '@/components/ui/icons'
 import { CommentIcon } from '@/components/ui/icons'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
+import { IconButton } from '@/components/ui/IconButton'
 
 // A fully static stand-in for the review experience, so the landing page's
 // "See a live review" link never depends on a real database asset existing.
@@ -73,9 +74,9 @@ export default function DemoReviewPage() {
             className="relative aspect-video rounded-th-lg overflow-hidden flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg, #0e0e0e, #171717 55%, #3a3833)' }}
           >
-            <button className="w-16 h-16 rounded-full bg-black/30 backdrop-blur flex items-center justify-center hover:bg-black/40 transition-colors">
-              <Play size={26} className="text-white ml-1" fill="white" />
-            </button>
+            <IconButton variant="primary" size="huge" label="Play">
+              <Play size={30} className="ml-1" fill="currentColor" />
+            </IconButton>
 
             {MARKER_POSITIONS.map((pos, i) => (
               <div

@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronDown, Clock, Film, Trash2, UserPlus } from 'lucide-react'
+import { Check, ChevronDown, Clock, Film, Trash2, UserPlus } from '@/components/ui/icons'
 import { PriorityBadge } from '@/components/PriorityBadge'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 import { ApproveIcon } from '@/components/ui/icons'
 import { PriorityMenu } from '@/components/PriorityMenu'
 import { VersionBadge } from '@/components/board/VersionManager'
@@ -104,13 +106,15 @@ export function BoardCard({ asset, color, isAdmin, token, editors, columns, onAs
       className={`group relative app-card p-3 cursor-pointer ${isPlaceholder ? 'border border-dashed border-th-faint' : 'border border-th-border'}`}
     >
       {!isPlaceholder && (
-        <button
+        <IconButton
+          variant="delete"
+          size="sm"
+          label="Delete"
           onClick={(e) => { e.stopPropagation(); onDelete(asset.id) }}
-          className="absolute top-2.5 right-2.5 p-1.5 rounded-th-sm bg-th-bg border border-th-border opacity-0 group-hover:opacity-100 transition-opacity text-th-muted hover:text-th-changes z-20"
-          title="Delete"
+          className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 z-20"
         >
           <Trash2 size={13} />
-        </button>
+        </IconButton>
       )}
 
       <div className="flex items-center gap-2 mb-2">
@@ -125,7 +129,7 @@ export function BoardCard({ asset, color, isAdmin, token, editors, columns, onAs
             className="w-5 h-5 rounded-th-sm flex items-center justify-center shrink-0"
             style={{ background: `color-mix(in srgb, ${color} 16%, transparent)` }}
           >
-            <Film size={11} style={{ color }} />
+            <Film accent size={11} style={{ color }} />
           </span>
         )}
         {isAdmin ? (
@@ -152,7 +156,7 @@ export function BoardCard({ asset, color, isAdmin, token, editors, columns, onAs
           <span className="ml-auto font-mono text-[9px] uppercase tracking-wider text-th-muted">Awaiting upload</span>
         ) : asset.is_complete && (
           <span
-            className="ml-auto w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+            className="ml-auto w-4 h-4 rounded-full flex items-center justify-center shrink-0 ic-on-fill"
             style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)', boxShadow: 'inset 0 0 0 1px var(--th-accent-edge)' }}
             title="Marked complete"
           >
@@ -196,15 +200,18 @@ export function BoardCard({ asset, color, isAdmin, token, editors, columns, onAs
 
         {isAdmin && (
           <div className="relative shrink-0" ref={menuRef}>
-            <button
+            <IconButton
+              label="Assign editor"
+              size="sm"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v) }}
-              className="flex items-center gap-0.5 p-1 rounded-th-sm text-th-muted hover:text-th-text hover:bg-th-surface-alt transition-colors opacity-0 group-hover:opacity-100"
+              className="gap-0.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
               style={menuOpen ? { opacity: 1 } : undefined}
-              title="Assign editor"
             >
               <UserPlus size={12} />
               <ChevronDown size={10} />
-            </button>
+            </IconButton>
 
             {menuOpen && (
               <div
@@ -215,10 +222,12 @@ export function BoardCard({ asset, color, isAdmin, token, editors, columns, onAs
                   <p className="px-3 py-2 text-[11px] text-th-muted">No editors in workspace</p>
                 ) : (
                   editors.map((ed) => (
-                    <button
+                    <Button
                       key={ed.id}
+                      variant="nav"
+                      role="menuitem"
                       onClick={() => { onAssign(asset.id, ed.id); setMenuOpen(false) }}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-[12px] hover:bg-th-surface-alt transition-colors"
+                      className="gap-2 text-left text-[12px] [--btn-h:32px]"
                     >
                       <span
                         className="app-avatar w-4 h-4 text-[8px]"
@@ -226,8 +235,8 @@ export function BoardCard({ asset, color, isAdmin, token, editors, columns, onAs
                         {initialsFor(ed.name)}
                       </span>
                       <span className="truncate flex-1">{ed.name}</span>
-                      {asset.editor?.id === ed.id && <Check size={12} style={{ color: 'var(--th-accent-text)' }} />}
-                    </button>
+                      {asset.editor?.id === ed.id && <Check size={12} />}
+                    </Button>
                   ))
                 )}
               </div>

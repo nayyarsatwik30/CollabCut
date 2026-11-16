@@ -3,7 +3,7 @@
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from '@/components/ui/icons'
 import { Button, ButtonIcon } from '@/components/ui/Button'
 
 export default function ForgotPasswordPage() {

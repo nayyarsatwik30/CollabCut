@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, Film } from 'lucide-react'
+import { Clock, Film } from '@/components/ui/icons'
 import { CommentIcon } from '@/components/ui/icons'
 import { Asset } from '@/lib/types'
 import { StatusBadge } from '@/components/ui/Badge'
@@ -26,7 +26,7 @@ export function AssetCard({ asset, projectId }: AssetCardProps) {
             alt={asset.name}
           />
         ) : (
-          <Film size={28} style={{ color: 'var(--th-accent-text)' }} />
+          <Film accent size={28} style={{ color: 'var(--th-accent-text)' }} />
         )}
         <div className="flex items-center gap-1.5 font-mono text-[11px] text-th-muted">
           <Clock size={10} />

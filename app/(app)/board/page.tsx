@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Plus, FolderKanban, Users, ChevronLeft, Film } from 'lucide-react'
+import { Plus, FolderKanban, Users, ChevronLeft, Film } from '@/components/ui/icons'
 import { BoardIcon } from '@/components/ui/icons'
 import { TopBar } from '@/components/layout/TopBar'
 import { BoardCard, initialsFor, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
@@ -634,7 +634,7 @@ export default function BoardPage() {
                   </div>
                 ) : !editorAssets || editorAssets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
-                    <Film size={32} className="text-th-faint" />
+                    <Film accent size={32} className="text-th-faint" />
                     <p className="text-[13px] text-th-muted">No assets assigned to this editor.</p>
                   </div>
                 ) : (

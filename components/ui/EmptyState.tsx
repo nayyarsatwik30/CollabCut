@@ -26,7 +26,7 @@ export function EmptyState({ icon: Icon, title, sub, link, className = '', child
           <circle cx="84" cy="22" r="4" fill="var(--th-accent)" />
           <circle cx="12" cy="72" r="3" fill="var(--th-border)" />
         </svg>
-        <span className="absolute text-th-accent-fg" style={{ left: 36, top: 32 }}><Icon size={20} strokeWidth={1.75} /></span>
+        <span className="absolute text-th-accent-fg ic-on-fill" style={{ left: 36, top: 32 }}><Icon size={20} /></span>
       </div>
       <p className="app-empty-title">{title}</p>
       {sub && <p className="app-empty-sub">{sub}</p>}

@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { X } from 'lucide-react'
+import { X } from '@/components/ui/icons'
+import { IconButton } from '@/components/ui/IconButton'
 
 export interface ToastData {
   id: string
@@ -39,9 +40,9 @@ export function Toast({ toast, onDismiss }: ToastProps) {
     >
       <span className={cn('w-2 h-2 rounded-full shrink-0', dotColor)} />
       {toast.message}
-      <button onClick={onDismiss} className="ml-1 text-th-muted hover:text-th-text transition-colors">
+      <IconButton onClick={onDismiss} label="Dismiss" size="sm" className="ml-1">
         <X size={13} />
-      </button>
+      </IconButton>
     </div>
   )
 }

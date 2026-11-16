@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
-import { Clock } from 'lucide-react'
+import { Clock } from '@/components/ui/icons'
 import { CommentIcon } from '@/components/ui/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSessionGuard } from '@/lib/useSessionGuard'

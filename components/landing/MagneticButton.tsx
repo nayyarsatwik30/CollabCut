@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useId, useRef, useState } from 'react'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight } from '@/components/ui/icons'
 
 // The magnetic "venom" button: an accent pill that reaches for the cursor.
 //
@@ -312,7 +312,7 @@ export function MagneticButton({ href, label, width = 120, variant = 'solid' }: 
         </svg>
       )}
       <Link ref={linkRef} className="lp-magnet-link" href={href} onClick={() => splatRef.current()}>
-        {label}{!reveal && <> <ArrowUpRight size={14} aria-hidden="true" /></>}
+        {label}{!reveal && <> <ArrowUpRight tone="inherit" size={14} aria-hidden="true" /></>}
       </Link>
     </span>
   )

@@ -9,9 +9,13 @@ import { cn } from '@/lib/utils'
    instead of a <button>" case (asChild) and focus-visible semantics.
    The look (pill, lime / solid / outline / ghost, 600 weight, 2px hover lift,
    focus ring) lives in the .btn classes in globals.css, which follow the
-   Dark/Light tokens. Sizes only set the height, padding and font size: md and
-   lg are the 48px / 15px board buttons; sm and xs are compact sizes for dense
-   toolbars and rows. */
+   Dark/Light tokens. Sizes only set the height, padding and font size: md is
+   the 44px / 15px default, lg 48px, sm 36px / 13px and xs 28px / 11px for
+   dense toolbars and rows. Variants: primary, solid, outline/secondary, ghost,
+   glass (over video), danger (filled), dangerOutline, dangerRow (danger text on
+   a wash), nav (sidebar row; aria-current="page" marks the active one), chip
+   (28px; add className "btn-chip-time" for the timecode chip) and link.
+   Round icon-only buttons are IconButton. */
 
 const buttonVariants = cva(
   'btn group',
@@ -25,12 +29,17 @@ const buttonVariants = cva(
         ghost: 'btn-ghost',
         danger: 'btn-danger',
         dangerOutline: 'btn-danger-outline',
+        dangerRow: 'btn-danger-row',
+        glass: 'btn-glass',
+        nav: 'btn-nav',
+        chip: 'btn-chip',
+        link: 'btn-link',
       },
       size: {
         xs: '[--btn-h:28px] [--btn-px:12px] [--btn-fs:11px] gap-1.5',
-        sm: '[--btn-h:36px] [--btn-px:14px] [--btn-fs:12px]',
+        sm: '[--btn-h:36px] [--btn-px:16px] [--btn-fs:13px]',
         md: '[--btn-px:22px]',
-        lg: '[--btn-px:28px]',
+        lg: '[--btn-h:48px] [--btn-px:28px]',
         icon: '[--btn-h:36px] [--btn-px:0px] w-9',
       },
     },

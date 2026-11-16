@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus } from '@/components/ui/icons'
 import { ALL_CLIENTS_KEY, countLabel, type ClientTab } from '@/lib/clients'
 
 interface ClientTabStripProps {

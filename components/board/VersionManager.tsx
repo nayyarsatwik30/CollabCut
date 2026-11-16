@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Trash2 } from 'lucide-react'
+import { Trash2 } from '@/components/ui/icons'
 import { VersionsIcon } from '@/components/ui/icons'
 import { IconButton } from '@/components/ui/IconButton'
 import { useConfirm, ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Button } from '@/components/ui/Button'
 
 interface VersionRow {
   id: string
@@ -151,9 +152,9 @@ export function VersionBadge({ assetId, versionCount, token, canManage, onChange
             <div className="max-h-60 overflow-y-auto">
               {versions === null ? (
                 loadFailed ? (
-                  <button type="button" onClick={load} className="px-4 py-3 text-[11px] text-th-muted underline btn-press">
-                    Try again
-                  </button>
+                  <div className="px-4 py-3 text-[11px]">
+                    <Button type="button" variant="link" onClick={load}>Try again</Button>
+                  </div>
                 ) : (
                   <p className="px-4 py-3 text-[11px] text-th-muted">Loading…</p>
                 )
@@ -161,17 +162,18 @@ export function VersionBadge({ assetId, versionCount, token, canManage, onChange
                 const canDelete = canManage && versions.length > 1 && v.id !== originId
                 return (
                   <div key={v.id} className="flex items-center border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors">
-                    <button
+                    <Button
                       type="button"
+                      variant="nav"
                       onClick={() => router.push(`/review/${v.id}`)}
-                      className="flex-1 min-w-0 flex items-center gap-2.5 pl-4 pr-2 py-3 text-left btn-press"
+                      className="flex-1 min-w-0 gap-2.5 text-left [--btn-h:52px] [--nav-px:16px]"
                     >
-                      <VersionsIcon size={12} className="text-th-muted shrink-0" />
+                      <VersionsIcon size={12} className="shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-medium truncate">v{v.version}</p>
                         <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
                       </div>
-                    </button>
+                    </Button>
                     {canDelete ? (
                       <IconButton
                         onClick={() => handleDelete(v)}

@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, CircleCheck, CircleAlert, Ban } from 'lucide-react'
+import { X, CircleCheck, CircleAlert, Ban } from '@/components/ui/icons'
 import { UploadIcon } from '@/components/ui/icons'
 import { useSession } from 'next-auth/react'
 import * as UpChunk from '@mux/upchunk'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
 import { Orb } from '@/components/ui/Orb'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 // UpChunk pauses (rather than failing) while the browser reports itself
 // offline and resumes on its own once it's back - but it would wait forever.
@@ -340,11 +342,10 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-th-border">
           <h2 className="font-bold text-[16px]">Upload cut</h2>
-          <button onClick={uploadInProgress ? handleCancel : onClose}
-            aria-label={uploadInProgress ? 'Cancel upload' : 'Close'}
-            className="text-th-muted hover:text-th-text transition-colors disabled:opacity-40">
+          <IconButton size="sm" onClick={uploadInProgress ? handleCancel : onClose}
+            label={uploadInProgress ? 'Cancel upload' : 'Close'}>
             <X size={16} />
-          </button>
+          </IconButton>
         </div>
 
         <div className="p-6">
@@ -408,10 +409,9 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
                 Uploading directly to Mux — do not close this window
               </p>
               <div className="mt-6 flex justify-center">
-                <button onClick={handleCancel}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-th border border-th-border text-[13px] font-semibold text-th-text bg-th-surface-alt hover:bg-th-surface-hov transition-colors btn-press">
+                <Button variant="outline" size="sm" onClick={handleCancel}>
                   <Ban size={13} /> Cancel upload
-                </button>
+                </Button>
               </div>
               {uploadStatus && (
                 <p className="mt-2 flex items-center gap-2 text-[12px] text-th-changes">
@@ -427,10 +427,9 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
               <div className="flex justify-center mb-4"><Orb state="composing" size={64} label="Processing your video" /></div>
               <p className="font-semibold mb-1">Upload complete</p>
               <p className="text-[12px] text-th-muted">Mux is processing your video…</p>
-              <button disabled
-                className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-semibold text-th-muted opacity-40 cursor-not-allowed">
+              <Button variant="outline" size="xs" disabled className="mt-4">
                 <Ban size={13} /> Cancel upload
-              </button>
+              </Button>
               <p className="text-[11px] text-th-faint mt-1">Can&apos;t be cancelled once processing has started</p>
             </div>
           )}
@@ -443,9 +442,9 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
               <p className="text-[12px] text-th-muted mb-5">
                 It will be ready to review in 1–2 minutes while Mux transcodes it.
               </p>
-              <button onClick={onClose} className="btn btn-primary [--btn-px:28px]">
+              <Button onClick={onClose} className="[--btn-px:28px]">
                 Done
-              </button>
+              </Button>
             </div>
           )}
         </div>

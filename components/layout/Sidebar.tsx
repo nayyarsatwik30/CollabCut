@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { LayoutGrid, Clock, Bell, MessageCircle, Settings, ChevronDown, Trash2, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { BoardIcon } from '@/components/ui/icons'
+import { LayoutGrid, Clock, Bell, MessageCircle, Settings, ChevronDown, Trash2, LogOut, PanelLeftClose, PanelLeftOpen, BoardIcon } from '@/components/ui/icons'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 import { cn } from '@/lib/utils'
 import { useStorageUsage } from '@/lib/useStorageUsage'
 import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
@@ -137,21 +138,19 @@ export function Sidebar() {
     const active = pathname.startsWith(href)
     const badge = href === '/notifications' ? unreadCount : href === '/chat' ? chatUnread : 0
     return (
-      <Link
+      <Button
+        asChild
         key={href}
+        variant="nav"
+        className={cn('gap-2.5', collapsed && '[--nav-jc:center] [--nav-px:0px]')}
+      >
+       <Link
         href={href}
         title={collapsed ? label : undefined}
         aria-label={collapsed ? `${label}${badge > 0 ? `, ${badge > 99 ? '99+' : badge} unread` : ''}` : undefined}
-        className={cn(
-          'relative flex items-center py-2 rounded-th-sm text-[13px] transition-colors',
-          collapsed ? 'justify-center px-0' : 'gap-2.5 px-3',
-          active
-            ? 'bg-[var(--th-chrome-active)] text-[var(--th-chrome-text)] font-semibold'
-            : 'text-th-muted hover:text-[var(--th-chrome-text)] hover:bg-[var(--th-chrome-hover)]',
-        )}
-      >
-        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-[var(--th-chrome-text)]" />}
-        <Icon size={16} strokeWidth={1.75} className={active ? 'text-[var(--th-chrome-text)]' : ''} />
+        aria-current={active ? 'page' : undefined}
+       >
+        <Icon size={18} accent={active} />
         <span className={cn('overflow-hidden whitespace-nowrap transition-opacity duration-200', collapsed ? 'w-0 opacity-0' : 'flex-1 opacity-100')}>{label}</span>
         {badge > 0 && collapsed && (
           <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-th-accent" />
@@ -161,7 +160,8 @@ export function Sidebar() {
             {badge > 99 ? '99+' : badge}
           </span>
         )}
-      </Link>
+       </Link>
+      </Button>
     )
   }
 
@@ -178,28 +178,18 @@ export function Sidebar() {
           <span className={cn('text-[17px] font-extrabold tracking-tight font-display overflow-hidden whitespace-nowrap transition-all duration-200', collapsed ? 'w-0 ml-0 opacity-0' : 'ml-2.5 opacity-100')}>COLLABCUT</span>
         </Link>
         {!collapsed && (
-          <button
-            onClick={toggleCollapsed}
-            aria-label="Collapse sidebar"
-            title="Collapse sidebar"
-            className="ml-auto w-7 h-7 rounded-th-sm flex items-center justify-center text-th-muted hover:text-[var(--th-chrome-text)] hover:bg-[var(--th-chrome-hover)] transition-colors shrink-0"
-          >
-            <PanelLeftClose size={16} strokeWidth={1.75} />
-          </button>
+          <IconButton onClick={toggleCollapsed} label="Collapse sidebar" size="sm" className="ml-auto">
+            <PanelLeftClose size={16} />
+          </IconButton>
         )}
       </div>
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-2.5">
         {collapsed ? (
-          <button
-            onClick={toggleCollapsed}
-            aria-label="Expand sidebar"
-            title="Expand sidebar"
-            className="mb-2 mt-1 w-full h-8 rounded-th-sm flex items-center justify-center text-th-muted hover:text-[var(--th-chrome-text)] hover:bg-[var(--th-chrome-hover)] transition-colors"
-          >
-            <PanelLeftOpen size={16} strokeWidth={1.75} />
-          </button>
+          <IconButton onClick={toggleCollapsed} label="Expand sidebar" size="sm" className="mb-2 mt-1 mx-auto flex">
+            <PanelLeftOpen size={16} />
+          </IconButton>
         ) : (
           <p className="px-3 pt-2 pb-2 text-[10px] font-semibold tracking-[0.14em] text-th-faint">MENU</p>
         )}
@@ -223,21 +213,18 @@ export function Sidebar() {
               role="menu"
               className={cn('absolute bottom-full left-0 mb-1.5 p-1 rounded-th-sm border border-th-border bg-th-chrome-raised shadow-lg z-40', collapsed ? 'min-w-[150px]' : 'right-0')}
             >
-              <button
-                role="menuitem"
-                onClick={handleLogoutClick}
-                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-th-sm text-[13px] text-th-muted hover:text-th-changes hover:bg-[var(--th-chrome-hover)] transition-colors text-left"
-              >
-                <LogOut size={14} strokeWidth={1.75} /> Logout
-              </button>
+              <Button role="menuitem" variant="nav" onClick={handleLogoutClick} className="gap-2">
+                <LogOut size={14} /> Logout
+              </Button>
             </div>
           )}
-          <button
+          <Button
+            variant="nav"
             onClick={() => setMenuOpen((o) => !o)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             title={collapsed ? name || email : undefined}
-            className={cn('w-full flex items-center py-2 rounded-th-sm hover:bg-[var(--th-chrome-hover)] transition-colors text-left', collapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5')}
+            className={cn('text-left [--btn-h:48px]', collapsed ? '[--nav-jc:center] [--nav-px:0px]' : 'gap-2.5 [--nav-px:10px]')}
           >
             <div className="app-avatar w-7 h-7 text-[11px]">{initials}</div>
             {!collapsed && (
@@ -246,8 +233,8 @@ export function Sidebar() {
                 <p className="text-[10px] text-th-muted font-mono truncate">{email}</p>
               </div>
             )}
-            {!collapsed && <ChevronDown size={13} strokeWidth={1.75} className={cn('text-th-muted transition-transform', menuOpen && 'rotate-180')} />}
-          </button>
+            {!collapsed && <ChevronDown size={13} className={cn('transition-transform', menuOpen && 'rotate-180')} />}
+          </Button>
         </div>
       </div>
     </aside>
