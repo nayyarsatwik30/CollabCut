@@ -144,6 +144,12 @@ export function Spheres({ state, progress }: { state: SceneState; progress: Prog
 
   useFrame((frame, delta) => {
     const dt = Math.min(delta, 1 / 30)
+    // The spring below is integrated in steps of at most 1/60 s. At the
+    // stiffest point of the convergence (w x dt > 1 at 30 fps) a single
+    // semi-implicit step is unstable and would grow every frame. A normal
+    // 60 Hz frame (including its jitter) stays one step, so nothing changes there.
+    const steps = Math.max(1, Math.ceil(dt * 60 - 0.05))
+    const subDt = dt / steps
     const t = frame.clock.elapsedTime
     const p = progress.current
     const s = sim.current
@@ -224,9 +230,11 @@ export function Spheres({ state, progress }: { state: SceneState; progress: Prog
       const z = 0.78
       for (let a = 0; a < 3; a++) {
         const target = a === 0 ? tx : a === 1 ? ty : tz
-        const acc = w * w * (target - pos[ix + a]) - 2 * z * w * vel[ix + a] + push[ix + a]
-        vel[ix + a] += acc * dt
-        pos[ix + a] += vel[ix + a] * dt
+        for (let k = 0; k < steps; k++) {
+          const acc = w * w * (target - pos[ix + a]) - 2 * z * w * vel[ix + a] + push[ix + a]
+          vel[ix + a] += acc * subDt
+          pos[ix + a] += vel[ix + a] * subDt
+        }
       }
       radius[i] += (targetR - radius[i]) * (1 - Math.exp(-dt * 14))
 

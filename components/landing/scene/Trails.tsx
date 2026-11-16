@@ -180,6 +180,7 @@ export function Trails({ state, segments, embers }: { state: SceneState; segment
     const size = new THREE.BufferAttribute(new Float32Array(count), 1)
     position.setUsage(THREE.DynamicDrawUsage)
     life.setUsage(THREE.DynamicDrawUsage)
+    size.setUsage(THREE.DynamicDrawUsage)
     const geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', position)
     geometry.setAttribute('aLife', life)
@@ -426,6 +427,9 @@ export function Trails({ state, segments, embers }: { state: SceneState; segment
       }
       ember.position.needsUpdate = true
       ember.life.needsUpdate = true
+      // Sizes are written when a spark is emitted; without this flag the GPU
+      // keeps the zero-filled buffer from the first upload and draws nothing.
+      ember.size.needsUpdate = true
       ember.material.uniforms.uScale.value = frame.size.height * frame.viewport.dpr * 1.43 // ~1/tan(fov/2) / 2
       // Embers are sparks of light; a pale page cannot show them, so Light leaves them out.
       emberMesh.current!.visible = (alive && palette.light.value < 0.5) || c.frames < 6

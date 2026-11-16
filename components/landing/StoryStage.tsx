@@ -1,13 +1,30 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { detectTier, qualityFor, MOBILE_QUERY, REDUCED_MOTION_QUERY, type Tier } from './scene/quality'
 import { STORY_SCROLL_VH, TL, clamp01, smoothstep } from './story'
 
 // three.js and the scene live in their own chunk, fetched only after the
 // hero text has painted and only on devices that will actually render it.
 const SceneCanvas = dynamic(() => import('./scene/SceneCanvas'), { ssr: false })
+
+// If the renderer cannot start (no usable WebGL context, a failed chunk load,
+// a shader that will not link), the scene simply does not appear. Without this
+// the error would unmount the whole stage, taking the hero text, the nav and
+// the Sign up link with it. It wraps the scene and nothing else.
+class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  componentDidCatch(error: unknown) {
+    console.warn('[landing] 3D scene failed to start; showing the page without it.', error)
+  }
+  render() {
+    return this.state.failed ? null : this.props.children
+  }
+}
 
 function StaticButterflies() {
   const items = [
@@ -138,22 +155,31 @@ export function StoryStage({ hero, captionA, captionB }: { hero: ReactNode; capt
 
   useEffect(() => { if (tier === 'none') setReady(false) }, [tier])
 
-  const webgl = mode === 'pinned' && tier !== null && tier !== 'none'
+  const pinned = mode === 'pinned'
+  const webgl = pinned && tier !== null && tier !== 'none'
 
   return (
     <section ref={sectionRef} className="lp-story" data-mode={mode} style={mode === 'pinned' ? { height: `${STORY_SCROLL_VH}vh` } : undefined} aria-label="Introduction">
+      {/* While pinned, the animated captions below are hidden (visibility)
+          outside their scroll windows, which also removes them from the
+          accessibility tree. This visually hidden copy keeps the story, and
+          the tool list the spheres stand for, readable at all times; the
+          animated captions are then aria-hidden so nothing is read twice. */}
+      {pinned && <div className="lp-sr-only">{captionA}{captionB}</div>}
       <div className="lp-story-sticky">
         <div className="lp-stage">
           {tier === 'none' && <StaticButterflies />}
           {webgl && (
             <div className="lp-stage-canvas" data-ready={ready} aria-hidden="true">
-              <SceneCanvas quality={qualityFor(tier)} active={active} progress={progress} onReady={onReady} />
+              <SceneBoundary>
+                <SceneCanvas quality={qualityFor(tier)} active={active} progress={progress} onReady={onReady} />
+              </SceneBoundary>
             </div>
           )}
           <div ref={heroRef} className="lp-stage-content">{hero}</div>
         </div>
-        <div ref={aRef} className="lp-caption lp-caption-a">{captionA}</div>
-        <div ref={bRef} className="lp-caption lp-caption-b">{captionB}</div>
+        <div ref={aRef} className="lp-caption lp-caption-a" aria-hidden={pinned || undefined}>{captionA}</div>
+        <div ref={bRef} className="lp-caption lp-caption-b" aria-hidden={pinned || undefined}>{captionB}</div>
       </div>
     </section>
   )

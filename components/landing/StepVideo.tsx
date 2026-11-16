@@ -31,8 +31,18 @@ export function StepVideo({ src, poster, number, name }: { src?: string; poster?
       return
     }
     const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) video.play().catch(() => {})
-      else video.pause()
+      if (entry.isIntersecting) {
+        video.play().catch((error: unknown) => {
+          // A browser can refuse even muted autoplay (data saver, a strict
+          // policy). The video has no controls of its own, so give the viewer
+          // controls and stop trying to autoplay. An AbortError is just a
+          // pause() landing on a pending play() as the video leaves the screen.
+          if (error instanceof DOMException && error.name === 'NotAllowedError') {
+            setManual(true)
+            io.disconnect()
+          }
+        })
+      } else video.pause()
     }, { threshold: 0.35 })
     io.observe(video)
     return () => {

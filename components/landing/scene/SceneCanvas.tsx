@@ -116,6 +116,15 @@ export default function SceneCanvas({ quality, active, progress, onReady }: { qu
     return () => window.removeEventListener('pointermove', onMove)
   }, [])
 
+  // Fiber restarts its clock from zero whenever the frame loop is paused or
+  // resumed, but a burst is timed against that clock. A stored timestamp from
+  // before the pause would then read as a burst that has not happened yet
+  // (a negative age, so a huge flash). The merge flash lasts about two
+  // seconds, so after a pause it is over; mark it expired.
+  useEffect(() => {
+    state.burstStart = -1
+  }, [active, state])
+
   return (
     <div ref={wrap} style={{ position: 'absolute', inset: 0 }}>
       <Canvas
