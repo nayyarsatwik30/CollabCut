@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Copy, Lock, Clock, Download, MessageSquare, Check, RefreshCw } from 'lucide-react'
+import { Copy, Lock, Clock, Check, RefreshCw } from 'lucide-react'
+import { ApproveIcon, CommentIcon, DownloadIcon } from '@/components/ui/icons'
 import { Modal } from '@/components/ui/Modal'
 
 interface ShareModalProps {
@@ -174,12 +175,9 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
             onClick={handleCopy}
             disabled={loading || !link}
             className="flex items-center gap-1.5 px-3 py-2 rounded-th-sm text-[12px] font-semibold btn-press transition-all disabled:opacity-50"
-            style={{
-              background: copied ? 'var(--th-resolved)' : 'var(--th-accent)',
-              color: copied ? '#fff' : 'var(--th-accent-fg)',
-            }}
+            style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)', boxShadow: 'inset 0 0 0 1px var(--th-accent-edge)' }}
           >
-            {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
+            {copied ? <><ApproveIcon size={14} /> Copied</> : <><Copy size={13} /> Copy</>}
           </button>
         </div>
 
@@ -191,7 +189,7 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
             onClick={handleRegenerate}
             disabled={loading || regenerating || !link || regenerateBlocked}
             title={regenerateBlocked ? 'Retype the password to include it in the new link' : undefined}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-sm text-[11px] font-semibold btn-press transition-all bg-th-surface-alt border border-th-border text-th-text hover:border-th-accent hover:text-th-accent-text disabled:opacity-50"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-sm text-[11px] font-semibold btn-press transition-all bg-th-surface-alt border border-th-border text-th-text hover:border-th-accent-line hover:text-th-accent-text disabled:opacity-50"
           >
             <RefreshCw size={12} className={regenerating ? 'animate-spin' : undefined} /> Regenerate
           </button>
@@ -209,8 +207,8 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
           {[
             { icon: Lock,          label: 'Password protect', checked: password,     set: setPassword },
             { icon: Clock,         label: 'Set expiry date',  checked: expiry,       set: setExpiry },
-            { icon: Download,      label: 'Disable download', checked: noDownload,   set: setNoDownload },
-            { icon: MessageSquare, label: 'Comments only',    checked: commentsOnly, set: setCommentsOnly },
+            { icon: DownloadIcon,      label: 'Disable download', checked: noDownload,   set: setNoDownload },
+            { icon: CommentIcon, label: 'Comments only',    checked: commentsOnly, set: setCommentsOnly },
           ].map(({ icon: Icon, label, checked, set }) => (
             <div key={label} className="border-b border-th-border last:border-b-0">
               <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-th-surface-alt transition-colors">
@@ -219,11 +217,11 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
                 <div
                   onClick={() => set(!checked)}
                   className="w-9 h-5 rounded-full transition-colors relative cursor-pointer shrink-0"
-                  style={{ background: checked ? 'var(--th-accent)' : 'var(--th-border)' }}
+                  style={{ background: checked ? 'var(--th-accent)' : 'var(--th-border-strong)', boxShadow: checked ? 'inset 0 0 0 1px var(--th-accent-edge)' : undefined }}
                 >
                   <div
-                    className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
-                    style={{ transform: checked ? 'translateX(18px)' : 'translateX(2px)' }}
+                    className="absolute top-0.5 w-4 h-4 rounded-full shadow transition-transform"
+                    style={{ transform: checked ? 'translateX(18px)' : 'translateX(2px)', background: checked ? 'var(--th-accent-fg)' : 'var(--th-bg)' }}
                   />
                 </div>
               </label>
@@ -235,7 +233,7 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
                     value={passwordValue}
                     onChange={(e) => setPasswordValue(e.target.value)}
                     placeholder={serverPasswordProtected ? 'Leave blank to keep current password' : 'Set a password'}
-                    className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+                    className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors"
                   />
                   {serverPasswordProtected && !passwordValue && (
                     <p className="text-[11px] text-th-faint mt-1.5">
@@ -251,7 +249,7 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
                     type="datetime-local"
                     value={expiryValue}
                     onChange={(e) => setExpiryValue(e.target.value)}
-                    className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text outline-none focus:border-th-accent transition-colors [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:rounded [&::-webkit-calendar-picker-indicator]:p-1.5 [&::-webkit-calendar-picker-indicator]:scale-125"
+                    className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text outline-none focus:border-th-accent-line transition-colors [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:rounded [&::-webkit-calendar-picker-indicator]:p-1.5 [&::-webkit-calendar-picker-indicator]:scale-125"
                   />
                 </div>
               )}

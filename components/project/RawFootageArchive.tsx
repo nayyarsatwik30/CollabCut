@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Archive, CheckCircle2, CloudUpload, CircleAlert, Download, X, File as FileIcon, Film, Image as ImageIcon, Music, Trash2 } from 'lucide-react'
+import { Archive, CheckCircle2, CircleAlert, X, File as FileIcon, Film, Image as ImageIcon, Music, Trash2 } from 'lucide-react'
+import { DownloadIcon, UploadIcon } from '@/components/ui/icons'
 import { MAX_INLINE_PHOTO_BYTES, MAX_RAW_FILE_BYTES, classifyRawFile, type RawFileKind } from '@/lib/raw-files'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
 import { useConfirm, ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -501,7 +502,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
     <div className="flex items-center gap-0.5 shrink-0">
       <button onClick={() => handleDownload(f)} title="Download" aria-label={`Download ${f.file_name}`}
         className="p-1 rounded-th-sm text-th-muted hover:text-th-text transition-colors">
-        <Download size={13} />
+        <DownloadIcon size={13} />
       </button>
       <button onClick={() => handleDelete(f)} title="Delete" aria-label={`Delete ${f.file_name}`}
         className="p-1 rounded-th-sm text-th-muted hover:text-th-changes transition-colors">
@@ -518,7 +519,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
 
   return (
     <div
-      className={`border rounded-th-lg p-4 transition-colors ${dragOver ? 'border-th-accent border-dashed ring-2 ring-th-accent bg-th-surface-hov' : 'border-th-border bg-th-surface-alt'}`}
+      className={`border rounded-th-lg p-4 transition-colors ${dragOver ? 'border-th-accent-line border-dashed ring-2 ring-th-accent-line bg-th-surface-hov' : 'border-th-border bg-th-surface-alt'}`}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
       onDragLeave={(e) => { if (e.currentTarget === e.target) setDragOver(false) }}
       onDrop={handleDrop}>
@@ -535,7 +536,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
           onClick={() => pickFiles('')}
           disabled={uploading}
           className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50">
-          <CloudUpload size={13} /> {uploading ? 'Uploading…' : 'Upload files'}
+          <UploadIcon size={13} /> {uploading ? 'Uploading…' : 'Upload files'}
         </button>
       </div>
 
@@ -588,7 +589,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
       )}
 
       <div className="mb-4 rounded-th-sm border-2 border-dashed border-th-muted py-5 px-3 text-center flex flex-col items-center gap-1.5">
-        <CloudUpload size={20} className="text-th-muted" />
+        <UploadIcon size={20} className="text-th-muted" />
         {listStatus === 'loading' ? (
           <div role="status" aria-live="polite" aria-label="Loading files" className="h-3 w-56 rounded bg-th-border animate-pulse" />
         ) : (
@@ -614,8 +615,8 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
                 <button
                   onClick={() => pickFiles(accept)}
                   disabled={uploading}
-                  className="flex items-center gap-1 h-6 px-2.5 rounded-th-full border border-th-border text-[11px] font-semibold btn-press hover:border-th-accent transition-colors disabled:opacity-50">
-                  <CloudUpload size={11} /> {cta}
+                  className="flex items-center gap-1 h-6 px-2.5 rounded-th-full border border-th-border text-[11px] font-semibold btn-press hover:border-th-accent-line transition-colors disabled:opacity-50">
+                  <UploadIcon size={11} /> {cta}
                 </button>
               </div>
               <p className="text-[10px] text-th-faint mb-2">{hint}</p>

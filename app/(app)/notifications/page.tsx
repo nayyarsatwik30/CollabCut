@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, MessageSquare, UserPlus, Upload, CircleCheck, Check, CheckCheck } from 'lucide-react'
+import { Bell, UserPlus, CircleCheck, Check, CheckCheck } from 'lucide-react'
+import { CommentIcon, UploadIcon } from '@/components/ui/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TopBar } from '@/components/layout/TopBar'
 import { useSessionGuard } from '@/lib/useSessionGuard'
@@ -20,9 +21,9 @@ interface Notification {
 
 const TYPE_ICON: Record<string, React.ElementType> = {
   editor_assigned: UserPlus,
-  cut_uploaded: Upload,
-  comment_added: MessageSquare,
-  comment_reply: MessageSquare,
+  cut_uploaded: UploadIcon,
+  comment_added: CommentIcon,
+  comment_reply: CommentIcon,
   version_ready: CircleCheck,
 }
 

@@ -11,6 +11,7 @@ interface FilmScrubberProps {
   onSeek: (time: number) => void
 }
 
+// Timecode markers: open = the text colour, resolved = lime, needs-changes = the danger colour.
 const STATUS_CSS: Record<string, string> = {
   open:     'var(--th-open)',
   resolved: 'var(--th-resolved)',
@@ -72,8 +73,7 @@ export function FilmScrubber({ currentTime, duration, comments, onSeek }: FilmSc
             className="film-strip-dot"
             style={{
               left: `${(c.timeSec / duration) * 100}%`,
-              background: STATUS_CSS[c.status] ?? 'var(--th-accent)',
-              boxShadow: `0 0 6px ${STATUS_CSS[c.status] ?? 'var(--th-accent)'}88`,
+              background: STATUS_CSS[c.status] ?? 'var(--th-text-primary)',
             }}
             onClick={(e) => { e.stopPropagation(); onSeek(c.timeSec) }}
             title={c.text}

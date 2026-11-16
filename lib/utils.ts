@@ -38,6 +38,14 @@ export const STATUS_LABELS: Record<CommentStatus | ProjectStatus | AssetStatus, 
   processing: 'Processing',
 }
 
+/** Palette-only chip class for a status (see .chip-* in globals.css). */
+export function statusChip(status: string): string {
+  if (status === 'approved' || status === 'resolved') return 'chip-resolved'
+  if (status === 'changes') return 'chip-changes'
+  if (status === 'open' || status === 'in_review') return 'chip-open'
+  return 'chip-muted'
+}
+
 /** Map comment status to CSS variable name (for inline color) */
 export function commentStatusVar(status: CommentStatus): string {
   const map: Record<CommentStatus, string> = {

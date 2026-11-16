@@ -20,7 +20,7 @@ export function PriorityBars({ bars, size = 10 }: { bars: number; size?: number 
   )
 }
 
-// Read-only priority badge: squared, violet, bars glyph + P-label. Distinct
+// Read-only priority badge: squared chip, bars glyph + P-label. Distinct
 // from the round, dotted StatusBadge pills.
 export function PriorityBadge({ priority, size = 'md' }: { priority: number; size?: 'sm' | 'md' }) {
   const meta = priorityMeta(priority)
@@ -29,12 +29,7 @@ export function PriorityBadge({ priority, size = 'md' }: { priority: number; siz
       role="img"
       aria-label={meta.a11y}
       title={meta.a11y}
-      className={`inline-flex shrink-0 items-center font-mono font-bold rounded-[3px] ${size === 'sm' ? 'text-[9px] px-1.5 py-0.5 gap-1' : 'text-[10px] px-1.5 py-0.5 gap-1.5'}`}
-      style={{
-        color: meta.color,
-        background: `color-mix(in srgb, ${meta.color} 14%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${meta.color} 45%, transparent)`,
-      }}
+      className={`inline-flex shrink-0 items-center font-mono font-bold rounded-[3px] ${meta.chip} ${size === 'sm' ? 'text-[9px] px-1.5 py-0.5 gap-1' : 'text-[10px] px-1.5 py-0.5 gap-1.5'}`}
     >
       <PriorityBars bars={meta.bars} size={size === 'sm' ? 11 : 12} />
       {meta.label}

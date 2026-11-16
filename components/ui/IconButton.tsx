@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 const iconButtonVariants = cva(
   'inline-flex items-center justify-center shrink-0 rounded-full ' +
   'transition-all duration-150 ease-out ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-th-accent ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-th-accent-line ' +
   'disabled:opacity-40 disabled:pointer-events-none active:scale-90',
   {
     variants: {

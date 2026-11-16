@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { TopBar } from '@/components/layout/TopBar'
-import { Clock, MessageSquare } from 'lucide-react'
+import { Clock } from 'lucide-react'
+import { CommentIcon } from '@/components/ui/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSessionGuard } from '@/lib/useSessionGuard'
+import { statusChip } from '@/lib/utils'
 import { Orb } from '@/components/ui/Orb'
 
 interface Highlight {
@@ -83,7 +85,7 @@ export default function RecentPage() {
                 <Link
                   key={h.id}
                   href={`/review/${h.asset_id}`}
-                  className="block bg-th-surface border border-th-border rounded-th p-4 hover:border-th-accent transition-colors"
+                  className="block bg-th-surface border border-th-border rounded-th p-4 hover:border-th-accent-line transition-colors"
                   style={{ borderLeftWidth: 3, borderLeftColor: STATUS_COLOR[h.status] ?? 'var(--th-accent)' }}
                 >
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -94,8 +96,7 @@ export default function RecentPage() {
                   </div>
                   <p className="text-[13px] text-th-text mb-2 line-clamp-2">{h.text}</p>
                   <div className="flex items-center gap-3">
-                    <span className="app-pill font-mono text-[10px]"
-                      style={{ color: STATUS_COLOR[h.status], background: `color-mix(in srgb, ${STATUS_COLOR[h.status]} 14%, transparent)` }}>
+                    <span className={`app-pill font-mono text-[10px] ${statusChip(h.status)}`}>
                       {STATUS_LABEL[h.status] ?? h.status.toUpperCase()}
                     </span>
                     <span className="font-mono text-[10px] text-th-muted">@ {formatTimecode(h.time_sec)}</span>

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Layers, ChevronDown, Share2, ThumbsUp, Check, Pencil, Square, Circle, Minus, Trash2, MessageSquare, Clock, Upload, X, FileText, ExternalLink, StickyNote, Link2 } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Check, Pencil, Square, Circle, Minus, Trash2, Clock, X, FileText, ExternalLink, StickyNote, Link2 } from 'lucide-react'
+import { ApproveIcon, CommentIcon, ReviewLinkIcon, UploadIcon, VersionsIcon } from '@/components/ui/icons'
 import { TopBar } from '@/components/layout/TopBar'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { CommentPanel } from '@/components/review/CommentPanel'
@@ -474,7 +475,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   onClick={() => setShowVersions(!showVersions)}
                   variant="secondary" size="xs" className="font-mono"
                 >
-                  <Layers size={10} />
+                  <VersionsIcon size={10} />
                   v{asset.version}
                   <ChevronDown size={10} />
                 </Button>
@@ -501,7 +502,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                                 onClick={() => handleSwitchVersion(v.id)}
                                 className="flex-1 min-w-0 flex items-center gap-2.5 pl-4 pr-2 py-3 text-left btn-press"
                               >
-                                <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
+                                <VersionsIcon size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-text)' }}>
                                     v{v.version}
@@ -532,7 +533,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                             onClick={() => { setShowVersions(false); handleOpenCompare() }}
                             variant="secondary" size="sm" className="w-full mb-2 md:hidden"
                           >
-                            <Layers size={13} />
+                            <VersionsIcon size={13} />
                             Compare versions
                           </Button>
                         )}
@@ -544,7 +545,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                             }}
                             variant="secondary" size="sm" className="w-full"
                           >
-                            <Upload size={13} />
+                            <UploadIcon size={13} />
                             Upload new version
                           </Button>
                         ) : (
@@ -564,7 +565,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   variant="secondary" size="xs" className="font-mono shrink-0 hidden md:inline-flex"
                   title="Compare versions" aria-label="Compare versions"
                 >
-                  <Layers size={10} className="text-th-accent-text" />
+                  <VersionsIcon size={10} className="text-th-accent-text" />
                   <span className="hidden xl:inline">Compare versions</span>
                 </Button>
               )}
@@ -574,7 +575,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               onClick={() => setShowUploadModal(true)}
               variant="secondary" size="xs" className="font-mono shrink-0"
             >
-              <Upload size={10} />
+              <UploadIcon size={10} />
               Upload new file
             </Button>
           )}
@@ -599,7 +600,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           <PriorityBadge priority={asset.priority} />
         )}
         <Button onClick={() => setShareOpen(true)} variant="secondary" size="sm" title="Share" aria-label="Share">
-          <Share2 size={13} /> <span className="hidden lg:inline">Share</span>
+          <ReviewLinkIcon size={13} /> <span className="hidden lg:inline">Share</span>
         </Button>
         {role === 'admin' && (
           <Button
@@ -609,14 +610,10 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             title={asset.is_complete ? 'Approved' : 'Approve cut'}
             aria-label={asset.is_complete ? 'Approved' : 'Approve cut'}
             className={`approve-glow font-bold ${asset.is_complete ? 'approved' : ''}`}
-            style={{
-              background: asset.is_complete ? 'var(--th-resolved)' : 'var(--th-accent)',
-              color: asset.is_complete ? '#fff' : 'var(--th-accent-fg)',
-            }}
           >
             {asset.is_complete
-              ? <><Check size={13} /> <span className="hidden lg:inline">Approved</span></>
-              : <><ThumbsUp size={13} /> <span className="hidden lg:inline">Approve cut</span></>}
+              ? <><ApproveIcon size={14} /> <span className="hidden lg:inline">Approved</span></>
+              : <><ApproveIcon size={13} /> <span className="hidden lg:inline">Approve cut</span></>}
           </Button>
         )}
       </TopBar>
@@ -632,7 +629,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               style={{
                 background: drawTool === key ? 'color-mix(in srgb, var(--th-accent) 18%, transparent)' : 'transparent',
                 color: drawTool === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
-                border: `1px solid ${drawTool === key ? 'var(--th-accent)' : 'var(--th-border)'}`,
+                border: `1px solid ${drawTool === key ? 'var(--th-accent-line)' : 'var(--th-border)'}`,
               }}
             >
               <Icon size={12} /> {label}
@@ -661,7 +658,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   onClick={() => setShowFulfillModal(true)}
                   size="sm" className="mx-auto"
                 >
-                  <Upload size={13} /> Upload cut
+                  <UploadIcon size={13} /> Upload cut
                 </Button>
               </div>
             </div>
@@ -695,7 +692,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         <aside className="w-85 shrink-0 bg-th-surface border border-th-border rounded-th-lg flex flex-col overflow-hidden">
           <div className="flex shrink-0 border-b border-th-border">
             {([
-              { key: 'notes', icon: MessageSquare, label: `Notes (${comments.length})` },
+              { key: 'notes', icon: CommentIcon, label: `Notes (${comments.length})` },
               ...(hasBrief ? [{ key: 'brief', icon: FileText, label: 'Brief' }] : []),
             ] as { key: SideTab; icon: React.ElementType; label: string }[]).map(({ key, icon: Icon, label }) => (
               <button
@@ -704,7 +701,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 className="flex-1 flex items-center justify-center gap-1.5 py-3 text-[11px] border-b-2 btn-press transition-colors"
                 style={{
                   color: sideTab === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
-                  borderColor: sideTab === key ? 'var(--th-accent)' : 'transparent',
+                  borderColor: sideTab === key ? 'var(--th-accent-line)' : 'transparent',
                   fontWeight: sideTab === key ? 700 : 400,
                 }}
               >
@@ -721,7 +718,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   timeSec: c.time_sec,
                   author: c.author_name,
                   initials: c.author_name?.[0]?.toUpperCase() ?? 'U',
-                  avatarColor: '#4CAF7D',
+                  avatarColor: 'var(--th-avatar-bg)',
                   status: c.status,
                   text: c.text,
                   replies: c.replies ?? [],
@@ -804,7 +801,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                             href={rawLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
+                            className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text font-semibold hover:border-th-accent-line hover:text-th-accent-text transition-colors btn-press"
                           >
                             <ExternalLink size={12} /> Open reference link
                           </a>
@@ -822,7 +819,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                             href={projectLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text font-semibold hover:border-th-accent hover:text-th-accent-text transition-colors btn-press"
+                            className="flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[12px] text-th-text font-semibold hover:border-th-accent-line hover:text-th-accent-text transition-colors btn-press"
                           >
                             <ExternalLink size={12} /> Open project drive link
                           </a>
@@ -908,7 +905,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           <div className="bg-th-surface border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-th-border flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Layers size={16} className="text-th-accent-text" />
+                <VersionsIcon size={16} className="text-th-accent-text" />
                 <h2 className="font-bold text-[16px]">Compare versions</h2>
               </div>
               <IconButton
@@ -927,7 +924,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   <select
                     value={compareV1Id}
                     onChange={(e) => setCompareV1Id(e.target.value)}
-                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent font-mono font-medium"
+                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent-line font-mono font-medium"
                   >
                     {versions.map((v) => (
                       <option key={v.id} value={v.id}>
@@ -960,7 +957,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   <select
                     value={compareV2Id}
                     onChange={(e) => setCompareV2Id(e.target.value)}
-                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent font-mono font-medium"
+                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent-line font-mono font-medium"
                   >
                     {versions.map((v) => (
                       <option key={v.id} value={v.id}>

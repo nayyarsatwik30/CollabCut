@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import { Search, LayoutGrid, List, Plus, Upload, Film, Check, FolderKanban } from 'lucide-react'
+import { Search, LayoutGrid, List, Plus, Film, Check, FolderKanban } from 'lucide-react'
+import { UploadIcon } from '@/components/ui/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TopBar } from '@/components/layout/TopBar'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
@@ -10,6 +11,7 @@ import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { NewContentModal } from '@/components/board/NewContentModal'
 import { useSessionGuard } from '@/lib/useSessionGuard'
+import { statusChip } from '@/lib/utils'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { ALL_CLIENTS_KEY, NO_CLIENT_KEY, buildClientTabs, countLabel, mergeExtraClients, matchesClient, type ClientTab } from '@/lib/clients'
 import { useSelectedClient } from '@/lib/useSelectedClient'
@@ -26,13 +28,6 @@ interface AssignedAsset {
   project_name: string
   project_client: string
   priority: number
-}
-
-const STATUS_COLOR: Record<string, string> = {
-  in_review: 'var(--th-open)',
-  approved: 'var(--th-resolved)',
-  changes: 'var(--th-changes)',
-  processing: 'var(--th-muted)',
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -326,7 +321,7 @@ export default function DashboardPage() {
                 className="flex items-center gap-1.5 px-3 py-2.5 text-[12px] border-b-2 btn-press transition-colors"
                 style={{
                   color: dashTab === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
-                  borderColor: dashTab === key ? 'var(--th-accent)' : 'transparent',
+                  borderColor: dashTab === key ? 'var(--th-accent-line)' : 'transparent',
                   fontWeight: dashTab === key ? 700 : 400,
                 }}
               >
@@ -369,13 +364,12 @@ export default function DashboardPage() {
               ) : (
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
                   {filteredAssigned.map((a) => {
-                    const color = STATUS_COLOR[a.status] ?? 'var(--th-muted)'
                     const label = STATUS_LABEL[a.status] ?? a.status.toUpperCase()
                     return (
                       <Link
                         key={a.id}
                         href={`/review/${a.id}`}
-                        className="flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
+                        className="flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent-line transition-colors shadow-card hover:shadow-card-hover"
                       >
                         <div className="aspect-video shrink-0 bg-th-surface-alt flex items-center justify-center relative">
                           {a.mux_playback_id ? (
@@ -387,10 +381,7 @@ export default function DashboardPage() {
                           ) : (
                             <Film size={36} style={{ color: 'var(--th-accent-text)' }} />
                           )}
-                          <span
-                            className="app-pill absolute top-2.5 right-2.5 font-mono text-[10px]"
-                            style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}
-                          >
+                          <span className={`app-pill absolute top-2.5 right-2.5 font-mono text-[10px] ${statusChip(a.status)}`}>
                             {label}
                           </span>
                         </div>
@@ -401,10 +392,7 @@ export default function DashboardPage() {
                           </div>
                           <p className="text-[11px] text-th-muted truncate">{a.project_client}</p>
                           <span
-                            className="self-start flex items-center gap-1.5 h-7 px-2.5 rounded-th text-[11px] font-semibold mt-0.5"
-                            style={a.is_complete
-                              ? { background: 'color-mix(in srgb, var(--th-resolved) 16%, transparent)', color: 'var(--th-resolved)', border: '1px solid color-mix(in srgb, var(--th-resolved) 40%, transparent)' }
-                              : { background: 'var(--th-surface-alt)', color: 'var(--th-muted)', border: '1px solid var(--th-border)' }}
+                            className={`self-start flex items-center gap-1.5 h-7 px-2.5 rounded-th text-[11px] font-semibold mt-0.5 ${a.is_complete ? 'chip-resolved' : 'chip-muted'}`}
                           >
                             {a.is_complete ? <><Check size={12} /> Complete</> : 'Pending'}
                           </span>
@@ -486,10 +474,10 @@ export default function DashboardPage() {
                   <button
                     disabled={newBlocked}
                     onClick={() => setShowNew(true)}
-                    className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent-text transition-colors btn-press overflow-hidden"
+                    className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent-line hover:text-th-accent-text transition-colors btn-press overflow-hidden"
                   >
                     <div className="aspect-video shrink-0 flex items-center justify-center">
-                      <Upload size={22} />
+                      <UploadIcon size={22} />
                     </div>
                     <div className="p-3.5 flex-1 flex items-center justify-center min-h-[56px]">
                       <span className="text-[13px] font-medium">New project</span>

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Upload, CircleCheck, CircleAlert, Ban } from 'lucide-react'
+import { X, CircleCheck, CircleAlert, Ban } from 'lucide-react'
+import { UploadIcon } from '@/components/ui/icons'
 import { useSession } from 'next-auth/react'
 import * as UpChunk from '@mux/upchunk'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
@@ -357,11 +358,11 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
                 onClick={() => fileRef.current?.click()}
                 className="border-2 border-dashed rounded-th-lg p-10 text-center cursor-pointer transition-colors"
                 style={{
-                  borderColor: dragOver ? 'var(--th-accent)' : 'var(--th-border)',
+                  borderColor: dragOver ? 'var(--th-accent-line)' : 'var(--th-border)',
                   background: dragOver ? 'color-mix(in srgb, var(--th-accent) 6%, transparent)' : 'var(--th-surface-alt)',
                 }}
               >
-                <Upload size={28} className="mx-auto mb-3 text-th-muted" />
+                <UploadIcon size={28} className="mx-auto mb-3 text-th-muted" />
                 <p className="font-semibold text-[14px] mb-1">Drop your cut here</p>
                 <p className="text-[12px] text-th-muted">or click to browse</p>
                 <p className="text-[11px] text-th-faint font-mono mt-3">MP4, MOV, MXF, ProRes — any format</p>
@@ -437,13 +438,12 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
           {/* Done */}
           {state === 'done' && (
             <div className="py-8 text-center">
-              <CircleCheck size={36} className="mx-auto mb-3" style={{ color: 'var(--th-resolved)' }} />
+              <CircleCheck size={36} className="mx-auto mb-3 text-th-text" />
               <p className="font-semibold mb-1">Video uploaded!</p>
               <p className="text-[12px] text-th-muted mb-5">
                 It will be ready to review in 1–2 minutes while Mux transcodes it.
               </p>
-              <button onClick={onClose}
-                className="px-6 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press">
+              <button onClick={onClose} className="btn btn-primary [--btn-px:28px]">
                 Done
               </button>
             </div>

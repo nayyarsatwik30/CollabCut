@@ -11,14 +11,17 @@ const STATUS_LABELS: Record<string, string> = {
   processing: 'Processing…',
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  open:       'var(--th-open)',
-  resolved:   'var(--th-resolved)',
-  changes:    'var(--th-changes)',
-  approved:   'var(--th-resolved)',
-  in_review:  'var(--th-open)',
-  draft:      'var(--th-muted)',
-  processing: 'var(--th-info)',
+// Status chips use the palette only (classes in globals.css): resolved and
+// approved are a lime fill, open and in-review an outline, needs-changes the
+// danger colour, everything else a muted outline.
+const STATUS_CHIP: Record<string, string> = {
+  open:       'chip-open',
+  resolved:   'chip-resolved',
+  changes:    'chip-changes',
+  approved:   'chip-resolved',
+  in_review:  'chip-open',
+  draft:      'chip-muted',
+  processing: 'chip-muted',
 }
 
 interface StatusBadgeProps {
@@ -27,18 +30,11 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const color = STATUS_COLOR[status] ?? 'var(--th-muted)'
+  const chip = STATUS_CHIP[status] ?? 'chip-muted'
   const label = STATUS_LABELS[status] ?? status
 
   return (
-    <span
-      className={cn('app-pill text-[10px] font-mono', className)}
-      style={{
-        color,
-        background: `color-mix(in srgb, ${color} 14%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
-      }}
-    >
+    <span className={cn('app-pill text-[10px] font-mono', chip, className)}>
       <span className="text-[8px]">●</span>
       {label.toUpperCase()}
     </span>
@@ -53,7 +49,9 @@ interface AvatarProps {
   style?: React.CSSProperties
 }
 
-export function Avatar({ initials, color, size = 'md', className, style }: AvatarProps) {
+// `color` stays in the props so existing call sites keep compiling: per-person
+// colours are not part of the palette, so every avatar is the same neutral pair.
+export function Avatar({ initials, size = 'md', className, style }: AvatarProps) {
   const sizeMap = {
     sm: 'w-6 h-6 text-[9px]',
     md: 'w-7 h-7 text-[11px]',
@@ -61,8 +59,8 @@ export function Avatar({ initials, color, size = 'md', className, style }: Avata
   }
   return (
     <div
-      className={cn('rounded-full flex items-center justify-center font-extrabold shrink-0', sizeMap[size], className)}
-      style={{ background: color, color: '#000', ...style }}
+      className={cn('app-avatar font-extrabold border border-th-border-strong', sizeMap[size], className)}
+      style={style}
     >
       {initials}
     </div>

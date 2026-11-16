@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { MessageSquare, Clock, Film } from 'lucide-react'
+import { Clock, Film } from 'lucide-react'
+import { CommentIcon } from '@/components/ui/icons'
 import { Asset } from '@/lib/types'
 import { StatusBadge } from '@/components/ui/Badge'
 
@@ -14,7 +15,7 @@ export function AssetCard({ asset, projectId }: AssetCardProps) {
   return (
     <Link
       href={`/review/${asset.id}`}
-      className="block app-card overflow-hidden hover:border-th-accent group"
+      className="block app-card overflow-hidden hover:border-th-accent-line group"
     >
       {/* Thumbnail */}
       <div className="h-28 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
@@ -45,7 +46,7 @@ export function AssetCard({ asset, projectId }: AssetCardProps) {
         <p className="text-[13px] font-semibold truncate mb-3 group-hover:text-th-accent-text transition-colors">{asset.name}</p>
         <div className="flex items-center justify-between text-[11px] text-th-faint font-mono">
           <span>{asset.sizeLabel}</span>
-          <span className="flex items-center gap-1.5"><MessageSquare size={10} />{asset.commentCount}</span>
+          <span className="flex items-center gap-1.5"><CommentIcon size={10} />{asset.commentCount}</span>
         </div>
       </div>
     </Link>

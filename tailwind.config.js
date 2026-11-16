@@ -21,6 +21,9 @@ module.exports = {
         'th-faint':       'var(--th-faint)',
         'th-accent':      'var(--th-accent)',
         'th-accent-hover': 'var(--th-accent-hover)',
+        'th-accent-line': 'var(--th-accent-line)', // lime on Dark, Ink on Light: for hairlines and rings
+        'th-border-strong': 'var(--th-border-strong)',
+        'th-danger':      'var(--th-danger)',
         'th-accent-fg':   'var(--th-accent-fg)',
         'th-accent-text': 'var(--th-accent-text)',
         'th-open':        'var(--th-open)',

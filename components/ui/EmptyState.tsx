@@ -11,7 +11,7 @@ interface EmptyStateProps {
 
 // App-themed empty state: flat-vector illustration (solid shapes, three theme
 // colors, no gradients/shadows/transparency), bold heading, muted subtext,
-// optional underlined teal link or action children.
+// optional underlined link or action children.
 export function EmptyState({ icon: Icon, title, sub, link, className = '', children }: EmptyStateProps) {
   return (
     <div className={`app-empty ${className}`}>

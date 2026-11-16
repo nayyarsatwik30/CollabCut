@@ -15,15 +15,7 @@ interface Channel { key: string; label: string; unread: number }
 interface Workspace { id: string; name: string; role: string; channels: Channel[] }
 interface ChatMessage { id: string; body: string; created_at: string; sender_id: string; sender_name: string; mine: boolean }
 
-const AVATAR_COLORS = ['#2F8F83', '#4F6BD8', '#B5528A', '#C27A2C', '#7A5BC0', '#3A8DBF', '#B8483F', '#5E8A3A']
 const GROUP_WINDOW_MS = 5 * 60 * 1000
-
-// Deterministic per sender (not profiles.avatar_color, which defaults to the same green for everyone).
-function avatarColor(seed: string) {
-  let h = 0
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
-  return AVATAR_COLORS[h % AVATAR_COLORS.length]
-}
 
 function initialsOf(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -32,13 +24,11 @@ function initialsOf(name: string) {
   return letters.toUpperCase()
 }
 
-function Avatar({ name, seed }: { name: string; seed: string }) {
+// Per-person colours are not part of the palette: every avatar is the neutral
+// avatar pair (initials tell people apart). `seed` is kept for the call sites.
+function Avatar({ name }: { name: string; seed: string }) {
   return (
-    <span
-      aria-hidden
-      className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
-      style={{ background: avatarColor(seed) }}
-    >
+    <span aria-hidden className="app-avatar w-8 h-8 text-[11px] border border-th-border-strong">
       {initialsOf(name)}
     </span>
   )
@@ -430,7 +420,7 @@ export default function ChatPage() {
                   rows={1}
                   placeholder="Message your team (Enter to send, Shift+Enter for a new line)"
                   aria-label="Message"
-                  className="flex-1 resize-none max-h-32 rounded-th-sm border border-th-border bg-th-surface px-3 py-2 text-[13px] focus:border-th-accent focus-visible:ring-2 focus-visible:ring-th-accent focus-visible:outline-none"
+                  className="flex-1 resize-none max-h-32 rounded-th-sm border border-th-border bg-th-surface px-3 py-2 text-[13px] focus:border-th-accent-line focus-visible:ring-2 focus-visible:ring-th-accent-line focus-visible:outline-none"
                 />
                 <button
                   onClick={send}

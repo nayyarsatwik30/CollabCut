@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { LayoutGrid, SquareKanban, Clock, Bell, MessageCircle, Settings, ChevronDown, Trash2, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { LayoutGrid, Clock, Bell, MessageCircle, Settings, ChevronDown, Trash2, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { BoardIcon } from '@/components/ui/icons'
 import { cn } from '@/lib/utils'
 import { useStorageUsage } from '@/lib/useStorageUsage'
 import { StorageUsageBar } from '@/components/storage/StorageUsageBar'
@@ -13,7 +14,7 @@ import { performLogout } from '@/lib/auth'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 
 const NAV_ITEMS = [
-  { href: '/board', icon: SquareKanban, label: 'Board' },
+  { href: '/board', icon: BoardIcon, label: 'Board' },
   { href: '/dashboard', icon: LayoutGrid, label: 'Projects' },
   { href: '/recent', icon: Clock, label: 'Recent' },
   { href: '/chat', icon: MessageCircle, label: 'Chat' },
@@ -172,7 +173,7 @@ export function Sidebar() {
       <div className={cn('h-13 flex items-center shrink-0', collapsed ? 'justify-center px-0' : 'px-5')}>
         <Link href="/board" className="flex items-center min-w-0">
           <span className="w-8 h-8 rounded-th-sm bg-white flex items-center justify-center shrink-0">
-            <img src="/collabcut-mark.png" alt="CollabCut" className="w-6 h-6 object-contain" />
+            <span role="img" aria-label="CollabCut" className="brand-mark" />
           </span>
           <span className={cn('text-[17px] font-extrabold tracking-tight font-display overflow-hidden whitespace-nowrap transition-all duration-200', collapsed ? 'w-0 ml-0 opacity-0' : 'ml-2.5 opacity-100')}>COLLABCUT</span>
         </Link>

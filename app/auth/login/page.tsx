@@ -80,7 +80,7 @@ export default function LoginPage() {
     <div className="page-scroll bg-th-bg flex flex-col min-h-screen">
       <header className="h-14 border-b border-th-border flex items-center justify-between px-6 shrink-0">
         <Link href="/" className="flex items-center gap-2.5">
-          <img src="/collabcut-mark.png" alt="CollabCut" className="w-6 h-6 object-contain shrink-0" />
+          <span role="img" aria-label="CollabCut" className="brand-mark" />
           <span className="text-[17px] font-extrabold tracking-tight">COLLABCUT</span>
         </Link>
         <ThemeToggle />
@@ -116,7 +116,7 @@ export default function LoginPage() {
               <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">Email</label>
               <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@studio.in"
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors" />
+                className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors" />
             </div>
 
             <div>
@@ -127,7 +127,7 @@ export default function LoginPage() {
               <div className="relative">
                 <input name="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="••••••••"
                   onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                  className="w-full px-3.5 py-2.5 pr-10 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors" />
+                  className="w-full px-3.5 py-2.5 pr-10 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors" />
                 <IconButton type="button" label={showPass ? 'Hide password' : 'Show password'}
                   size="sm" variant="ghost"
                   onClick={() => setShowPass(!showPass)}

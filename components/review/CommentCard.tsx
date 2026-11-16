@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Trash2, MessageSquare, CornerDownRight } from 'lucide-react'
+import { Trash2, CornerDownRight } from 'lucide-react'
+import { ApproveIcon, CommentIcon } from '@/components/ui/icons'
 import { Comment, CommentStatus } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
@@ -44,9 +45,7 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
       <div className="p-3.5">
         {/* Header row */}
         <div className="flex items-center gap-2 mb-2.5">
-          <Avatar initials={c.initials} color={c.avatarColor} size="sm"
-            style={{ boxShadow: `0 0 0 2px var(--th-surface), 0 0 0 4px ${c.avatarColor}44` } as React.CSSProperties}
-          />
+          <Avatar initials={c.initials} color={c.avatarColor} size="sm" />
           <div className="flex-1 min-w-0">
             <span className="text-[12px] font-semibold">{c.author}</span>
             <span className="text-[10px] text-th-muted font-mono ml-2">{c.createdAt}</span>
@@ -54,8 +53,7 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
           {/* Timecode jump */}
           <button
             onClick={() => onSeek(c.timeSec)}
-            className="font-mono text-[10px] px-2 py-0.5 rounded-th-sm btn-press transition-colors"
-            style={{ color: 'var(--th-accent-text)', background: 'color-mix(in srgb, var(--th-accent) 14%, transparent)' }}
+            className="chip-time btn-press transition-colors hover:bg-th-surface-hov"
           >
             {formatTimecode(c.timeSec)}
           </button>
@@ -76,7 +74,7 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
               onClick={() => setReplying(!replying)}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
             >
-              <MessageSquare size={11} />
+              <CommentIcon size={12} />
               Reply
               {c.replies.length > 0 && (
                 <span className="font-mono text-[10px] font-bold text-th-accent-text">{c.replies.length}</span>
@@ -88,11 +86,12 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
               title={c.resolved ? 'Reopen' : 'Mark resolved'}
               className="w-7 h-7 rounded-th-sm border border-th-border flex items-center justify-center btn-press transition-colors"
               style={{
-                background: c.resolved ? 'color-mix(in srgb, var(--th-resolved) 18%, transparent)' : 'var(--th-surface-alt)',
-                color: c.resolved ? 'var(--th-resolved)' : 'var(--th-muted)',
+                background: c.resolved ? 'var(--th-accent)' : 'var(--th-surface-alt)',
+                color: c.resolved ? 'var(--th-accent-fg)' : 'var(--th-muted)',
+                boxShadow: c.resolved ? 'inset 0 0 0 1px var(--th-accent-edge)' : undefined,
               }}
             >
-              <Check size={12} />
+              <ApproveIcon size={13} />
             </button>
 
             <button
@@ -134,7 +133,7 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
             onChange={(e) => setReplyText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitReply() } if (e.key === 'Escape') { setReplying(false); setReplyText('') } }}
             placeholder="Write a reply… (Enter to send)"
-            className="flex-1 px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors font-display"
+            className="flex-1 px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors font-display"
           />
           <button onClick={submitReply}
             className="px-3 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[12px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
