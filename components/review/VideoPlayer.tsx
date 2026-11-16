@@ -295,7 +295,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           onSeek={seekTo}
         />
 
-        <div className="flex items-center gap-2 px-4 pb-3">
+        <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
           <IconButton variant="outline" size="sm" onClick={() => skip(-10)} label="Back 10s (Shift+←)" className="relative">
             <SkipBack size={14} />
             <span className="absolute bottom-0 right-0.5 text-[8px] font-bold leading-none pointer-events-none">10</span>

@@ -737,7 +737,7 @@ h3,
    tone="inherit" opts out (surfaces with their own colour system). */
 .ic { flex-shrink: 0; }
 :root[data-theme='dark'] .ic { color: var(--th-accent); }
-:root[data-theme='dark'] :is(.btn-primary, .btn-solid, .btn-danger, .disc-primary, .bg-th-accent, .bg-th-danger, .chip-p1, .chip-resolved, .ic-on-fill) .ic,
+:root[data-theme='dark'] :is(.btn-primary, .btn-solid, .btn-danger, .disc-primary, .bg-th-accent, .bg-th-danger, .chip-p1, .chip-resolved, .ic-on-fill, .btn-chip[aria-pressed='true'], .btn-chip.is-active) .ic,
 :root[data-theme='dark'] .ic[data-tone='inherit'],
 :root[data-theme='dark'] .ic-tile[data-tone='inherit'] .ic { color: inherit; }
 :root[data-theme='dark'] .ic[data-tone='muted'],
@@ -763,8 +763,10 @@ h3,
 }
 :root[data-theme='dark'] .ic-tile { background: transparent; box-shadow: none; color: var(--th-accent); }
 :root[data-theme='dark'] .ic-tile[data-tone='inherit'] { color: inherit; }
+/* in Dark the tile rule above is more specific than the fill exception below, so repeat it here */
+:root[data-theme='dark'] :is(.btn-primary, .disc-primary, .bg-th-accent, .chip-p1, .chip-resolved, .btn-chip[aria-pressed='true'], .btn-chip.is-active) .ic-tile { background: transparent; box-shadow: none; color: inherit; }
 /* a tile inside a lime fill would be lime on lime: drop the fill, keep the icon */
-:is(.btn-primary, .disc-primary, .bg-th-accent, .chip-p1, .chip-resolved) .ic-tile { background: transparent; box-shadow: none; color: inherit; }
+:is(.btn-primary, .disc-primary, .bg-th-accent, .chip-p1, .chip-resolved, .btn-chip[aria-pressed='true'], .btn-chip.is-active) .ic-tile { background: transparent; box-shadow: none; color: inherit; }
 
 /* ── Inputs / selects / textareas ── */
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']),

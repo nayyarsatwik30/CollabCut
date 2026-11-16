@@ -106,7 +106,7 @@ function build(name: string, paint: PaintFn): IconComponent {
       height: size,
       strokeWidth,
       className: cn('ic', accent ? undefined : className),
-      'aria-hidden': props['aria-label'] ? undefined : true,
+      'aria-hidden': props['aria-label'] || props['aria-labelledby'] ? undefined : true,
       ...props,
       ...(toneAttr ? { 'data-tone': toneAttr } : null),
     } as React.SVGProps<SVGSVGElement>)
