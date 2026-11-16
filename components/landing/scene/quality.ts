@@ -6,6 +6,8 @@ export interface Quality {
   tier: Tier
   maxDpr: number
   butterflies: number
+  seeds: number // seeds per dandelion head
+  filaments: number // parachute filaments per seed
   trailSegments: number // points per trail ribbon
   embers: number // particle pool shared by all spheres
   bloom: boolean // selective bloom pass (trails + sphere edges)
@@ -33,7 +35,7 @@ export function detectTier(): Tier {
 }
 
 export function qualityFor(tier: Tier): Quality {
-  if (tier === 'high') return { tier, maxDpr: 1.75, butterflies: 26, trailSegments: 30, embers: 150, bloom: true, msaa: 4 }
-  if (tier === 'low') return { tier, maxDpr: 1, butterflies: 12, trailSegments: 14, embers: 40, bloom: false, msaa: 0 }
-  return { tier, maxDpr: 1, butterflies: 0, trailSegments: 0, embers: 0, bloom: false, msaa: 0 }
+  if (tier === 'high') return { tier, maxDpr: 1.75, butterflies: 26, seeds: 200, filaments: 10, trailSegments: 30, embers: 150, bloom: true, msaa: 4 }
+  if (tier === 'low') return { tier, maxDpr: 1, butterflies: 10, seeds: 120, filaments: 7, trailSegments: 14, embers: 40, bloom: false, msaa: 0 }
+  return { tier, maxDpr: 1, butterflies: 0, seeds: 0, filaments: 0, trailSegments: 0, embers: 0, bloom: false, msaa: 0 }
 }

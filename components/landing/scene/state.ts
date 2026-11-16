@@ -27,20 +27,37 @@ export const SPHERES: SphereDef[] = [
   { name: 'Telegram', finish: 'chrome', r: 0.54, anchor: [1.9, 1.75, 0.6], start: 1.0, swirl: -0.5, zDrift: -0.8, omega: 6.6, delay: 0.025 },
 ]
 
+// Where each sphere's dandelion stands in the hero (same order as SPHERES):
+// the right-hand side, at uneven heights and depths.
+export const PUFFS: [number, number, number][] = [
+  [1.15, 0.15, 0.8], // WhatsApp
+  [3.25, -0.75, 0.0], // Notion
+  [0.6, -1.05, 1.2], // Slack
+  [1.6, -1.15, 1.5], // Frame.io
+  [3.5, 2.0, -1.8], // Google Drive
+  [2.75, 0.45, -1.0], // Gmail
+  [0.95, 1.6, -1.5], // Dropbox
+  [1.75, 1.5, 0.3], // Telegram
+]
+// A seed head is a little smaller than the sphere it becomes.
+export const puffRadius = (sphereRadius: number) => sphereRadius * 0.5 + 0.07
+
 export const MERGED = { name: 'CollabCut', finish: 'pearl' as Finish, r: 1.15 }
 export const CENTER: [number, number, number] = [0, 0.42, 0.5]
 export const PLANE_Z = -3
 export const TOOL_COUNT = SPHERES.length
 export const BODY_COUNT = TOOL_COUNT + 1 // tools + the merged sphere (last index)
 
-// Per-frame simulation output, written by <Spheres/> and read by the
-// backdrop, trails, embers and burst. Plain typed arrays: no React state in
+// Per-frame simulation output, written by <Dandelions/> and <Spheres/> and
+// read by the butterflies, backdrop, trails, embers and burst. Plain typed arrays: no React state in
 // the render loop.
 export interface SceneState {
   pos: Float32Array // BODY_COUNT * 3
   vel: Float32Array // BODY_COUNT * 3
   radius: Float32Array // rendered radius (0 while hidden)
   glow: Float32Array // 0..1 trail/rim intensity from real speed
+  puff: Float32Array // TOOL_COUNT * 3: where each dandelion head is right now (it sways)
+  puffR: Float32Array // TOOL_COUNT: its radius
   burstStart: number // clock time of the last merge crossing, or -1
   burstDir: number // +1 scrolling down through the merge, -1 back up
 }
@@ -51,6 +68,8 @@ export function createSceneState(): SceneState {
     vel: new Float32Array(BODY_COUNT * 3),
     radius: new Float32Array(BODY_COUNT),
     glow: new Float32Array(BODY_COUNT),
+    puff: new Float32Array(TOOL_COUNT * 3),
+    puffR: new Float32Array(TOOL_COUNT),
     burstStart: -1,
     burstDir: 1,
   }

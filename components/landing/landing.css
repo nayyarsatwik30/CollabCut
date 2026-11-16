@@ -473,18 +473,34 @@ html:has(.lp) body {
 }
 
 /* ---------- Five steps, zigzag ---------- */
+.lp-steps {
+  /* The glow behind each video bleeds past the screen edge. */
+  overflow-x: clip;
+  --step-gutter: clamp(20px, 4vw, 56px);
+  /* Left edge of the page container, so step text lines up with every other section. */
+  --step-inset: max(var(--step-gutter), calc((100vw - 1320px) / 2 + var(--step-gutter)));
+  /* How far the video's edges take to fade into the page. */
+  --step-fade-inner: 26%;
+  --step-fade-outer: 15%;
+}
 .lp-steps-list {
   list-style: none;
-  margin-top: clamp(48px, 7vw, 96px);
+  margin-top: clamp(40px, 6vw, 88px);
   display: grid;
-  gap: clamp(64px, 9vw, 132px);
+  gap: clamp(28px, 4vw, 64px);
 }
-/* Mobile first: one column, text above video. */
+
+/* Mobile first: one column, text above video, video full width. */
 .lp-step {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
+}
+.lp-step-text {
+  position: relative;
+  display: flex;
   align-items: center;
+  padding: 0 var(--step-gutter) 20px;
 }
 .lp-step-number {
   display: block;
@@ -507,29 +523,43 @@ html:has(.lp) body {
   line-height: 1.5;
   color: var(--muted);
 }
-/* Desktop: text and video side by side; the side comes from
-   data-text-side, set in one place (textSideFor in Steps.tsx). */
-@media (min-width: 768px) {
-  .lp-step {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    gap: clamp(32px, 6vw, 96px);
-  }
-  .lp-step[data-text-side='right'] {
-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  }
-  .lp-step[data-text-side='right'] .lp-step-text {
-    order: 2;
-  }
+
+/* Text rising out of shadow. --rise (0..1) is set from the scroll position
+   by StepsRise.tsx; unset, it is 1 and the text is simply there. The short
+   transition only smooths the steps of a mouse wheel. */
+.lp-step-rise {
+  --hidden: calc(1 - var(--rise, 1));
+  opacity: var(--rise, 1);
+  transform: translate3d(0, calc(var(--hidden) * 44px), 0);
+  filter: blur(calc(var(--hidden) * 7px));
+  transition: opacity 0.35s ease-out, transform 0.35s ease-out, filter 0.35s ease-out;
+  will-change: opacity, transform, filter;
 }
 
-/* The slot is always 16:9, with or without a recording. */
-.lp-step-media {
+/* The media half: no box. A glow sits behind it and its edges are masked
+   so the picture dissolves into the page instead of ending on a line. */
+.lp-step-slot {
   position: relative;
   aspect-ratio: 16 / 9;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--bg);
+}
+.lp-step-slot::before {
+  content: '';
+  position: absolute;
+  inset: 5% 3%;
+  /* A blurred slab of light the size of the picture: it shows as a halo
+     around the edges and corners, and as the whole image when there is no
+     recording yet. The second layer gives it a brighter heart. */
+  background:
+    radial-gradient(ellipse 40% 42% at 50% 50%, color-mix(in srgb, var(--glow) 9%, transparent), transparent 75%),
+    color-mix(in srgb, var(--glow) 9%, transparent);
+  filter: blur(54px);
+  pointer-events: none;
+}
+.lp-step-media {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--step-fade-outer), #000 calc(100% - var(--step-fade-outer)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--step-fade-outer), #000 calc(100% - var(--step-fade-outer)), transparent);
 }
 .lp-step-frame {
   position: absolute;
@@ -539,10 +569,8 @@ html:has(.lp) body {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  transition: opacity 0.5s ease;
-}
-.lp-step-frame {
   color: var(--muted);
+  transition: opacity 0.5s ease;
 }
 .lp-step-frame-label {
   font-family: var(--th-mono);
@@ -566,14 +594,80 @@ html:has(.lp) body {
   opacity: 0;
 }
 
+/* Desktop: text and video take half the screen each. The side comes from
+   data-text-side, set in one place (textSideFor in Steps.tsx). */
+@media (min-width: 768px) {
+  .lp-step {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: clamp(380px, 33vw, 84vh);
+  }
+  .lp-step-text {
+    padding: 0 clamp(24px, 4vw, 72px) 0 var(--step-inset);
+  }
+  .lp-step-slot {
+    aspect-ratio: auto;
+  }
+  /* The picture fades out towards the text. Top and bottom are already
+     faded by the mask on .lp-step-media; the two together also round the
+     inner corners off into the dark. The outer edge is the edge of the screen. */
+  .lp-step-media video {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--step-fade-inner));
+    mask-image: linear-gradient(to right, transparent, #000 var(--step-fade-inner));
+  }
+  .lp-step[data-text-side='right'] .lp-step-text {
+    order: 2;
+    padding: 0 var(--step-inset) 0 clamp(24px, 4vw, 72px);
+  }
+  .lp-step[data-text-side='right'] .lp-step-media video {
+    -webkit-mask-image: linear-gradient(to left, transparent, #000 var(--step-fade-inner));
+    mask-image: linear-gradient(to left, transparent, #000 var(--step-fade-inner));
+  }
+}
+
+/* Focus shadow, pointer devices only. A shadow falls from the centre line
+   over whichever half the cursor is NOT on: over the inner part of the video
+   while reading the text, over the text while watching the video. */
+@media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+  .lp-step-text::after,
+  .lp-step-slot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.36s ease;
+    --shade-strong: color-mix(in srgb, var(--bg) 82%, transparent);
+    --shade-soft: color-mix(in srgb, var(--bg) 38%, transparent);
+    /* Default: this half's centre line is on its right (the left-hand half). */
+    background: linear-gradient(to left, var(--shade-strong), var(--shade-soft) 55%, transparent);
+  }
+  /* The right-hand half: its centre line is on its left. */
+  .lp-step[data-text-side='left'] .lp-step-slot::after,
+  .lp-step[data-text-side='right'] .lp-step-text::after {
+    background: linear-gradient(to right, var(--shade-strong), var(--shade-soft) 55%, transparent);
+  }
+  .lp-step:has(.lp-step-text:hover) .lp-step-slot::after,
+  .lp-step:has(.lp-step-slot:hover) .lp-step-text::after {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-reveal] {
     transition: none;
     opacity: 1;
     transform: none;
   }
+  .lp-step-rise {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
   .lp-step-frame,
-  .lp-step-media video {
+  .lp-step-media video,
+  .lp-step-text::after,
+  .lp-step-slot::after {
     transition: none;
   }
 }

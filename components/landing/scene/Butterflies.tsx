@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, type MutableRefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { TL, smoothstep } from '../story'
+import { TOOL_COUNT, type SceneState } from './state'
 
 export interface PointerState {
   x: number // NDC, -1..1
@@ -62,6 +63,7 @@ attribute float aSide;
 attribute vec2 aWing;
 attribute float aPhase;
 attribute float aTone;
+attribute float aFold;
 varying vec2 vWing;
 varying float vSide;
 varying vec3 vN;
@@ -75,7 +77,11 @@ void main() {
   if (abs(aSide) > 0.5) {
     // Tips and the hindwing trail the root slightly, so the wing bends.
     float lag = aWing.x * 0.6 + max(0.0, -aWing.y) * 0.25;
-    float a = (0.32 + 0.92 * sin(aPhase - lag)) * aSide;
+    // In flight the wings beat; at rest they are held up and nearly closed,
+    // opening and closing a touch as the butterfly sits.
+    float beat = 0.32 + 0.92 * sin(aPhase - lag);
+    float rest = 1.3 + 0.1 * sin(aPhase * 0.35) - aWing.x * 0.06;
+    float a = mix(beat, rest, aFold) * aSide;
     float c = cos(a);
     float s = sin(a);
     p = vec3(p.x * c, p.x * s, p.z);
@@ -161,20 +167,57 @@ interface Agent {
   size: number
   flap: number
   bank: number
+  puff: number // which dandelion it lands on
+  landAt: number // where in the landing window it sets off
+  nx: number; ny: number; nz: number // its spot on the seed head (outward direction)
+  hx: number; hy: number; hz: number // which way it faces once landed
 }
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
-export function Butterflies({ count, pointer, progress, fg, bg }: { count: number; pointer: MutableRefObject<PointerState>; progress: MutableRefObject<number>; fg: string; bg: string }) {
+// Deals the butterflies out across the dandelions and gives each its own spot
+// on the upper, camera-facing part of the seed head, spaced around it so two
+// on the same head do not sit on top of each other.
+function perch(i: number, count: number) {
+  const puff = i % TOOL_COUNT
+  const slot = Math.floor(i / TOOL_COUNT)
+  const perHead = Math.ceil(count / TOOL_COUNT)
+  const az = (slot / perHead) * Math.PI * 1.5 - 0.5 + puff * 0.9 + (Math.random() - 0.5) * 0.4
+  const el = 0.5 + Math.random() * 0.55
+  const nx = Math.cos(el) * Math.sin(az) * 0.8
+  const ny = Math.sin(el)
+  const nz = Math.cos(el) * (0.55 + 0.45 * Math.cos(az))
+  const nl = Math.hypot(nx, ny, nz)
+  const n = [nx / nl, ny / nl, nz / nl]
+  // Facing: any direction along the surface.
+  const turn = Math.random() * Math.PI * 2
+  const ref = Math.abs(n[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]
+  let ax = n[1] * ref[2] - n[2] * ref[1], ay = n[2] * ref[0] - n[0] * ref[2], az2 = n[0] * ref[1] - n[1] * ref[0]
+  const al = Math.hypot(ax, ay, az2)
+  ax /= al; ay /= al; az2 /= al
+  const bx = n[1] * az2 - n[2] * ay, by = n[2] * ax - n[0] * az2, bz = n[0] * ay - n[1] * ax
+  const c = Math.cos(turn), s = Math.sin(turn)
+  return {
+    puff,
+    landAt: Math.random(),
+    nx: n[0], ny: n[1], nz: n[2],
+    hx: ax * c + bx * s, hy: ay * c + by * s, hz: az2 * c + bz * s,
+  }
+}
+
+export function Butterflies({ count, pointer, progress, state: scene, fg, bg }: { count: number; pointer: MutableRefObject<PointerState>; progress: MutableRefObject<number>; state: SceneState; fg: string; bg: string }) {
   const mesh = useRef<THREE.InstancedMesh>(null)
 
-  const { geometry, material, phase } = useMemo(() => {
+  const { geometry, material, phase, fold } = useMemo(() => {
     const geometry = buildGeometry()
     const phase = new THREE.InstancedBufferAttribute(new Float32Array(count), 1)
     phase.setUsage(THREE.DynamicDrawUsage)
     const tone = new Float32Array(count)
     for (let i = 0; i < count; i++) tone[i] = Math.random() < 0.3 ? Math.random() * 0.22 : 0.72 + Math.random() * 0.28
+    const fold = new THREE.InstancedBufferAttribute(new Float32Array(count), 1)
+    fold.setUsage(THREE.DynamicDrawUsage)
     geometry.setAttribute('aPhase', phase)
+    geometry.setAttribute('aFold', fold)
     geometry.setAttribute('aTone', new THREE.InstancedBufferAttribute(tone, 1))
     const material = new THREE.ShaderMaterial({
       vertexShader: VERT,
@@ -183,7 +226,7 @@ export function Butterflies({ count, pointer, progress, fg, bg }: { count: numbe
       side: THREE.DoubleSide,
       alphaToCoverage: true,
     })
-    return { geometry, material, phase }
+    return { geometry, material, phase, fold }
   }, [count, fg, bg])
 
   useEffect(() => () => { geometry.dispose(); material.dispose() }, [geometry, material])
@@ -203,6 +246,7 @@ export function Butterflies({ count, pointer, progress, fg, bg }: { count: numbe
         size: 0.13 + Math.random() * 0.12,
         flap: 12 + Math.random() * 5,
         bank: 0,
+        ...perch(i, count),
       })
       // Start scattered to the right and a little beyond the frame, then drift in.
       pos[i * 3] = 0.8 + Math.random() * 4.7
@@ -215,16 +259,25 @@ export function Butterflies({ count, pointer, progress, fg, bg }: { count: numbe
   }, [count])
 
   const m = useMemo(() => new THREE.Matrix4(), [])
+  const warm = useRef(0)
 
   useFrame((state, delta) => {
     const im = mesh.current
     if (!im) return
-    // As the story starts, the butterflies scatter out of frame and rest
-    // there; scrolling back up brings them home.
+    // As the story starts, each butterfly glides to its dandelion, settles
+    // with its wings folded, and sinks into the seed head before any sphere
+    // exists. All of it follows scroll progress, so scrolling back up plays
+    // it in reverse: they come out of the seed heads and lift off again.
     const p = progress.current
-    im.visible = p < 0.3
+    const away = smoothstep(TL.butterfliesAway[0], TL.butterfliesAway[1], p)
+    // Hard guarantee: while any sphere is drawn at all, no butterfly is.
+    // (Spheres ease in and out over a few frames, so on a fast scroll back up
+    // this holds the butterflies until the last sphere has really gone.)
+    let sphere = 0
+    for (let i = 0; i < TOOL_COUNT; i++) sphere = Math.max(sphere, scene.radius[i])
+    const shown = (1 - away) * (1 - smoothstep(0, 0.004, sphere))
+    im.visible = shown > 0.002 || warm.current++ < 6
     if (!im.visible) return
-    const scatter = smoothstep(TL.butterfliesOut[0], TL.butterfliesOut[1], p)
     const dt = Math.min(delta, 1 / 30)
     const t = state.clock.elapsedTime
     const vw = state.viewport.width
@@ -244,8 +297,9 @@ export function Butterflies({ count, pointer, progress, fg, bg }: { count: numbe
       const x = pos[ix], y = pos[ix + 1], z = pos[ix + 2]
 
       // Idle: each butterfly follows its own slow, non-repeating loop on the right.
-      const wx = homeX + Math.sin(t * a.f1 + a.p1) * vw * 0.24 + Math.cos(a.p1) * vw * 1.2 * scatter
-      const wy = vh * 0.04 + Math.sin(t * a.f2 + a.p2) * vh * 0.34 + Math.sin(a.p1) * vh * 1.2 * scatter
+      const land = smoothstep(TL.land[0] + (TL.land[1] - TL.land[0] - TL.landSpan) * a.landAt, TL.land[0] + (TL.land[1] - TL.land[0] - TL.landSpan) * a.landAt + TL.landSpan, p)
+      const wx = homeX + Math.sin(t * a.f1 + a.p1) * vw * 0.24
+      const wy = vh * 0.04 + Math.sin(t * a.f2 + a.p2) * vh * 0.34
       const wz = -0.6 + Math.sin(t * a.f3 + a.p3) * 2.2
       // Chasing: circle the cursor at a personal distance rather than piling on it.
       const oa = t * a.orbitSpeed + a.p1 * 3
@@ -253,17 +307,17 @@ export function Butterflies({ count, pointer, progress, fg, bg }: { count: numbe
       const tcy = cy + Math.sin(oa) * a.orbitR * 0.8
       const tcz = 0.3 + Math.sin(oa * 0.7 + a.p2) * 1.2
 
-      const k = sim.chase * a.eager * (1 - scatter)
+      const k = sim.chase * a.eager * (1 - land)
       const dx = lerp(wx, tcx, k) - x
       const dy = lerp(wy, tcy, k) - y
       const dz = lerp(wz, tcz, k) - z
       const dist = Math.hypot(dx, dy, dz) || 1e-4
-      const maxSpeed = lerp(0.5 + 0.25 * a.eager, 1.5 + 1.7 * a.eager, k) + scatter * 5.5
+      const maxSpeed = lerp(0.5 + 0.25 * a.eager, 1.5 + 1.7 * a.eager, k)
       const want = (maxSpeed * Math.min(1, dist / 1.1)) / dist
       let ax = (dx * want - vel[ix]) * 2.4
       let ay = (dy * want - vel[ix + 1]) * 2.4
       let az = (dz * want - vel[ix + 2]) * 2.4
-      const maxForce = lerp(1.4, 6, k) + scatter * 10
+      const maxForce = lerp(1.4, 6, k)
       const al = Math.hypot(ax, ay, az)
       if (al > maxForce) { const s = maxForce / al; ax *= s; ay *= s; az *= s }
 
@@ -301,7 +355,8 @@ export function Butterflies({ count, pointer, progress, fg, bg }: { count: numbe
       let fx = dir[ix], fy = dir[ix + 1], fz = dir[ix + 2]
 
       // Wingbeat quickens with speed.
-      const ph = phase.array[i] + dt * (a.flap + 9 * Math.min(1, speed / 2.5))
+      // ...and slows right down as it settles.
+      const ph = phase.array[i] + dt * (a.flap + 9 * Math.min(1, speed / 2.5)) * (1 - 0.86 * land)
       ;(phase.array as Float32Array)[i] = ph
 
       // Basis: model x = wingspan, y = up, z = forward. right = up x forward.
@@ -320,18 +375,46 @@ export function Butterflies({ count, pointer, progress, fg, bg }: { count: numbe
       fx = fx * cp + ux * sp; fy = fy * cp + uy * sp; fz = fz * cp + uz * sp
       ux = fy * rz - fz * ry; uy = fz * rx - fx * rz; uz = fx * ry - fy * rx
 
-      const s = a.size
-      const bob = Math.sin(ph) * 0.03
+      // Landing: the flight above keeps running underneath, and the drawn
+      // butterfly is carried from it onto its spot on the seed head. It comes
+      // in from just above the spot and turns to sit along the surface.
+      let px = pos[ix], py = pos[ix + 1] + Math.sin(ph) * 0.03 * (1 - land), pz = pos[ix + 2]
+      if (land > 0) {
+        const hb = a.puff * 3
+        const R = scene.puffR[a.puff] * 0.96
+        const lift = (1 - land) * 0.35
+        px = lerp(px, scene.puff[hb] + a.nx * (R + lift), land)
+        py = lerp(py, scene.puff[hb + 1] + a.ny * (R + lift), land)
+        pz = lerp(pz, scene.puff[hb + 2] + a.nz * (R + lift), land)
+        ux = lerp(ux, a.nx, land); uy = lerp(uy, a.ny, land); uz = lerp(uz, a.nz, land)
+        const ul = Math.hypot(ux, uy, uz) || 1
+        ux /= ul; uy /= ul; uz /= ul
+        fx = lerp(fx, a.hx, land); fy = lerp(fy, a.hy, land); fz = lerp(fz, a.hz, land)
+        const along = fx * ux + fy * uy + fz * uz
+        fx -= ux * along; fy -= uy * along; fz -= uz * along
+        const fl2 = Math.hypot(fx, fy, fz) || 1
+        fx /= fl2; fy /= fl2; fz /= fl2
+        rx = uy * fz - uz * fy; ry = uz * fx - ux * fz; rz = ux * fy - uy * fx
+      }
+      ;(fold.array as Float32Array)[i] = land
+
+      // Sinking into the seed head: it draws down into the threads and is gone.
+      const s = a.size * shown
+      if (away > 0) {
+        const hb = a.puff * 3
+        px = lerp(px, scene.puff[hb], away * 0.55); py = lerp(py, scene.puff[hb + 1], away * 0.55); pz = lerp(pz, scene.puff[hb + 2], away * 0.55)
+      }
       m.set(
-        rx * s, ux * s, fx * s, pos[ix],
-        ry * s, uy * s, fy * s, pos[ix + 1] + bob,
-        rz * s, uz * s, fz * s, pos[ix + 2],
+        rx * s, ux * s, fx * s, px,
+        ry * s, uy * s, fy * s, py,
+        rz * s, uz * s, fz * s, pz,
         0, 0, 0, 1,
       )
       im.setMatrixAt(i, m)
     }
     im.instanceMatrix.needsUpdate = true
     phase.needsUpdate = true
+    fold.needsUpdate = true
   })
 
   return <instancedMesh ref={mesh} args={[geometry, material, count]} frustumCulled={false} />

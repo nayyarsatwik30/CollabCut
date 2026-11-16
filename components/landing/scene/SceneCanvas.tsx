@@ -6,6 +6,7 @@ import { TL, smoothstep } from '../story'
 import { Backdrop } from './Backdrop'
 import { Burst } from './Burst'
 import { Butterflies, type PointerState } from './Butterflies'
+import { Dandelions } from './Dandelions'
 import { buildEnvironment } from './environment'
 import { Glow } from './Glow'
 import { Spheres } from './Spheres'
@@ -112,8 +113,11 @@ export default function SceneCanvas({ quality, active, progress, onReady }: { qu
         <StudioEnvironment />
         <CameraRig pointer={pointer} progress={progress} />
         <Backdrop state={state} progress={progress} fg={tokens.fg} bg={tokens.bg} glow={tokens.glow} />
-        <Butterflies count={quality.butterflies} pointer={pointer} progress={progress} fg={tokens.fg} bg={tokens.bg} />
+        {/* Order matters: the dandelions place the seed heads, the spheres grow out of
+            them, and the butterflies read both. */}
+        <Dandelions state={state} progress={progress} seeds={quality.seeds} filaments={quality.filaments} fg={tokens.fg} glow={tokens.glow} />
         <Spheres state={state} progress={progress} fg={tokens.fg} bg={tokens.bg} glow={tokens.glow} />
+        <Butterflies count={quality.butterflies} pointer={pointer} progress={progress} state={state} fg={tokens.fg} bg={tokens.bg} />
         <Trails state={state} segments={quality.trailSegments} embers={quality.embers} glow={tokens.glow} />
         <Burst state={state} glow={tokens.glow} />
         {quality.bloom && <Glow progress={progress} />}

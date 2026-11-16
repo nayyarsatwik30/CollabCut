@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { Reveal } from './Reveal'
 import { StepVideo } from './StepVideo'
+import { StepsRise } from './StepsRise'
 import { STEPS, STEPS_INTRO, STEPS_LAYOUT } from './content'
 
 // The one place that decides which side a step's text sits on (desktop).
@@ -36,24 +37,28 @@ export function Steps() {
           <p className="lp-kicker">{STEPS_INTRO.kicker}</p>
           <h2 className="lp-h2" id="lp-steps-title">{STEPS_INTRO.title}</h2>
         </Reveal>
-        <ol className="lp-steps-list">
-          {STEPS.map((step, i) => {
-            const media = mediaFor(i + 1)
-            return (
-              <li className="lp-step" data-text-side={textSideFor(i)} key={step.number}>
-                <Reveal className="lp-step-text">
+      </div>
+      {/* Full-bleed rows: the text keeps the page gutter, the video runs to the screen edge. */}
+      <ol className="lp-steps-list">
+        {STEPS.map((step, i) => {
+          const media = mediaFor(i + 1)
+          return (
+            <li className="lp-step" data-text-side={textSideFor(i)} key={step.number}>
+              <div className="lp-step-text">
+                <div className="lp-step-rise">
                   <span className="lp-step-number">{step.number}</span>
                   <h3>{step.name}</h3>
                   <p>{step.text}</p>
-                </Reveal>
-                <Reveal className="lp-step-slot" delay={90}>
-                  <StepVideo src={media.src} poster={media.poster} number={step.number} name={step.name} />
-                </Reveal>
-              </li>
-            )
-          })}
-        </ol>
-      </div>
+                </div>
+              </div>
+              <div className="lp-step-slot">
+                <StepVideo src={media.src} poster={media.poster} number={step.number} name={step.name} />
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+      <StepsRise target="#workflow" />
     </section>
   )
 }

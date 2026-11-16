@@ -5,10 +5,15 @@ export const STORY_SCROLL_VH = 380 // total height of the pinned section
 
 export const TL = {
   heroOut: [0.02, 0.11],
-  butterfliesOut: [0.01, 0.14],
+  // Hero -> story handoff, in order, with no overlap between the stages:
+  // butterflies land on the dandelions, fold and sink into them, and only
+  // then do the dandelions start turning into spheres.
+  land: [0.015, 0.085], // butterflies arrive and settle (each takes landSpan)
+  landSpan: 0.045,
+  butterfliesAway: [0.085, 0.115], // settled butterflies sink into the seed heads
   reveal: [0.05, 0.2], // backdrop light pool fades up
-  emerge: [0.07, 0.27], // window in which spheres start emerging
-  emergeSpan: 0.12, // how long one sphere takes to emerge
+  morph: [0.12, 0.215], // window in which the dandelions start changing, one after another
+  morphSpan: 0.11, // how long one dandelion takes to become its sphere
   captionAIn: [0.26, 0.34],
   captionAOut: [0.58, 0.65],
   converge: [0.62, 0.795],
@@ -17,6 +22,15 @@ export const TL = {
   trailsOut: [0.8, 0.86],
   captionBIn: [0.86, 0.93],
 } as const
+
+// Local progress of one dandelion's change into its sphere: 0 before it starts,
+// 1 when the sphere is formed, and it keeps counting past 1 as the sphere
+// travels on. `startFrac` is the sphere's position (0..1) in the morph window.
+// Inside that local progress:
+//   0.10 - 0.62  seeds draw back into the core
+//   0.42 - 1.00  the sphere grows out of the core
+//   0.70 - 1.60  the sphere leaves for where it roams
+export const morphAt = (p: number, startFrac: number) => Math.max(0, (p - (TL.morph[0] + (TL.morph[1] - TL.morph[0]) * startFrac)) / TL.morphSpan)
 
 export const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x)
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t

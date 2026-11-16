@@ -13,7 +13,7 @@ export const NAV = {
 }
 
 export const HERO = {
-  tagline: 'Frame-accurate video review',
+  tagline: 'By editors, for editors',
   eyebrow: 'For teams who ship more than one cut',
   copy: 'Stop managing production through scattered messages, mystery files, and status meetings. Give every client, editor, and cut a place to move forward.',
   primary: { label: 'Talk to our team', href: '/contact' },

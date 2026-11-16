@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Play } from 'lucide-react'
 
-// A 16:9 slot for a step's screen recording.
+// The media half of a step. It has no box: CSS fades its edges into the page
+// and puts a soft glow behind it (see .lp-step-slot in landing.css).
 //
-// The frame underneath (black, hairline border, play icon, "Demo video") is
-// always rendered and is the finished empty state. When `src` is given, the
-// video is layered on top and fades in once it has a frame to show; if it
-// fails to load, the frame simply stays. Same box either way: no layout shift.
+// The glowing area with the play icon and "Demo video" is always rendered and
+// is the finished empty state. When `src` is given, the video is layered on
+// top and fades in once it has a frame to show; if it fails to load, the
+// empty state simply stays. Same area either way: no layout shift.
 //
 // Playback: muted, looped, inline, preload="metadata". It plays only while
 // at least a third of it is on screen and pauses when it leaves. Under

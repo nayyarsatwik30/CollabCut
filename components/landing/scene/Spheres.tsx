@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { TL, clamp01, easeOutBack, easeOutCubic, lerp, smoothstep } from '../story'
+import { TL, clamp01, easeOutBack, lerp, morphAt, smoothstep } from '../story'
 import { GLOW_LAYER, glowPass } from './Glow'
 import { makeLabelTexture } from './labels'
-import { CENTER, MERGED, PLANE_Z, SPHERES, TOOL_COUNT, type Finish, type ProgressRef, type SceneState } from './state'
+import { CENTER, MERGED, SPHERES, TOOL_COUNT, type Finish, type ProgressRef, type SceneState } from './state'
 
 interface SphereUniforms {
   uLabel: { value: THREE.Texture }
@@ -150,7 +150,6 @@ export function Spheres({ state, progress, fg, bg, glow }: { state: SceneState; 
     const xs = Math.max(0.55, Math.min(1.2, frame.viewport.width / 8.06))
     const [cx, cy, cz] = CENTER
     const trailsFade = 1 - smoothstep(TL.trailsOut[0], TL.trailsOut[1], p)
-    const [e0, e1] = TL.emerge
     // For the first few frames everything is drawn at near-zero size, so the
     // materials compile and labels upload now rather than mid-scroll.
     const warm = s.frames++ < 6
@@ -178,8 +177,9 @@ export function Spheres({ state, progress, fg, bg, glow }: { state: SceneState; 
       const d = SPHERES[i]
       const sd = s.seeds[i]
       const ix = i * 3
-      const start = lerp(e0, e1, d.start)
-      const e = smoothstep(start, start + TL.emergeSpan, p)
+      // Each sphere grows out of its dandelion (see morphAt in story.ts).
+      const u = morphAt(p, d.start)
+      const e = smoothstep(0.42, 1, u)
       const c = smoothstep(TL.converge[0] + d.delay, TL.converge[1], p)
 
       // Where it wants to be while roaming: an anchor that scrolling swings
@@ -196,11 +196,11 @@ export function Spheres({ state, progress, fg, bg, glow }: { state: SceneState; 
       const ry = ay + Math.sin(t * sd.f2 + sd.p2) * sd.amp * 0.8
       const rz = az + Math.sin(t * sd.f3 + sd.p3) * sd.amp * 1.1
 
-      // Emerging: pushed out of the page plane toward the viewer.
-      const k = easeOutCubic(e)
-      let tx = lerp(ax * 0.3, rx, k)
-      let ty = lerp(ay * 0.3, ry, k)
-      let tz = lerp(PLANE_Z + 0.15, rz, k)
+      // Emerging: it forms where its dandelion stood, then leaves for where it roams.
+      const k = smoothstep(0.7, 1.6, u)
+      let tx = lerp(state.puff[ix], rx, k)
+      let ty = lerp(state.puff[ix + 1], ry, k)
+      let tz = lerp(state.puff[ix + 2], rz, k)
 
       // Converging: spiral in, accelerating like a fall toward the centre.
       if (c > 0) {
