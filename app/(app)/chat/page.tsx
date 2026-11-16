@@ -1,13 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { MessageCircle, Send } from 'lucide-react'
+import { MessageCircle, Send } from '@/components/ui/icons'
 import { TopBar } from '@/components/layout/TopBar'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Orb } from '@/components/ui/Orb'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { usePolling, sameData } from '@/lib/usePolling'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 const MAX_LENGTH = 2000
 
@@ -311,14 +313,12 @@ export default function ChatPage() {
               {active && active.channels.length > 1 && (
                 <div role="group" aria-label="Channels" className="flex gap-1.5 overflow-x-auto pb-2">
                   {active.channels.map((c) => (
-                    <button
+                    <Button
                       key={c.key || 'general'}
+                      variant="chip"
                       aria-pressed={c.key === channel}
                       onClick={() => setChannel(c.key)}
-                      className={cn(
-                        'shrink-0 flex items-center gap-1.5 rounded-th-full px-3 py-1 text-[12px] transition-colors',
-                        c.key === channel ? 'bg-th-accent text-th-accent-fg font-semibold' : 'text-th-muted hover:bg-th-surface-alt',
-                      )}
+                      className="shrink-0"
                     >
                       {c.label}
                       {c.unread > 0 && c.key !== channel && (
@@ -327,7 +327,7 @@ export default function ChatPage() {
                           <span className="sr-only">{`, ${c.unread > 99 ? '99+' : c.unread} unread`}</span>
                         </>
                       )}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}
@@ -422,14 +422,14 @@ export default function ChatPage() {
                   aria-label="Message"
                   className="flex-1 resize-none max-h-32 rounded-th-sm border border-th-border bg-th-surface px-3 py-2 text-[13px] focus:border-th-accent-line focus-visible:ring-2 focus-visible:ring-th-accent-line focus-visible:outline-none"
                 />
-                <button
+                <IconButton
+                  variant="primary"
                   onClick={send}
                   disabled={!draft.trim() || sending || feedStatus === 'denied'}
-                  aria-label="Send message"
-                  className="h-9 w-9 shrink-0 rounded-th-sm bg-th-accent text-th-accent-fg flex items-center justify-center disabled:opacity-40 transition-opacity"
+                  label="Send message"
                 >
-                  <Send size={15} strokeWidth={1.75} />
-                </button>
+                  <Send size={15} />
+                </IconButton>
               </div>
             </div>
           </div>

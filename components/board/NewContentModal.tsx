@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Plus } from 'lucide-react'
+import { X, Plus } from '@/components/ui/icons'
 import { useSession } from 'next-auth/react'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 interface NewContentModalProps {
   onClose: () => void
@@ -66,10 +68,9 @@ export function NewContentModal({ onClose, onCreated, defaultClient = '' }: NewC
       <div className="bg-th-surface border border-th-border rounded-th-lg w-full max-w-md shadow-panel animate-slide-up overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-th-border">
           <h2 className="font-bold text-[16px]">New content</h2>
-          <button onClick={onClose} disabled={submitting}
-            className="text-th-muted hover:text-th-text transition-colors disabled:opacity-40">
+          <IconButton size="sm" onClick={onClose} disabled={submitting} label="Close">
             <X size={16} />
-          </button>
+          </IconButton>
         </div>
 
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -143,20 +144,12 @@ export function NewContentModal({ onClose, onCreated, defaultClient = '' }: NewC
         </div>
 
         <div className="flex gap-2 px-6 py-4 border-t border-th-border">
-          <button
-            onClick={onClose}
-            disabled={submitting}
-            className="flex-1 py-2.5 rounded-th bg-th-surface-alt border border-th-border text-[13px] font-medium btn-press hover:bg-th-surface-hov transition-colors disabled:opacity-50"
-          >
+          <Button variant="outline" size="sm" className="flex-1" onClick={onClose} disabled={submitting}>
             Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || !title.trim()}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50"
-          >
+          </Button>
+          <Button size="sm" className="flex-1" onClick={handleSubmit} disabled={submitting || !title.trim()}>
             <Plus size={14} /> {submitting ? 'Creating…' : 'Create'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

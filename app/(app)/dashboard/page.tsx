@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import { Search, LayoutGrid, List, Plus, Film, Check, FolderKanban } from 'lucide-react'
+import { Search, LayoutGrid, List, Plus, Film, Check, FolderKanban } from '@/components/ui/icons'
 import { UploadIcon } from '@/components/ui/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 import { TopBar } from '@/components/layout/TopBar'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { CardGridSkeleton } from '@/components/ui/CardGridSkeleton'
@@ -283,29 +285,24 @@ export default function DashboardPage() {
           {role !== 'editor' && (
             <div className="flex items-center gap-0.5 p-0.5 rounded-th-sm bg-th-surface-alt border border-th-border">
               {([['grid', LayoutGrid], ['list', List]] as const).map(([v, Icon]) => (
-                <button
+                <IconButton
                   key={v}
+                  label={v === 'grid' ? 'Grid view' : 'List view'}
+                  aria-pressed={view === v}
+                  variant={view === v ? 'subtle' : 'ghost'}
+                  size="sm"
                   onClick={() => setView(v)}
-                  className="p-1.5 rounded btn-press transition-colors"
-                  style={{
-                    background: view === v ? 'var(--th-surface)' : 'transparent',
-                    color: view === v ? 'var(--th-text)' : 'var(--th-muted)',
-                  }}
                 >
                   <Icon size={14} />
-                </button>
+                </IconButton>
               ))}
             </div>
           )}
 
             {role !== 'editor' && (
-              <button
-                disabled={newBlocked}
-                onClick={() => setShowNew(true)}
-                className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
-              >
+              <Button size="sm" disabled={newBlocked} onClick={() => setShowNew(true)}>
                 <Plus size={14} /> New project
-              </button>
+              </Button>
             )}
         </TopBar>
 
@@ -379,7 +376,7 @@ export default function DashboardPage() {
                               alt={a.name}
                             />
                           ) : (
-                            <Film size={36} style={{ color: 'var(--th-accent-text)' }} />
+                            <Film accent size={36} style={{ color: 'var(--th-accent-text)' }} />
                           )}
                           <span className={`app-pill absolute top-2.5 right-2.5 font-mono text-[10px] ${statusChip(a.status)}`}>
                             {label}
@@ -432,9 +429,9 @@ export default function DashboardPage() {
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-th-muted">
                   {projectsError && projects.length === 0 ? 'Showing projects (count unavailable)' : `Showing ${countLabel(filtered.length, 'projects')}`}
                   {activeClient !== ALL_CLIENTS_KEY && (
-                    <button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} className="underline hover:text-th-text btn-press">
+                    <Button variant="link" onClick={() => setSelectedClient(ALL_CLIENTS_KEY)}>
                       Show all clients
-                    </button>
+                    </Button>
                   )}
                 </span>
               </div>
@@ -442,7 +439,7 @@ export default function DashboardPage() {
               {projectsError && !loading && (
                 <div role="alert" className="mb-4 flex flex-wrap items-center gap-3 text-[13px] text-th-changes">
                   Couldn&apos;t load your projects.
-                  <button onClick={retryProjects} aria-busy={retrying} aria-disabled={retrying} className="underline btn-press">{retrying ? 'Retrying...' : 'Retry'}</button>
+                  <Button variant="link" onClick={retryProjects} aria-busy={retrying} aria-disabled={retrying}>{retrying ? 'Retrying...' : 'Retry'}</Button>
                 </div>
               )}
               {loading ? (
@@ -453,13 +450,9 @@ export default function DashboardPage() {
                   title={activeClient === ALL_CLIENTS_KEY ? 'No projects yet' : activeClient === NO_CLIENT_KEY ? 'No projects without a client' : `No projects for ${activeClientLabel} yet`}
                   sub={activeClient === ALL_CLIENTS_KEY ? 'Create your first project to get started.' : 'Create one to get started.'}
                 >
-                  <button
-                    disabled={newBlocked}
-                    onClick={() => setShowNew(true)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors"
-                  >
+                  <Button size="sm" disabled={newBlocked} onClick={() => setShowNew(true)}>
                     <Plus size={14} /> {activeClient === ALL_CLIENTS_KEY ? 'Create first project' : defaultClient ? `Create project for ${defaultClient}` : 'Create project'}
-                  </button>
+                  </Button>
                 </EmptyState>
               ) : filtered.length === 0 && search ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">

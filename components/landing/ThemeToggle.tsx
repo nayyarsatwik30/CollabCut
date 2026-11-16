@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useState } from 'react'
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun } from '@/components/ui/icons'
 import { DEFAULT_THEME, THEME_ATTR, THEME_KEY, type ThemeName } from './theme'
 
 const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
@@ -38,8 +38,8 @@ export function ThemeToggle() {
 
   return (
     <button type="button" className="lp-theme-toggle" onClick={toggle} aria-pressed={theme === 'light'} aria-label="Light theme" title={theme === 'light' ? 'Switch to dark' : 'Switch to light'}>
-      <Sun className="lp-icon-sun" size={15} aria-hidden="true" />
-      <Moon className="lp-icon-moon" size={15} aria-hidden="true" />
+      <Sun tone="inherit" className="lp-icon-sun" size={15} aria-hidden="true" />
+      <Moon tone="inherit" className="lp-icon-moon" size={15} aria-hidden="true" />
     </button>
   )
 }

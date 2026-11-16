@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Archive, CheckCircle2, CircleAlert, X, File as FileIcon, Film, Image as ImageIcon, Music, Trash2 } from 'lucide-react'
+import { Archive, CheckCircle2, CircleAlert, X, File as FileIcon, Film, Image as ImageIcon, Music, Trash2 } from '@/components/ui/icons'
 import { DownloadIcon, UploadIcon } from '@/components/ui/icons'
 import { MAX_INLINE_PHOTO_BYTES, MAX_RAW_FILE_BYTES, classifyRawFile, type RawFileKind } from '@/lib/raw-files'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
 import { useConfirm, ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 interface RawFootageArchiveProps {
   projectId: string
@@ -500,14 +502,12 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
 
   const actions = (f: RawFile) => (
     <div className="flex items-center gap-0.5 shrink-0">
-      <button onClick={() => handleDownload(f)} title="Download" aria-label={`Download ${f.file_name}`}
-        className="p-1 rounded-th-sm text-th-muted hover:text-th-text transition-colors">
+      <IconButton size="sm" onClick={() => handleDownload(f)} label={`Download ${f.file_name}`}>
         <DownloadIcon size={13} />
-      </button>
-      <button onClick={() => handleDelete(f)} title="Delete" aria-label={`Delete ${f.file_name}`}
-        className="p-1 rounded-th-sm text-th-muted hover:text-th-changes transition-colors">
+      </IconButton>
+      <IconButton size="sm" variant="danger" onClick={() => handleDelete(f)} label={`Delete ${f.file_name}`}>
         <Trash2 size={13} />
-      </button>
+      </IconButton>
     </div>
   )
 
@@ -532,12 +532,9 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
           <h3 className="text-[13px] font-bold">Raw Files</h3>
           <span className="font-mono text-[10px] text-th-faint">{files.length}</span>
         </div>
-        <button
-          onClick={() => pickFiles('')}
-          disabled={uploading}
-          className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50">
+        <Button size="sm" onClick={() => pickFiles('')} disabled={uploading}>
           <UploadIcon size={13} /> {uploading ? 'Uploading…' : 'Upload files'}
-        </button>
+        </Button>
       </div>
 
       <p className="text-[12px] text-th-muted mb-1">
@@ -558,10 +555,9 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
           </div>
           <div className="flex items-center justify-between mt-1.5 gap-3">
             <p className="text-[11px] text-th-muted">Keep this tab open until it finishes. Files you add now join the queue.</p>
-            <button onClick={cancelUploads}
-              className="shrink-0 h-6 px-2.5 rounded-th-full border border-th-border text-[11px] font-semibold btn-press hover:border-th-changes hover:text-th-changes transition-colors">
+            <Button variant="dangerOutline" size="xs" onClick={cancelUploads} className="shrink-0">
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -569,14 +565,14 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
       {notice && (
         <div className="mb-3 flex items-start gap-2 text-[12px] text-th-text" role="status">
           <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-th-accent" /> <span className="flex-1">{notice}</span>
-          <button onClick={() => setNotice('')} aria-label="Dismiss" className="text-th-muted hover:text-th-text"><X size={12} /></button>
+          <IconButton size="sm" onClick={() => setNotice('')} label="Dismiss"><X size={12} /></IconButton>
         </div>
       )}
 
       {errors.map((e) => (
         <div key={e.id} className="mb-2 flex items-start gap-2 text-[12px] text-th-changes" role="alert">
           <CircleAlert size={13} className="mt-0.5 shrink-0" /> <span className="flex-1">{e.text}</span>
-          <button onClick={() => setErrors((prev) => prev.filter((x) => x.id !== e.id))} aria-label="Dismiss" className="hover:opacity-70"><X size={12} /></button>
+          <IconButton size="sm" variant="danger" onClick={() => setErrors((prev) => prev.filter((x) => x.id !== e.id))} label="Dismiss"><X size={12} /></IconButton>
         </div>
       ))}
 
@@ -584,7 +580,7 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
         <div className="mb-3 flex items-center gap-2 text-[12px] text-th-changes" role="alert">
           <CircleAlert size={13} className="shrink-0" />
           <span>Couldn't load your files.</span>
-          <button onClick={() => { setListStatus('loading'); loadFiles() }} className="underline font-semibold">Try again</button>
+          <Button variant="link" onClick={() => { setListStatus('loading'); loadFiles() }}>Try again</Button>
         </div>
       )}
 
@@ -612,12 +608,9 @@ export function RawFootageArchive({ projectId, token }: RawFootageArchiveProps) 
                   <h4 className="text-[12px] font-bold">{title}</h4>
                   <span className="font-mono text-[10px] text-th-faint">{items.length}</span>
                 </div>
-                <button
-                  onClick={() => pickFiles(accept)}
-                  disabled={uploading}
-                  className="flex items-center gap-1 h-6 px-2.5 rounded-th-full border border-th-border text-[11px] font-semibold btn-press hover:border-th-accent-line transition-colors disabled:opacity-50">
+                <Button variant="outline" size="xs" onClick={() => pickFiles(accept)} disabled={uploading}>
                   <UploadIcon size={11} /> {cta}
-                </button>
+                </Button>
               </div>
               <p className="text-[10px] text-th-faint mb-2">{hint}</p>
 

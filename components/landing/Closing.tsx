@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowUpRight, Check } from 'lucide-react'
+import { ArrowUpRight, Check } from '@/components/ui/icons'
 import { Reveal } from './Reveal'
 import { ABOUT, BRAND, FOOTER, PLANS, PRICING } from './content'
 
@@ -20,12 +20,12 @@ export function Pricing() {
               <p className="lp-plan-storage">{plan.storage} <span>workspace storage</span></p>
               <p className="lp-plan-desc">{plan.description}</p>
               <ul className="lp-plan-specs">
-                <li><Check size={14} aria-hidden="true" /> {plan.admins} admins</li>
-                <li><Check size={14} aria-hidden="true" /> {plan.editors} editors</li>
-                <li><Check size={14} aria-hidden="true" /> {plan.storage} shared across every project</li>
+                <li><Check tone="inherit" size={14} aria-hidden="true" /> {plan.admins} admins</li>
+                <li><Check tone="inherit" size={14} aria-hidden="true" /> {plan.editors} editors</li>
+                <li><Check tone="inherit" size={14} aria-hidden="true" /> {plan.storage} shared across every project</li>
               </ul>
               <div className="lp-plan-actions">
-                <Link className="lp-btn" href={PRICING.primary.href}>{PRICING.primary.label} <ArrowUpRight size={15} aria-hidden="true" /></Link>
+                <Link className="lp-btn" href={PRICING.primary.href}>{PRICING.primary.label} <ArrowUpRight tone="inherit" size={15} aria-hidden="true" /></Link>
                 <Link className="lp-link" href={PRICING.secondary.href}>{PRICING.secondary.label}</Link>
               </div>
             </article>
@@ -46,7 +46,7 @@ export function About() {
         </Reveal>
         <Reveal className="lp-about-body" delay={90}>
           {ABOUT.paragraphs.map((p) => <p key={p}>{p}</p>)}
-          <Link className="lp-link" href={ABOUT.link.href}>{ABOUT.link.label} <ArrowUpRight size={15} aria-hidden="true" /></Link>
+          <Link className="lp-link" href={ABOUT.link.href}>{ABOUT.link.label} <ArrowUpRight tone="inherit" size={15} aria-hidden="true" /></Link>
         </Reveal>
       </div>
     </section>

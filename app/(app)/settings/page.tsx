@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogOut, Copy, Settings } from 'lucide-react'
+import { LogOut, Copy, Settings } from '@/components/ui/icons'
 import { TopBar } from '@/components/layout/TopBar'
 import { ConfirmDialog, useConfirm } from '@/components/ui/ConfirmDialog'
 import { useSession } from 'next-auth/react'
@@ -121,21 +121,14 @@ export default function SettingsPage() {
         <div className="flex flex-1 overflow-hidden min-h-0">
           <div className="w-48 shrink-0 border-r border-th-border p-3 space-y-0.5 flex flex-col">
             {(['profile', 'notifications', 'team'] as Tab[]).map((t) => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`relative w-full text-left px-3 py-2 rounded-th-sm text-[13px] transition-colors capitalize ${
-                  tab === t ? 'bg-th-accent/10 text-th-accent-text font-semibold' : 'text-th-muted hover:text-th-text hover:bg-th-surface-alt'
-                }`}>
-                {tab === t && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-th-accent" />}
+              <Button key={t} variant="nav" onClick={() => setTab(t)} aria-current={tab === t ? 'page' : undefined} className="capitalize">
                 {t}
-              </button>
+              </Button>
             ))}
             <div className="pt-2 mt-1 border-t border-th-border">
-              <button
-                onClick={handleLogoutClick}
-                className="w-full flex items-center gap-1.5 text-left px-3 py-2 rounded-th-sm text-[13px] text-th-muted hover:text-th-changes hover:bg-th-surface-alt transition-colors"
-              >
+              <Button variant="dangerRow" size="sm" onClick={handleLogoutClick} className="w-full justify-start">
                 <LogOut size={13} /> Logout
-              </button>
+              </Button>
             </div>
           </div>
 

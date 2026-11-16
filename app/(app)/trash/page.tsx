@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
-import { Trash2, RotateCcw, X, FolderKanban, Film } from 'lucide-react'
+import { Trash2, RotateCcw, X, FolderKanban, Film } from '@/components/ui/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSessionGuard } from '@/lib/useSessionGuard'
 import { Orb } from '@/components/ui/Orb'
@@ -137,7 +137,7 @@ export default function TrashPage() {
                                     <div className="bg-th-surface rounded-th border border-th-border overflow-hidden">
                                         {assets.map((a) => (
                                             <div key={a.id} className="flex items-center gap-4 px-5 py-3.5 border-b border-th-border last:border-b-0">
-                                                <Film size={16} className="shrink-0 text-th-muted" />
+                                                <Film accent size={16} className="shrink-0 text-th-muted" />
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-[13px] font-semibold truncate">{a.name}{a.version != null && <span className="font-mono text-th-muted font-normal"> · v{a.version}</span>}</p>
                                                     <p className="text-[11px] text-th-muted">{a.project_name} · Deleted {new Date(a.deleted_at).toLocaleDateString()}</p>

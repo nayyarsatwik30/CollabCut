@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Lock, Send, ChevronDown, Check, X } from 'lucide-react'
+import { Lock, Send, ChevronDown, Check, X } from '@/components/ui/icons'
 import { CommentIcon, VersionsIcon } from '@/components/ui/icons'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { Avatar } from '@/components/ui/Badge'
@@ -10,6 +10,8 @@ import { fetchShareDownloadUrl } from '@/lib/download-client'
 import { Orb } from '@/components/ui/Orb'
 import { TopBar } from '@/components/layout/TopBar'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 const NAME_STORAGE_KEY = 'dailies_reviewer_name'
 
@@ -249,13 +251,9 @@ export default function PublicReviewClient({ token }: { token: string }) {
             className="w-full px-3 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors mb-2"
           />
           {passwordError && <p className="text-[12px] text-th-changes mb-2">{passwordError}</p>}
-          <button
-            onClick={handleUnlock}
-            disabled={verifying || !passwordInput.trim()}
-            className="w-full py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50"
-          >
+          <Button size="sm" className="w-full" onClick={handleUnlock} disabled={verifying || !passwordInput.trim()}>
             {verifying ? 'Checking…' : 'Unlock'}
-          </button>
+          </Button>
         </div>
       </GateShell>
     )
@@ -277,14 +275,11 @@ export default function PublicReviewClient({ token }: { token: string }) {
 
           {versions.length > 1 && (
             <div className="relative shrink-0">
-              <button
-                onClick={() => setShowVersions(!showVersions)}
-                className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
-              >
+              <Button variant="chip" size="xs" className="font-mono" onClick={() => setShowVersions(!showVersions)} aria-haspopup="true" aria-expanded={showVersions}>
                 <VersionsIcon size={10} />
                 v{asset.version}
                 <ChevronDown size={10} />
-              </button>
+              </Button>
 
               {showVersions && (
                 <>
@@ -295,20 +290,22 @@ export default function PublicReviewClient({ token }: { token: string }) {
                     </div>
                     <div className="max-h-60 overflow-y-auto">
                       {versions.map((v) => (
-                        <button
+                        <Button
                           key={v.id}
+                          variant="nav"
                           onClick={() => handleSwitchVersion(v.id)}
-                          className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
+                          aria-current={v.id === asset.id ? 'true' : undefined}
+                          className="gap-2.5 text-left [--btn-h:52px] [--nav-px:16px]"
                         >
-                          <VersionsIcon size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
+                          <VersionsIcon size={12} />
                           <div className="flex-1 min-w-0">
                             <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-text)' }}>
                               v{v.version}
                             </p>
                             <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>
                           </div>
-                          {v.id === asset.id && <Check size={12} className="text-th-accent-text shrink-0" />}
-                        </button>
+                          {v.id === asset.id && <Check size={12} className="shrink-0" />}
+                        </Button>
                       ))}
                     </div>
                   </div>
@@ -318,13 +315,10 @@ export default function PublicReviewClient({ token }: { token: string }) {
           )}
 
           {versions.length >= 2 && (
-            <button
-              onClick={handleOpenCompare}
-              className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
-            >
-              <VersionsIcon size={10} className="text-th-accent-text" />
+            <Button variant="chip" size="xs" className="font-mono shrink-0" onClick={handleOpenCompare}>
+              <VersionsIcon size={10} />
               Compare versions
-            </button>
+            </Button>
           )}
           </div>
         }
@@ -394,13 +388,9 @@ export default function PublicReviewClient({ token }: { token: string }) {
               className="w-full px-3 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none resize-none leading-relaxed transition-colors focus:border-th-accent-line"
             />
             {commentText.trim() && (
-              <button
-                onClick={handlePostComment}
-                disabled={posting}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:bg-th-accent-hover transition-colors disabled:opacity-50"
-              >
+              <Button size="sm" className="w-full" onClick={handlePostComment} disabled={posting}>
                 <Send size={13} /> {posting ? 'Posting…' : `Post note at ${formatTimecode(currentTime)}`}
-              </button>
+              </Button>
             )}
           </div>
         </aside>
@@ -414,12 +404,9 @@ export default function PublicReviewClient({ token }: { token: string }) {
                 <VersionsIcon size={16} className="text-th-accent-text" />
                 <h2 className="font-bold text-[16px]">Compare versions</h2>
               </div>
-              <button
-                onClick={() => setShowCompareModal(false)}
-                className="text-th-muted hover:text-th-text transition-colors p-1 rounded-th hover:bg-th-surface-alt"
-              >
+              <IconButton onClick={() => setShowCompareModal(false)} label="Close comparison">
                 <X size={18} />
-              </button>
+              </IconButton>
             </div>
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-6 overflow-hidden min-h-0 bg-black/40">

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Component } from "@/components/ui/gradient-bars-background";
-import { Settings, X } from "lucide-react";
+import { Settings, X } from '@/components/ui/icons';
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export default function Demo() {

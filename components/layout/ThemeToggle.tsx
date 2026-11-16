@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun } from '@/components/ui/icons'
 import { THEME_KEY } from '@/components/layout/theme-boot'
 
 type Theme = 'light' | 'dark'
@@ -32,14 +32,11 @@ export function ThemeToggle() {
       aria-checked={dark}
       aria-label="Dark mode"
       onClick={toggle}
-      className="relative w-[52px] h-7 rounded-full border border-th-border bg-th-surface-alt shrink-0 transition-colors"
+      className="toggle"
     >
-      <Sun size={13} className="absolute left-[7px] top-1/2 -translate-y-1/2 text-th-muted" />
-      <Moon size={13} className="absolute right-[7px] top-1/2 -translate-y-1/2 text-th-muted" />
-      <span
-        className="absolute top-[2px] left-[2px] w-6 h-6 rounded-full bg-th-accent text-th-accent-fg flex items-center justify-center transition-transform"
-        style={{ transform: dark ? 'translateX(24px)' : 'translateX(0)' }}
-      >
+      <Sun size={13} tone="muted" className="absolute left-[9px] top-1/2 -translate-y-1/2" />
+      <Moon size={13} tone="muted" className="absolute right-[9px] top-1/2 -translate-y-1/2" />
+      <span className="toggle-knob ic-on-fill">
         {dark ? <Moon size={13} /> : <Sun size={13} />}
       </span>
     </button>

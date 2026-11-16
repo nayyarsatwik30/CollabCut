@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { X } from '@/components/ui/icons'
+import { IconButton } from '@/components/ui/IconButton'
 import { cn } from '@/lib/utils'
 
 interface ModalProps {
@@ -47,9 +48,9 @@ export function Modal({ open, onClose, title, children, width = '360px', classNa
         {title && (
           <div className="flex items-center justify-between px-5 py-4 border-b border-th-border">
             <h3 className="font-semibold text-[15px]">{title}</h3>
-            <button onClick={onClose} className="text-th-muted hover:text-th-text transition-colors p-1 rounded-th-sm hover:bg-th-surface-alt">
+            <IconButton onClick={onClose} label="Close" size="sm">
               <X size={15} />
-            </button>
+            </IconButton>
           </div>
         )}
         <div className="p-5">{children}</div>

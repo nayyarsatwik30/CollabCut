@@ -1,7 +1,7 @@
-import { Archive, ArrowDownUp, Check, Clock3, Layers3, Link2, MessagesSquare, ShieldCheck, Users2, type LucideIcon } from 'lucide-react'
+import { Archive, ArrowDownUp, Check, Clock3, Layers3, Link2, MessagesSquare, ShieldCheck, Users2, type IconComponent } from '@/components/ui/icons'
 import { FEATURES, FEATURES_INTRO, type FeatureIcon } from './content'
 
-const ICONS: Record<FeatureIcon, LucideIcon> = {
+const ICONS: Record<FeatureIcon, IconComponent> = {
   versions: Layers3,
   transfer: ArrowDownUp,
   chat: MessagesSquare,
@@ -25,7 +25,7 @@ function Group({ hidden = false }: { hidden?: boolean }) {
         const Icon = ICONS[f.icon]
         return (
           <li className="lp-feature" key={f.title}>
-            <Icon size={18} aria-hidden="true" />
+            <Icon tone="inherit" size={18} aria-hidden="true" />
             <h3>{f.title}</h3>
             <p>{f.text}</p>
           </li>

@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Copy, Lock, Clock, Check, RefreshCw } from 'lucide-react'
+import { Copy, Lock, Clock, Check, RefreshCw } from '@/components/ui/icons'
 import { ApproveIcon, CommentIcon, DownloadIcon } from '@/components/ui/icons'
 import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
 
 interface ShareModalProps {
   open: boolean
@@ -171,28 +172,24 @@ export function ShareModal({ open, assetId, token, onClose, onCopied }: ShareMod
           <div className="flex-1 px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted truncate">
             {loading ? 'Loading link…' : link ?? '—'}
           </div>
-          <button
-            onClick={handleCopy}
-            disabled={loading || !link}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-th-sm text-[12px] font-semibold btn-press transition-all disabled:opacity-50"
-            style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)', boxShadow: 'inset 0 0 0 1px var(--th-accent-edge)' }}
-          >
+          <Button size="sm" onClick={handleCopy} disabled={loading || !link}>
             {copied ? <><ApproveIcon size={14} /> Copied</> : <><Copy size={13} /> Copy</>}
-          </button>
+          </Button>
         </div>
 
         <div className="flex items-center justify-between -mt-2">
           <span className="text-[11px] text-th-faint">
             {saving ? 'Saving…' : 'Settings save automatically'}
           </span>
-          <button
+          <Button
+            variant="outline"
+            size="xs"
             onClick={handleRegenerate}
             disabled={loading || regenerating || !link || regenerateBlocked}
             title={regenerateBlocked ? 'Retype the password to include it in the new link' : undefined}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-sm text-[11px] font-semibold btn-press transition-all bg-th-surface-alt border border-th-border text-th-text hover:border-th-accent-line hover:text-th-accent-text disabled:opacity-50"
           >
             <RefreshCw size={12} className={regenerating ? 'animate-spin' : undefined} /> Regenerate
-          </button>
+          </Button>
         </div>
 
         {regenerateBlocked && (

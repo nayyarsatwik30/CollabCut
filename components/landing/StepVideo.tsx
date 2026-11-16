@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Play } from 'lucide-react'
+import { Play } from '@/components/ui/icons'
 
 // The media half of a step. It has no box: CSS fades its edges into the page
 // and puts a soft glow behind it (see .lp-step-slot in landing.css).
@@ -59,7 +59,7 @@ export function StepVideo({ src, poster, number, name }: { src?: string; poster?
   return (
     <div className="lp-step-media" data-state={visible ? 'video' : 'empty'}>
       <div className="lp-step-frame" aria-hidden={visible ? true : undefined}>
-        <Play size={18} strokeWidth={1.5} aria-hidden="true" />
+        <Play tone="inherit" size={18} strokeWidth={1.5} aria-hidden="true" />
         <span className="lp-step-frame-label">Demo video</span>
       </div>
       {hasVideo && (

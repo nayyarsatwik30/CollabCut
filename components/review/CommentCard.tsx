@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Trash2, CornerDownRight } from 'lucide-react'
+import { Trash2, CornerDownRight } from '@/components/ui/icons'
 import { ApproveIcon, CommentIcon } from '@/components/ui/icons'
 import { Comment, CommentStatus } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
 import { CommentAttachmentList } from './CommentAttachments'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 
 const STATUS_BORDER: Record<CommentStatus, string> = {
   open:     'var(--th-open)',
@@ -51,12 +53,9 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
             <span className="text-[10px] text-th-muted font-mono ml-2">{c.createdAt}</span>
           </div>
           {/* Timecode jump */}
-          <button
-            onClick={() => onSeek(c.timeSec)}
-            className="chip-time btn-press transition-colors hover:bg-th-surface-hov"
-          >
+          <Button variant="chip" className="btn-chip-time" onClick={() => onSeek(c.timeSec)}>
             {formatTimecode(c.timeSec)}
-          </button>
+          </Button>
         </div>
 
         {/* Note text */}
@@ -70,37 +69,27 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
           <StatusBadge status={c.status} />
 
           <div className={`ml-auto flex items-center gap-1.5 transition-opacity duration-100 ${showActions ? 'opacity-100' : 'opacity-0'}`}>
-            <button
-              onClick={() => setReplying(!replying)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-th-full border border-th-border hover:bg-th-surface-alt text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
-            >
+            <Button variant="outline" size="xs" onClick={() => setReplying(!replying)}>
               <CommentIcon size={12} />
               Reply
               {c.replies.length > 0 && (
-                <span className="font-mono text-[10px] font-bold text-th-accent-text">{c.replies.length}</span>
+                <span className="font-mono text-[10px] font-bold">{c.replies.length}</span>
               )}
-            </button>
+            </Button>
 
-            <button
+            <IconButton
+              size="sm"
+              variant={c.resolved ? 'primary' : 'outline'}
               onClick={() => onResolve(c.id)}
-              title={c.resolved ? 'Reopen' : 'Mark resolved'}
-              className="w-7 h-7 rounded-th-sm border border-th-border flex items-center justify-center btn-press transition-colors"
-              style={{
-                background: c.resolved ? 'var(--th-accent)' : 'var(--th-surface-alt)',
-                color: c.resolved ? 'var(--th-accent-fg)' : 'var(--th-muted)',
-                boxShadow: c.resolved ? 'inset 0 0 0 1px var(--th-accent-edge)' : undefined,
-              }}
+              label={c.resolved ? 'Reopen' : 'Mark resolved'}
+              aria-pressed={c.resolved}
             >
               <ApproveIcon size={13} />
-            </button>
+            </IconButton>
 
-            <button
-              onClick={() => onDelete(c.id)}
-              title="Delete note"
-              className="w-7 h-7 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center btn-press text-th-changes hover:bg-th-changes/10 transition-colors"
-            >
+            <IconButton size="sm" variant="danger" onClick={() => onDelete(c.id)} label="Delete note">
               <Trash2 size={11} />
-            </button>
+            </IconButton>
           </div>
         </div>
       </div>
@@ -135,10 +124,9 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
             placeholder="Write a reply… (Enter to send)"
             className="flex-1 px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors font-display"
           />
-          <button onClick={submitReply}
-            className="px-3 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[12px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
+          <Button size="sm" onClick={submitReply}>
             Send
-          </button>
+          </Button>
         </div>
       )}
     </div>

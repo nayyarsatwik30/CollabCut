@@ -4,9 +4,11 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { RawFootageArchive } from '@/components/project/RawFootageArchive'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, FolderKanban, Trash2, Video, Film, CircleCheck, Clock } from 'lucide-react'
+import { ChevronLeft, FolderKanban, Trash2, Video, Film, CircleCheck, Clock } from '@/components/ui/icons'
 import { UploadIcon } from '@/components/ui/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 import { TopBar } from '@/components/layout/TopBar'
 import { Avatar } from '@/components/ui/Badge'
 import { ProjectPageSkeleton } from '@/components/project/ProjectPageSkeleton'
@@ -180,11 +182,9 @@ function BriefTab({ project, token, onSaved }: {
             className={BRIEF_INPUT} style={{ borderRadius: 0 }} placeholder="https://drive.google.com/..." />
         </label>
         <div className="flex items-center gap-3">
-          <button onClick={save} disabled={saving}
-            className="px-4 py-2 text-[13px] font-semibold bg-th-accent text-th-accent-fg hover:bg-th-accent-hover transition-colors disabled:opacity-50 btn-press"
-            style={{ borderRadius: 0 }}>
+          <Button size="sm" onClick={save} disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
           {message && (
             <span className="text-[12px]" style={{ color: message.ok ? 'var(--th-text-primary)' : 'var(--th-danger)' }}>{message.text}</span>
           )}
@@ -572,38 +572,37 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     <h2 className="text-[13px] font-bold">Custom Cut</h2>
                     <span className="font-mono text-[10px] text-th-faint">{customAssets.length}</span>
                   </div>
-                  <button
-                    onClick={() => setShowUploadCustom(true)}
-                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
+                  <Button size="sm" onClick={() => setShowUploadCustom(true)}>
                     <UploadIcon size={13} /> Upload
-                  </button>
+                  </Button>
                 </div>
                 {project?.viewer_is_admin && (
                   <p className="text-[11px] text-th-faint -mt-1 mb-3">
                     Have audio, photos or camera originals instead of a cut?{' '}
-                    <button onClick={() => setTab('raw-footage')} className="underline hover:text-th-text">Add them under Raw Files</button>.
+                    <Button variant="link" onClick={() => setTab('raw-footage')}>Add them under Raw Files</Button>.
                   </p>
                 )}
 
                 {customAssets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 gap-3 text-center border border-dashed border-th-border rounded-th-lg">
                     <p className="text-[13px] text-th-muted">No custom cuts yet.</p>
-                    <button
-                      onClick={() => setShowUploadCustom(true)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[12px] font-semibold btn-press">
+                    <Button size="sm" onClick={() => setShowUploadCustom(true)}>
                       <UploadIcon size={13} /> Upload first cut
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                     {customAssets.map((a) => (
                       <Link key={a.id} href={`/review/${a.id}`}
                         className="group relative flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent-line transition-colors shadow-card hover:shadow-card-hover">
-                        <button
+                        <IconButton
+                          variant="delete"
+                          size="sm"
+                          label="Delete cut"
                           onClick={(e) => handleDeleteAsset(e, a.id)}
-                          className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg border border-th-border opacity-0 group-hover:opacity-100 transition-opacity text-th-muted hover:text-th-changes z-20">
+                          className="absolute top-2.5 left-2.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 z-20">
                           <Trash2 size={13} />
-                        </button>
+                        </IconButton>
                         <div className="aspect-video shrink-0 bg-th-surface-alt flex flex-col items-center justify-center gap-2 relative">
                           {a.mux_playback_id ? (
                             <img
@@ -612,7 +611,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                               alt={a.name}
                             />
                           ) : (
-                            <Film size={28} style={{ color: 'var(--th-accent-text)' }} />
+                            <Film accent size={28} style={{ color: 'var(--th-accent-text)' }} />
                           )}
                           <span className="thumb-badge font-mono text-[11px] px-1.5 py-0.5 rounded relative z-[1]">{formatDuration(a.duration_sec)}</span>
                         </div>
@@ -648,20 +647,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     <h2 className="text-[13px] font-bold">Board Cut</h2>
                     <span className="font-mono text-[10px] text-th-faint">{boardAssets.length}</span>
                   </div>
-                  <button
-                    onClick={() => setShowUploadBoard(true)}
-                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
+                  <Button size="sm" onClick={() => setShowUploadBoard(true)}>
                     <UploadIcon size={13} /> Upload
-                  </button>
+                  </Button>
                 </div>
 
                 {boardAssets.length === 0 ? (
                   <EmptyState icon={Video} title="No assets yet" sub="Upload your first cut to start reviewing.">
-                    <button
-                      onClick={() => setShowUploadBoard(true)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
+                    <Button size="sm" onClick={() => setShowUploadBoard(true)}>
                       <UploadIcon size={14} /> Upload first cut
-                    </button>
+                    </Button>
                   </EmptyState>
                 ) : (
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
@@ -671,11 +666,14 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                       <Link key={a.id} href={`/review/${a.id}`}
                         className={`group relative flex flex-col h-full bg-th-surface rounded-th-lg overflow-hidden transition-colors shadow-card hover:shadow-card-hover ${isPlaceholder ? 'border border-dashed border-th-faint hover:border-th-accent-line' : 'border border-th-border hover:border-th-accent-line'}`}>
                         {!isPlaceholder && (
-                          <button
+                          <IconButton
+                            variant="delete"
+                            size="sm"
+                            label="Delete cut"
                             onClick={(e) => handleDeleteAsset(e, a.id)}
-                            className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg border border-th-border opacity-0 group-hover:opacity-100 transition-opacity text-th-muted hover:text-th-changes z-20">
+                            className="absolute top-2.5 left-2.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 z-20">
                             <Trash2 size={13} />
-                          </button>
+                          </IconButton>
                         )}
                         {isPlaceholder ? (
                           <div className="aspect-video shrink-0 bg-th-surface-alt/40 flex flex-col items-center justify-center gap-2 relative">
@@ -691,7 +689,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                                 alt={a.name}
                               />
                             ) : (
-                              <Film size={28} style={{ color: 'var(--th-accent-text)' }} />
+                              <Film accent size={28} style={{ color: 'var(--th-accent-text)' }} />
                             )}
                             <span className="thumb-badge font-mono text-[11px] px-1.5 py-0.5 rounded relative z-[1]">{formatDuration(a.duration_sec)}</span>
                             {(a.version_count ?? 1) >= 2 ? (

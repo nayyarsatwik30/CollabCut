@@ -7,6 +7,7 @@ import { formatTimecode } from '@/lib/utils'
 import { CommentCard } from './CommentCard'
 import { MAX_ATTACHMENTS_PER_COMMENT, MAX_COMMENT_ATTACHMENT_BYTES } from '@/lib/comment-attachment-rules'
 import { AttachButton, DraftAttachmentList, useCommentAttachments } from './CommentAttachments'
+import { Button } from '@/components/ui/Button'
 
 type Filter = 'all' | CommentStatus
 
@@ -70,16 +71,15 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
       {/* Filter row */}
       <div className="px-4 py-2.5 border-b border-th-border flex items-center gap-1.5 shrink-0">
         {FILTERS.map(({ key, label }) => (
-          <button
+          <Button
             key={key}
+            variant="chip"
+            aria-pressed={filter === key}
             onClick={() => setFilter(key)}
-            className="px-3 py-1 rounded-th-full text-[11px] font-medium transition-colors btn-press capitalize"
-            style={filter === key
-              ? { background: 'var(--th-accent)', color: 'var(--th-accent-fg)', border: '1px solid var(--th-accent-edge)', fontWeight: 600 }
-              : { background: 'transparent', color: 'var(--th-muted)', border: '1px solid var(--th-border)' }}
+            className="capitalize"
           >
             {label}
-          </button>
+          </Button>
         ))}
         <span className="ml-auto font-mono text-[10px] text-th-faint">{filtered.length}</span>
       </div>
@@ -167,13 +167,13 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
 
         {/* Submit — only visible when typing */}
         {draftText.trim() && (
-          <button
+          <Button
             onClick={handleSubmit}
             disabled={drafts.busy || drafts.errorCount > 0}
-            className="btn btn-primary mt-2 w-full animate-fade-in [--btn-fs:14px]"
+            className="mt-2 w-full animate-fade-in [--btn-fs:14px]"
           >
             <CommentIcon size={16} /> {drafts.busy ? 'Uploading file…' : `Post note at ${formatTimecode(currentTime)}`}
-          </button>
+          </Button>
         )}
       </div>
     </div>

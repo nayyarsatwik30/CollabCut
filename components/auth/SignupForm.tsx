@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff, ArrowRight, Check, Copy } from 'lucide-react'
+import { Eye, EyeOff, ArrowRight, Check, Copy } from '@/components/ui/icons'
 import { Button, ButtonIcon } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
 

@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Trash2, Film } from 'lucide-react'
+import { Trash2, Film } from '@/components/ui/icons'
+import { IconButton } from '@/components/ui/IconButton'
 import { cn, statusChip } from '@/lib/utils'
 
 interface Project {
@@ -45,7 +46,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
           href={`/project/${project.id}`}
           className="flex items-center gap-4 px-5 py-3.5 border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors"
         >
-          <Film size={20} style={{ color: 'var(--th-accent-text)' }} />
+          <Film accent size={20} style={{ color: 'var(--th-accent-text)' }} />
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold truncate">{project.name}</p>
             <p className="text-[11px] text-th-muted">{project.client}</p>
@@ -55,12 +56,15 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
           </span>
         </Link>
         {onDelete && (
-          <button
+          <IconButton
+            variant="delete"
+            size="sm"
+            label="Delete project"
             onClick={handleDelete}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-th-sm opacity-0 group-hover:opacity-100 transition-opacity text-th-muted hover:text-th-changes hover:bg-th-changes/10"
+            className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
           >
             <Trash2 size={13} />
-          </button>
+          </IconButton>
         )}
       </div>
     )
@@ -80,7 +84,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
               alt={project.name}
             />
           ) : (
-            <Film size={36} style={{ color: 'var(--th-accent-text)' }} />
+            <Film accent size={36} style={{ color: 'var(--th-accent-text)' }} />
           )}
           <span className={`absolute top-2.5 right-2.5 font-mono text-[10px] px-2 py-0.5 rounded-th-full ${statusChip(project.status)}`}>
             {label}
@@ -93,12 +97,15 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
       </Link>
 
       {onDelete && (
-        <button
+        <IconButton
+          variant="delete"
+          size="sm"
+          label="Delete project"
           onClick={handleDelete}
-          className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg border border-th-border opacity-0 group-hover:opacity-100 transition-opacity text-th-muted hover:text-th-changes"
+          className="absolute top-2.5 left-2.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
         >
           <Trash2 size={13} />
-        </button>
+        </IconButton>
       )}
     </div>
   )
