@@ -1,17 +1,11 @@
-/* CollabCut landing — design tokens and bespoke styles.
-   Every colour on the landing (DOM and WebGL) derives from these six tokens.
-   Swap the palette here; no component edits needed. The 3D scene reads
-   --bg, --fg and --glow at mount. */
-:root:has(.lp),
-.lp {
-  --bg: #000000;
-  --fg: #ffffff;
-  --muted: #a1a1a1;
-  --line: rgba(255, 255, 255, 0.14);
-  --accent: #ffffff;
-  --accent-fg: #000000;
-  --glow: #ffffff;
-}
+/* CollabCut landing — bespoke styles.
+   No colour is defined in this file. The tokens (--bg, --fg, --muted,
+   --surface, --line, --line-strong, --accent, --accent-fg, --accent-edge)
+   come from theme.ts, emitted per theme by ThemeBoot.tsx; the 3D scene reads
+   the same file through scene/palette.ts.
+   The accent is a fill, never thin text or a hairline. --accent-edge is the
+   thin ink edge accent fills get in Light, where the accent has almost no
+   contrast against the page; it is transparent in Dark. */
 
 /* Keep overscroll and the area behind the page on-palette. */
 html:has(.lp),
@@ -25,20 +19,20 @@ html:has(.lp) body {
   overflow-x: clip;
   background: var(--bg);
   color: var(--fg);
-  color-scheme: dark;
   font-family: var(--th-font);
   -webkit-font-smoothing: antialiased;
 }
 
 .lp ::selection {
-  background: var(--fg);
-  color: var(--bg);
+  background: var(--accent);
+  color: var(--accent-fg);
 }
 
 .lp a:focus-visible,
 .lp button:focus-visible {
-  outline: 2px solid var(--fg);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--accent-edge);
   border-radius: 4px;
 }
 
@@ -230,6 +224,16 @@ html:has(.lp) body {
   color: var(--fg);
   white-space: nowrap;
 }
+/* Highlighter block: a solid accent fill with ink text. */
+.lp-mark {
+  padding: 0 0.22em;
+  border-radius: 0.16em;
+  background: var(--accent);
+  color: var(--accent-fg);
+  box-shadow: 0 0 0 1px var(--accent-edge);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
 
 .lp-nav {
   display: flex;
@@ -245,6 +249,124 @@ html:has(.lp) body {
 .lp-nav a:hover {
   color: var(--fg);
 }
+/* Links and the toggle sit above the magnetic button's goo, which can reach
+   out under them. */
+.lp-nav > a,
+.lp-nav > button {
+  position: relative;
+  z-index: 1;
+}
+
+/* Dark / Light toggle: a quiet icon button. The icon shows the theme a click
+   switches to, picked from the attribute on <html> so it is right at first paint. */
+.lp-theme-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.lp-theme-toggle:hover {
+  border-color: var(--fg);
+}
+.lp .lp-theme-toggle:focus-visible {
+  border-radius: 50%;
+}
+html[data-lp-theme='light'] .lp-icon-sun,
+html:not([data-lp-theme='light']) .lp-icon-moon {
+  display: none;
+}
+
+/* Magnetic Sign up (MagneticButton.tsx). On its own the link is a plain
+   accent pill. With the goo layer mounted, the SVG underneath draws the pill
+   and the link keeps only its label. */
+.lp-magnet {
+  position: relative;
+  z-index: 0;
+  flex: none;
+  display: inline-block;
+}
+.lp-magnet-goo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.lp-magnet-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--accent-edge);
+  border-radius: 999px;
+  background: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lp-nav .lp-magnet-link,
+.lp-nav .lp-magnet-link:hover {
+  color: var(--accent-fg);
+}
+.lp-magnet[data-goo='on'] .lp-magnet-link {
+  border-color: transparent;
+  background: transparent;
+  will-change: transform;
+}
+.lp .lp-magnet-link:focus-visible {
+  border-radius: 999px;
+}
+
+/* Sign in: the 'reveal' variant. At rest it is plain, faded text that
+   recedes behind Sign up (--quiet is tuned per theme to stay above 4.5:1).
+   Hovering it brings up a pill in the page's text colour (Cream in Dark, Ink
+   in Light) with the same magnetic goo; the label flips to the page colour
+   and grows by 2px. The box is pill-sized all along, so nothing shifts; the
+   negative margin takes back the room the hidden pill would add. */
+.lp-magnet-reveal {
+  margin: 0 -22px;
+}
+.lp-magnet-reveal .lp-magnet-goo {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.lp-nav .lp-magnet-reveal .lp-magnet-link {
+  border-color: transparent;
+  background: transparent;
+  color: var(--fg);
+  opacity: var(--quiet);
+  font-weight: 400;
+  transition: font-size 0.18s ease, color 0.18s ease, opacity 0.18s ease;
+}
+.lp-magnet-reveal[data-shown='on'] .lp-magnet-goo,
+.lp-magnet-reveal:has(:focus-visible) .lp-magnet-goo {
+  opacity: 1;
+}
+.lp-nav .lp-magnet-reveal[data-shown='on'] .lp-magnet-link,
+.lp-nav .lp-magnet-reveal .lp-magnet-link:focus-visible,
+.lp-nav .lp-magnet-reveal[data-goo='off'] .lp-magnet-link:hover {
+  color: var(--bg);
+  opacity: 1;
+  font-size: 15px;
+  font-weight: 600;
+}
+/* No goo layer (touch, reduced motion): the link draws its own pill. */
+.lp-nav .lp-magnet-reveal[data-goo='off'] .lp-magnet-link:hover,
+.lp-nav .lp-magnet-reveal[data-goo='off'] .lp-magnet-link:focus-visible {
+  background: var(--fg);
+}
 
 .lp-btn {
   display: inline-flex;
@@ -253,7 +375,7 @@ html:has(.lp) body {
   gap: 8px;
   padding: 12px 20px;
   border-radius: 999px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--accent-edge);
   background: var(--accent);
   color: var(--accent-fg);
   font-size: 13px;
@@ -263,14 +385,6 @@ html:has(.lp) body {
 .lp-btn:hover {
   transform: translateY(-2px);
 }
-.lp-nav .lp-btn {
-  padding: 9px 16px;
-  color: var(--accent-fg);
-}
-.lp-nav .lp-btn:hover {
-  color: var(--accent-fg);
-}
-
 .lp-link {
   display: inline-flex;
   align-items: center;
@@ -305,7 +419,8 @@ html:has(.lp) body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--fg);
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-edge);
 }
 .lp-hero-copy {
   margin-top: 18px;
@@ -331,11 +446,12 @@ html:has(.lp) body {
 }
 .lp-static-flutter svg {
   position: absolute;
-  color: var(--fg);
 }
 
 @media (max-width: 767px) {
-  .lp-nav a:not(.lp-btn) {
+  /* Phones keep the toggle and Sign up; the text links drop out. */
+  .lp-nav > a,
+  .lp-nav > .lp-magnet-reveal {
     display: none;
   }
   .lp-nav {
@@ -371,8 +487,9 @@ html:has(.lp) body {
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }
 .lp-marquee:focus-visible {
-  outline: 2px solid var(--fg);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
+  box-shadow: inset 0 0 0 3px var(--accent-edge);
 }
 .lp-marquee-track {
   display: flex;
@@ -407,7 +524,7 @@ html:has(.lp) body {
   padding: 22px 22px 24px;
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: linear-gradient(160deg, color-mix(in srgb, var(--fg) 7%, transparent), color-mix(in srgb, var(--fg) 2%, transparent));
+  background: var(--surface);
   color: var(--fg);
 }
 .lp-feature svg {
@@ -685,7 +802,7 @@ html:has(.lp) body {
   padding: clamp(24px, 3vw, 40px);
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: linear-gradient(160deg, color-mix(in srgb, var(--fg) 7%, transparent), color-mix(in srgb, var(--fg) 2%, transparent));
+  background: var(--surface);
 }
 .lp-plan-name {
   font-family: var(--th-mono);

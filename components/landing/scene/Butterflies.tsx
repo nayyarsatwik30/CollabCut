@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, type MutableRefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { TL, smoothstep } from '../story'
-import { TOOL_COUNT, type SceneState } from './state'
+import { palette } from './palette'
+import { SCENE } from './quality'
+import { MAX_FLOWERS, TOOL_COUNT, type SceneState } from './state'
 
 export interface PointerState {
   x: number // NDC, -1..1
@@ -12,9 +14,25 @@ export interface PointerState {
   lastMove: number // performance.now() of the last real movement
 }
 
-// One butterfly = two subdivided wing sheets + a slim body, drawn for every
-// instance in a single draw call. The flap is done in the vertex shader from a
-// per-instance phase, so the CPU only steers.
+// The clapper butterfly from the design board (viewBox 0 0 64 48, mirrored
+// about x = 32). Each wing is a clapperboard: a slate (the board) with a
+// striped arm hinged at the shoulder, which claps open and shut as the
+// butterfly flies. Between the wings are a slim body and two antennae.
+//
+// One butterfly = two subdivided wing sheets + one body sheet, drawn for every
+// instance in a single draw call. The sheets are plain rectangles; the
+// drawing itself is worked out per pixel in the fragment shader (signed
+// distances, in the drawing's own units), so edges stay crisp at any size and
+// the colours are just uniforms. The 3D wingbeat is done in the vertex shader
+// from a per-instance phase, so the CPU only steers.
+//
+// UNITS drawing units span one wing sheet (model x 0..1), measured out from
+// the centre line; the drawing's y = MID sits on the model's z = 0, with the
+// antennae pointing forward.
+const UNITS = 24
+const MID = 24
+const WING_HALF_DEPTH = 0.72
+
 function buildGeometry() {
   const position: number[] = []
   const wing: number[] = []
@@ -28,7 +46,7 @@ function buildGeometry() {
       for (let i = 0; i <= US; i++) {
         const u = i / US
         const v = (j / VS) * 2 - 1
-        position.push(s * u, 0, v * 0.72)
+        position.push(s * u, 0, v * WING_HALF_DEPTH)
         wing.push(u, v)
         side.push(s)
       }
@@ -43,10 +61,12 @@ function buildGeometry() {
       }
     }
   }
+  // Body sheet: wide and long enough for the body and both antennae. Its
+  // aWing carries its own model-space x and z.
   const b = position.length / 3
-  const bw = 0.045
-  position.push(-bw, 0.004, -0.55, bw, 0.004, -0.55, -bw, 0.004, 0.62, bw, 0.004, 0.62)
-  wing.push(-1, -1, 1, -1, -1, 1, 1, 1)
+  const bx = 0.25, z0 = -0.68, z1 = 0.76
+  position.push(-bx, 0.004, z0, bx, 0.004, z0, -bx, 0.004, z1, bx, 0.004, z1)
+  wing.push(-bx, z0, bx, z0, -bx, z1, bx, z1)
   side.push(0, 0, 0, 0)
   index.push(b, b + 2, b + 1, b + 1, b + 2, b + 3)
 
@@ -62,14 +82,12 @@ const VERT = /* glsl */ `
 attribute float aSide;
 attribute vec2 aWing;
 attribute float aPhase;
-attribute float aTone;
 attribute float aFold;
 varying vec2 vWing;
 varying float vSide;
 varying vec3 vN;
-varying vec3 vViewDir;
 varying float vDepth;
-varying float vTone;
+varying float vClap;
 
 void main() {
   vec3 p = position;
@@ -89,12 +107,12 @@ void main() {
   }
   vec4 wp = modelMatrix * instanceMatrix * vec4(p, 1.0);
   vN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * n);
-  vViewDir = cameraPosition - wp.xyz;
   vec4 mv = viewMatrix * wp;
   vDepth = -mv.z;
   vWing = aWing;
   vSide = aSide;
-  vTone = aTone;
+  // The clapper arm opens and shuts with the wingbeat, and stays shut once landed.
+  vClap = (0.5 + 0.5 * sin(aPhase)) * (1.0 - aFold);
   gl_Position = projectionMatrix * mv;
 }
 `
@@ -102,54 +120,61 @@ void main() {
 const FRAG = /* glsl */ `
 uniform vec3 uFg;
 uniform vec3 uBg;
+uniform vec3 uInk;
+uniform vec3 uAccent;
+uniform float uLight;
 varying vec2 vWing;
 varying float vSide;
 varying vec3 vN;
-varying vec3 vViewDir;
 varying float vDepth;
-varying float vTone;
+varying float vClap;
 
-float lobe(vec2 p, vec2 c, vec2 r, float rot) {
-  p -= c;
-  float cs = cos(rot);
-  float sn = sin(rot);
-  p = vec2(p.x * cs + p.y * sn, -p.x * sn + p.y * cs);
-  return length(p / r) - 1.0;
+// Distance to a rounded rectangle and to a line segment.
+float box(vec2 p, vec2 c, vec2 hs, float r) {
+  vec2 d = abs(p - c) - hs + r;
+  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
+}
+float seg(vec2 p, vec2 a, vec2 b) {
+  vec2 pa = p - a;
+  vec2 ba = b - a;
+  return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
 }
 
 void main() {
-  float alpha;
+  float d;
   vec3 col;
   if (abs(vSide) < 0.5) {
-    float d = length(vWing) - 1.0;
-    float fw = fwidth(d);
-    alpha = 1.0 - smoothstep(-fw, fw, d);
-    col = uFg * mix(0.05, 0.2, vTone);
+    // Body rect (30,15 4x24 rx 2) and the antennae (stroke 1.4), text colour.
+    vec2 q = vec2(32.0 + ${UNITS.toFixed(1)} * vWing.x, ${MID.toFixed(1)} - ${UNITS.toFixed(1)} * vWing.y);
+    d = box(q, vec2(32.0, 27.0), vec2(2.0, 12.0), 2.0);
+    d = min(d, min(seg(q, vec2(32.0, 15.0), vec2(27.0, 7.0)), seg(q, vec2(32.0, 15.0), vec2(37.0, 7.0))) - 0.7);
+    col = uFg;
   } else {
-    vec2 p = vWing;
-    float fore = lobe(p, vec2(0.50, 0.40), vec2(0.54, 0.44), 0.42);
-    float hind = lobe(p, vec2(0.36, -0.40), vec2(0.40, 0.50), -0.25);
-    float d = min(fore, hind);
-    float fw = fwidth(d);
-    alpha = 1.0 - smoothstep(-fw, fw, d);
-
-    float base = mix(0.16, 0.95, vTone);
-    float root = smoothstep(0.9, 0.0, length(p - vec2(0.0, 0.05)));
-    float margin = smoothstep(-0.30, -0.02, d);
-    float ang = atan(p.y - 0.02, p.x + 0.06);
-    float vein = smoothstep(0.90, 1.0, abs(sin(ang * 8.0))) * smoothstep(0.12, 0.45, length(p));
-    float pat = base * (1.0 - 0.28 * vein);
-    // Pale wings get a dark margin, dark wings a pale one.
-    pat = mix(pat, mix(0.9, 0.04, vTone), margin * 0.75);
-    pat += 0.10 * root;
-
-    vec3 N = normalize(vN);
-    vec3 V = normalize(vViewDir);
-    vec3 L = normalize(vec3(-0.35, 0.8, 0.5));
-    float light = 0.38 + 0.62 * abs(dot(N, L));
-    float sheen = pow(1.0 - abs(dot(N, V)), 3.0) * 0.35 * (0.3 + 0.7 * vTone) * (1.0 - margin);
-    col = uFg * (pat * light + sheen);
+    // Both wings are drawn as the left one; the right sheet is its mirror.
+    vec2 q = vec2(32.0 - ${UNITS.toFixed(1)} * vWing.x, ${MID.toFixed(1)} - ${(UNITS * WING_HALF_DEPTH).toFixed(2)} * vWing.y);
+    // The slate (8,26 22x14 rx 2), text colour.
+    float board = box(q, vec2(19.0, 33.0), vec2(11.0, 7.0), 2.0);
+    // The arm swings 1 to 26 degrees about the shoulder (30,26). Undo that
+    // turn, then measure against the arm at rest: four slanted stripes, 4
+    // wide every 6, between y 18 and 24, leaning 3 across for 6 up.
+    float th = radians(mix(1.0, 26.0, vClap));
+    float c = cos(th);
+    float s = sin(th);
+    vec2 r = q - vec2(30.0, 26.0);
+    r = vec2(r.x * c + r.y * s, -r.x * s + r.y * c) + vec2(30.0, 26.0);
+    float xs = r.x - (24.0 - r.y) * 0.5;
+    float stripe = max(abs(mod(xs - 8.0, 6.0) - 2.0) - 2.0, max(8.0 - xs, xs - 30.0)) * 0.894;
+    float arm = max(abs(r.y - 21.0) - 3.0, stripe);
+    d = min(board, arm);
+    float onArm = step(arm, board);
+    col = mix(uFg, uAccent, onArm);
+    // Light: the accent stripes get a thin ink edge.
+    col = mix(col, uInk, uLight * onArm * smoothstep(-0.9, -0.55, arm));
+    // A little shading from the wing's tilt, so the beat reads in 3D.
+    col *= 0.72 + 0.28 * abs(dot(normalize(vN), normalize(vec3(-0.35, 0.8, 0.5))));
   }
+  float fw = max(fwidth(d), 1e-4);
+  float alpha = 1.0 - smoothstep(-fw, fw, d);
   if (alpha < 0.01) discard;
   float fog = smoothstep(6.5, 12.5, vDepth);
   col = mix(col, uBg, fog * 0.82);
@@ -167,21 +192,35 @@ interface Agent {
   size: number
   flap: number
   bank: number
-  puff: number // which dandelion it lands on
+  puff: number // which flower it lands on
   landAt: number // where in the landing window it sets off
-  nx: number; ny: number; nz: number // its spot on the seed head (outward direction)
+  nx: number; ny: number; nz: number // its spot on the flower head (outward direction)
   hx: number; hy: number; hz: number // which way it faces once landed
 }
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
-// Deals the butterflies out across the dandelions and gives each its own spot
-// on the upper, camera-facing part of the seed head, spaced around it so two
-// on the same head do not sit on top of each other.
-function perch(i: number, count: number) {
-  const puff = i % TOOL_COUNT
-  const slot = Math.floor(i / TOOL_COUNT)
-  const perHead = Math.ceil(count / TOOL_COUNT)
+// Which flower each butterfly lands on. They are dealt round every flower in
+// turn (in a shuffled order), so the landings are spread as evenly as they
+// can be: no flower gets a second butterfly until every flower has one. That
+// keeps each flower at or under SCENE.perchLimit for as long as there is room
+// (butterflies <= flowers x limit); past that the limit cannot hold and the
+// extra ones are still shared out evenly.
+function dealFlowers(count: number, flowers: number) {
+  const order = Array.from({ length: flowers }, (_, i) => i)
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[order[i], order[j]] = [order[j], order[i]]
+  }
+  const perHead = Math.max(1, Math.ceil(count / flowers))
+  if (perHead > SCENE.perchLimit && process.env.NODE_ENV !== 'production') console.warn(`[landing] ${count} butterflies on ${flowers} flowers is more than perchLimit ${SCENE.perchLimit} allows; some flowers get ${perHead}.`)
+  return { order, perHead }
+}
+
+// Gives a butterfly its own spot on the upper, camera-facing part of its
+// flower head, spaced around it so two on the same head do not sit on top of
+// each other. `slot` is its turn on that flower.
+function perch(puff: number, slot: number, perHead: number) {
   const az = (slot / perHead) * Math.PI * 1.5 - 0.5 + puff * 0.9 + (Math.random() - 0.5) * 0.4
   const el = 0.5 + Math.random() * 0.55
   const nx = Math.cos(el) * Math.sin(az) * 0.8
@@ -205,29 +244,26 @@ function perch(i: number, count: number) {
   }
 }
 
-export function Butterflies({ count, pointer, progress, state: scene, fg, bg }: { count: number; pointer: MutableRefObject<PointerState>; progress: MutableRefObject<number>; state: SceneState; fg: string; bg: string }) {
+export function Butterflies({ count, flowers, pointer, progress, state: scene }: { count: number; flowers: number; pointer: MutableRefObject<PointerState>; progress: MutableRefObject<number>; state: SceneState }) {
   const mesh = useRef<THREE.InstancedMesh>(null)
 
   const { geometry, material, phase, fold } = useMemo(() => {
     const geometry = buildGeometry()
     const phase = new THREE.InstancedBufferAttribute(new Float32Array(count), 1)
     phase.setUsage(THREE.DynamicDrawUsage)
-    const tone = new Float32Array(count)
-    for (let i = 0; i < count; i++) tone[i] = Math.random() < 0.3 ? Math.random() * 0.22 : 0.72 + Math.random() * 0.28
     const fold = new THREE.InstancedBufferAttribute(new Float32Array(count), 1)
     fold.setUsage(THREE.DynamicDrawUsage)
     geometry.setAttribute('aPhase', phase)
     geometry.setAttribute('aFold', fold)
-    geometry.setAttribute('aTone', new THREE.InstancedBufferAttribute(tone, 1))
     const material = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
-      uniforms: { uFg: { value: new THREE.Color(fg) }, uBg: { value: new THREE.Color(bg) } },
+      uniforms: { uFg: { value: palette.fg }, uBg: { value: palette.bg }, uInk: { value: palette.ink }, uAccent: { value: palette.accent }, uLight: palette.light },
       side: THREE.DoubleSide,
       alphaToCoverage: true,
     })
     return { geometry, material, phase, fold }
-  }, [count, fg, bg])
+  }, [count])
 
   useEffect(() => () => { geometry.dispose(); material.dispose() }, [geometry, material])
 
@@ -236,6 +272,8 @@ export function Butterflies({ count, pointer, progress, state: scene, fg, bg }: 
     const pos = new Float32Array(count * 3)
     const vel = new Float32Array(count * 3)
     const dir = new Float32Array(count * 3)
+    const heads = Math.min(MAX_FLOWERS, Math.max(TOOL_COUNT, flowers))
+    const { order, perHead } = dealFlowers(count, heads)
     for (let i = 0; i < count; i++) {
       agents.push({
         f1: 0.09 + Math.random() * 0.16, f2: 0.11 + Math.random() * 0.19, f3: 0.07 + Math.random() * 0.13,
@@ -243,10 +281,11 @@ export function Butterflies({ count, pointer, progress, state: scene, fg, bg }: 
         eager: 0.45 + Math.random() * 0.55,
         orbitR: 0.14 + Math.random() * 0.86,
         orbitSpeed: (0.5 + Math.random() * 0.7) * (Math.random() < 0.5 ? -1 : 1),
-        size: 0.13 + Math.random() * 0.12,
+        // 0.19 is the original average size.
+        size: 0.19 * SCENE.butterflySize * (1 + (Math.random() * 2 - 1) * SCENE.butterflySizeVariation),
         flap: 12 + Math.random() * 5,
         bank: 0,
-        ...perch(i, count),
+        ...perch(order[i % heads], Math.floor(i / heads), perHead),
       })
       // Start scattered to the right and a little beyond the frame, then drift in.
       pos[i * 3] = 0.8 + Math.random() * 4.7
@@ -256,7 +295,7 @@ export function Butterflies({ count, pointer, progress, state: scene, fg, bg }: 
       dir[i * 3] = -1
     }
     return { agents, pos, vel, dir, chase: 0 }
-  }, [count])
+  }, [count, flowers])
 
   const m = useMemo(() => new THREE.Matrix4(), [])
   const warm = useRef(0)
@@ -264,10 +303,10 @@ export function Butterflies({ count, pointer, progress, state: scene, fg, bg }: 
   useFrame((state, delta) => {
     const im = mesh.current
     if (!im) return
-    // As the story starts, each butterfly glides to its dandelion, settles
-    // with its wings folded, and sinks into the seed head before any sphere
+    // As the story starts, each butterfly glides to its flower, settles
+    // with its wings folded, and sinks into the flower head before any sphere
     // exists. All of it follows scroll progress, so scrolling back up plays
-    // it in reverse: they come out of the seed heads and lift off again.
+    // it in reverse: they come out of the flower heads and lift off again.
     const p = progress.current
     const away = smoothstep(TL.butterfliesAway[0], TL.butterfliesAway[1], p)
     // Hard guarantee: while any sphere is drawn at all, no butterfly is.
@@ -376,7 +415,7 @@ export function Butterflies({ count, pointer, progress, state: scene, fg, bg }: 
       ux = fy * rz - fz * ry; uy = fz * rx - fx * rz; uz = fx * ry - fy * rx
 
       // Landing: the flight above keeps running underneath, and the drawn
-      // butterfly is carried from it onto its spot on the seed head. It comes
+      // butterfly is carried from it onto its spot on the flower head. It comes
       // in from just above the spot and turns to sit along the surface.
       let px = pos[ix], py = pos[ix + 1] + Math.sin(ph) * 0.03 * (1 - land), pz = pos[ix + 2]
       if (land > 0) {
@@ -398,7 +437,7 @@ export function Butterflies({ count, pointer, progress, state: scene, fg, bg }: 
       }
       ;(fold.array as Float32Array)[i] = land
 
-      // Sinking into the seed head: it draws down into the threads and is gone.
+      // Sinking into the flower head: it draws in toward the hub and is gone.
       const s = a.size * shown
       if (away > 0) {
         const hb = a.puff * 3

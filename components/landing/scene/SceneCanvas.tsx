@@ -2,25 +2,45 @@
 
 import { useEffect, useMemo, useRef, type MutableRefObject } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import * as THREE from 'three'
 import { TL, smoothstep } from '../story'
+import { THEME_ATTR, readTheme } from '../theme'
 import { Backdrop } from './Backdrop'
 import { Burst } from './Burst'
 import { Butterflies, type PointerState } from './Butterflies'
-import { Dandelions } from './Dandelions'
+import { ReelFlowers } from './ReelFlowers'
 import { buildEnvironment } from './environment'
 import { Glow } from './Glow'
+import { applyPalette, palette } from './palette'
 import { Spheres } from './Spheres'
 import { Trails } from './Trails'
 import { createSceneState } from './state'
-import type { Quality } from './quality'
+import { SCENE, type Quality } from './quality'
 
-// Palette comes from the landing's CSS tokens so a palette swap in
-// landing.css reaches the shaders too.
-function readTokens() {
-  const root = document.querySelector('.lp') ?? document.documentElement
-  const style = getComputedStyle(root)
-  const get = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback
-  return { bg: get('--bg', '#000000'), fg: get('--fg', '#ffffff'), glow: get('--glow', '#ffffff') }
+// Keeps the scene on the page's theme. Background and fog share the palette's
+// colour objects, so following a theme change is one in-place update.
+function ThemeSync() {
+  const scene = useThree((s) => s.scene)
+  const invalidate = useThree((s) => s.invalidate)
+  useEffect(() => {
+    const fog = new THREE.Fog(0, 8.5, 19)
+    fog.color = palette.bg
+    scene.background = palette.bg
+    scene.fog = fog
+    const sync = () => {
+      applyPalette(readTheme())
+      invalidate()
+    }
+    sync()
+    const observer = new MutationObserver(sync)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: [THEME_ATTR] })
+    return () => {
+      observer.disconnect()
+      scene.background = null
+      scene.fog = null
+    }
+  }, [scene, invalidate])
+  return null
 }
 
 // Steps resolution down if the device can't hold ~45fps.
@@ -82,7 +102,6 @@ function CameraRig({ pointer, progress }: { pointer: MutableRefObject<PointerSta
 export default function SceneCanvas({ quality, active, progress, onReady }: { quality: Quality; active: boolean; progress: MutableRefObject<number>; onReady: () => void }) {
   const wrap = useRef<HTMLDivElement>(null)
   const pointer = useRef<PointerState>({ x: 0.45, y: 0, lastMove: -1e9 })
-  const tokens = useMemo(readTokens, [])
   const state = useMemo(createSceneState, [])
 
   useEffect(() => {
@@ -108,18 +127,17 @@ export default function SceneCanvas({ quality, active, progress, onReady }: { qu
         style={{ pointerEvents: 'none' }}
         onCreated={onReady}
       >
-        <color attach="background" args={[tokens.bg]} />
-        <fog attach="fog" args={[tokens.bg, 8.5, 19]} />
+        <ThemeSync />
         <StudioEnvironment />
         <CameraRig pointer={pointer} progress={progress} />
-        <Backdrop state={state} progress={progress} fg={tokens.fg} bg={tokens.bg} glow={tokens.glow} />
-        {/* Order matters: the dandelions place the seed heads, the spheres grow out of
+        <Backdrop state={state} progress={progress} />
+        {/* Order matters: the flowers place their heads, the spheres grow out of
             them, and the butterflies read both. */}
-        <Dandelions state={state} progress={progress} seeds={quality.seeds} filaments={quality.filaments} fg={tokens.fg} glow={tokens.glow} />
-        <Spheres state={state} progress={progress} fg={tokens.fg} bg={tokens.bg} glow={tokens.glow} />
-        <Butterflies count={quality.butterflies} pointer={pointer} progress={progress} state={state} fg={tokens.fg} bg={tokens.bg} />
-        <Trails state={state} segments={quality.trailSegments} embers={quality.embers} glow={tokens.glow} />
-        <Burst state={state} glow={tokens.glow} />
+        <ReelFlowers state={state} progress={progress} count={quality.flowers} size={SCENE.flowerSize} />
+        <Spheres state={state} progress={progress} />
+        <Butterflies count={quality.butterflies} flowers={quality.flowers} pointer={pointer} progress={progress} state={state} />
+        <Trails state={state} segments={quality.trailSegments} embers={quality.embers} />
+        <Burst state={state} />
         {quality.bloom && <Glow progress={progress} />}
         <AdaptiveDpr max={quality.maxDpr} />
       </Canvas>

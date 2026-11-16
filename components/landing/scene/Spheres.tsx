@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { TL, clamp01, easeOutBack, lerp, morphAt, smoothstep } from '../story'
 import { GLOW_LAYER, glowPass } from './Glow'
 import { makeLabelTexture } from './labels'
+import { palette } from './palette'
 import { CENTER, MERGED, SPHERES, TOOL_COUNT, type Finish, type ProgressRef, type SceneState } from './state'
 
 interface SphereUniforms {
@@ -16,10 +17,13 @@ interface SphereUniforms {
   uGlowCol: { value: THREE.Color }
 }
 
-// Physically based finishes. Base colours are derived from the --bg / --fg
-// tokens so a palette swap carries through.
-function makeMaterial(finish: Finish, fg: THREE.Color, bg: THREE.Color, glow: THREE.Color, blank: THREE.Texture) {
-  const mix = (t: number) => bg.clone().lerp(fg, t)
+// Physically based finishes. The bodies are greys between Ink and Cream in
+// both themes (they do not invert with the page); only the speed glow on the
+// leading edge is the accent.
+function makeMaterial(finish: Finish, blank: THREE.Texture) {
+  const fg = palette.cream
+  const glow = palette.accent
+  const mix = (t: number) => palette.ink.clone().lerp(fg, t)
   let material: THREE.MeshPhysicalMaterial
   let ink: THREE.Color
   if (finish === 'obsidian') {
@@ -80,17 +84,14 @@ function makeMaterial(finish: Finish, fg: THREE.Color, bg: THREE.Color, glow: TH
   return { material, uniforms }
 }
 
-export function Spheres({ state, progress, fg, bg, glow }: { state: SceneState; progress: ProgressRef; fg: string; bg: string; glow: string }) {
+export function Spheres({ state, progress }: { state: SceneState; progress: ProgressRef }) {
   const built = useMemo(() => {
     const blank = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1)
     blank.needsUpdate = true
     const geometry = new THREE.SphereGeometry(1, 64, 48)
     const group = new THREE.Group()
-    const cFg = new THREE.Color(fg)
-    const cBg = new THREE.Color(bg)
-    const cGlow = new THREE.Color(glow)
     const bodies = [...SPHERES.map((s) => ({ name: s.name, finish: s.finish })), { name: MERGED.name, finish: MERGED.finish }].map((b) => {
-      const { material, uniforms } = makeMaterial(b.finish, cFg, cBg, cGlow, blank)
+      const { material, uniforms } = makeMaterial(b.finish, blank)
       const mesh = new THREE.Mesh(geometry, material)
       mesh.layers.enable(GLOW_LAYER)
       mesh.visible = false
@@ -98,7 +99,7 @@ export function Spheres({ state, progress, fg, bg, glow }: { state: SceneState; 
       return { ...b, mesh, material, uniforms }
     })
     return { blank, geometry, group, bodies }
-  }, [fg, bg, glow])
+  }, [])
 
   // Labels are drawn once the page font is available.
   useEffect(() => {
@@ -177,7 +178,7 @@ export function Spheres({ state, progress, fg, bg, glow }: { state: SceneState; 
       const d = SPHERES[i]
       const sd = s.seeds[i]
       const ix = i * 3
-      // Each sphere grows out of its dandelion (see morphAt in story.ts).
+      // Each sphere grows out of its flower (see morphAt in story.ts).
       const u = morphAt(p, d.start)
       const e = smoothstep(0.42, 1, u)
       const c = smoothstep(TL.converge[0] + d.delay, TL.converge[1], p)
@@ -196,7 +197,7 @@ export function Spheres({ state, progress, fg, bg, glow }: { state: SceneState; 
       const ry = ay + Math.sin(t * sd.f2 + sd.p2) * sd.amp * 0.8
       const rz = az + Math.sin(t * sd.f3 + sd.p3) * sd.amp * 1.1
 
-      // Emerging: it forms where its dandelion stood, then leaves for where it roams.
+      // Emerging: it forms where its flower stood, then leaves for where it roams.
       const k = smoothstep(0.7, 1.6, u)
       let tx = lerp(state.puff[ix], rx, k)
       let ty = lerp(state.puff[ix + 1], ry, k)

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { GLOW_LAYER } from './Glow'
+import { palette } from './palette'
 import { CENTER, type SceneState } from './state'
 
 // The soft flash at the moment everything becomes one sphere. A one-shot in
@@ -11,18 +12,22 @@ import { CENTER, type SceneState } from './state'
 // point in either direction; the shockwave ring itself travels across the
 // page plane (see Backdrop).
 const FRAG = /* glsl */ `
-uniform vec3 uGlow;
+uniform vec3 uAccent;
 uniform float uFlash;
 varying vec2 vUv;
 void main() {
   vec2 q = (vUv - 0.5) * 9.0;
   float r2 = dot(q, q);
   float a = uFlash * (exp(-r2 * 1.9) * 1.15 + exp(-r2 * 0.3) * 0.06);
-  gl_FragColor = vec4(uGlow * a, 1.0);
+  // Accent, whitening at its hot centre. Drawn over the frame rather than
+  // added to it, so it shows on a pale page as well as a dark one.
+  vec3 col = mix(uAccent, vec3(1.0), clamp(a, 0.0, 1.0) * 0.35) * (1.0 + a);
+  gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
+  #include <colorspace_fragment>
 }
 `
 
-export function Burst({ state, glow }: { state: SceneState; glow: string }) {
+export function Burst({ state }: { state: SceneState }) {
   const mesh = useRef<THREE.Mesh>(null)
   const warm = useRef(0)
   const { geometry, material } = useMemo(() => ({
@@ -30,14 +35,13 @@ export function Burst({ state, glow }: { state: SceneState; glow: string }) {
     material: new THREE.ShaderMaterial({
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: FRAG,
-      uniforms: { uGlow: { value: new THREE.Color(glow) }, uFlash: { value: 0 } },
+      uniforms: { uAccent: { value: palette.accent }, uFlash: { value: 0 } },
       transparent: true,
-      blending: THREE.AdditiveBlending,
       depthWrite: false,
       depthTest: false,
       toneMapped: false,
     }),
-  }), [glow])
+  }), [])
 
   useEffect(() => () => { geometry.dispose(); material.dispose() }, [geometry, material])
   useEffect(() => { mesh.current?.layers.enable(GLOW_LAYER) }, [])

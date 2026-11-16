@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { GLOW_LAYER } from './Glow'
+import { palette } from './palette'
 import { TOOL_COUNT, type SceneState } from './state'
 
 // Each sphere drags a ribbon built from where it has actually been over the
@@ -52,25 +53,18 @@ void main() {
 }
 `
 
-const NOISE = /* glsl */ `
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
-}
-`
-
+// The tail is one solid body, like a snake: a clean accent fill with a crisp
+// edge that tapers to a point (the taper is in the geometry). No noise, no
+// wisps. It is drawn over the frame rather than added to it, so it is just
+// as solid on a pale page, and it does not brighten where it crosses itself.
 const TRAIL_FRAG = /* glsl */ `
-uniform vec3 uGlow;
-uniform float uTime;
+uniform vec3 uAccent;
+uniform vec3 uInk;
+uniform float uLight;
 varying vec2 vUv;
 varying float vI;
-varying float vSeed;
 varying float vOff;
 varying float vHalf;
-${NOISE}
 void main() {
   // Position across the ribbon, -1..1. Dividing two interpolated values keeps
   // it exact where the ribbon tapers or bends; interpolating it directly makes
@@ -78,25 +72,25 @@ void main() {
   float y = clamp(vOff / max(vHalf, 1e-5), -1.0, 1.0);
   float across = abs(y);
   float along = 1.0 - vUv.x;
-  // Turbulence streaming backwards along the trail: burning air, not a clean line.
-  float n1 = noise(vec2(vUv.x * 4.0 - uTime * 2.2 + vSeed * 17.0, y * 1.8 + uTime * 0.6));
-  float n2 = noise(vec2(vUv.x * 17.0 - uTime * 5.5 + vSeed * 5.0, y * 5.5 - uTime * 1.3));
-  float turb = 0.5 + 0.7 * n1 + 0.3 * n2;
-  float wobble = (n1 - 0.5) * 0.16 * vUv.x;
-  float a2 = (across + wobble) * (across + wobble);
-  // A broad, dim body of disturbed air; only a short stretch right behind
-  // the sphere is hot enough (above 1.0) to reach the bloom pass.
-  float body = exp(-a2 * 4.5) * pow(along, 1.25) * 0.42;
-  float hot = exp(-a2 * 20.0) * pow(along, 3.2) * 1.15;
-  float smoke = smoothstep(0.15, 0.85, n1 * 0.75 + n2 * 0.45);
-  float a = (body * (0.35 + 0.9 * smoke) + hot * turb) * vI;
-  // The tail breaks up into wisps instead of ending on a clean edge.
-  a *= smoothstep(0.0, 0.4, along + (n1 - 0.5) * 0.55);
-  a *= 1.0 - smoothstep(0.8, 1.0, across);
+  // One screen pixel, measured in the same units as 'across'.
+  float px = max(fwidth(across), 1e-4);
+  float a = 1.0 - smoothstep(1.0 - px * 1.5, 1.0, across);
+  // The body is there or not: it comes in as the sphere picks up speed
+  // instead of getting brighter with it.
+  a *= smoothstep(0.08, 0.3, vI);
+  a *= smoothstep(0.0, 0.06, along);
   // Soft start: normally hidden behind the sphere, but a sphere that has
   // shrunk away must not leave a hard-edged trail head.
   a *= smoothstep(0.0, 0.12, vUv.x + 0.02);
-  gl_FragColor = vec4(uGlow * a, 1.0);
+  // Dark: a hotter spine just behind the sphere (above 1.0) feeds the bloom.
+  float hot = exp(-across * across * 5.0) * pow(along, 2.2);
+  vec3 dark = uAccent * (1.0 + 0.9 * hot);
+  // Light: the accent has almost no edge against a pale page, so the body
+  // gets a thin ink outline.
+  float rim = smoothstep(1.0 - px * 4.0, 1.0 - px * 2.5, across);
+  vec3 pale = mix(uAccent, uInk, rim);
+  gl_FragColor = vec4(mix(dark, pale, uLight), a);
+  #include <colorspace_fragment>
 }
 `
 
@@ -114,18 +108,19 @@ void main() {
 `
 
 const EMBER_FRAG = /* glsl */ `
-uniform vec3 uGlow;
+uniform vec3 uAccent;
 varying float vLife;
 void main() {
   float d = length(gl_PointCoord - 0.5) * 2.0;
   float a = exp(-d * d * 4.0) * (1.0 - smoothstep(0.8, 1.0, d)) * vLife * vLife;
-  gl_FragColor = vec4(uGlow * a * 0.9, 1.0);
+  gl_FragColor = vec4(uAccent * (1.0 + a), a * 0.9);
+  #include <colorspace_fragment>
 }
 `
 
-const additive = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false } as const
+const layered = { transparent: true, depthWrite: false, toneMapped: false } as const
 
-export function Trails({ state, segments, embers, glow }: { state: SceneState; segments: number; embers: number; glow: string }) {
+export function Trails({ state, segments, embers }: { state: SceneState; segments: number; embers: number }) {
   // The path is recorded at up to one control point per frame on every tier
   // (cheap: a few numbers per sphere). `segments` is the quality knob for how
   // many points the smoothed ribbon is drawn with. The pixels covered, which
@@ -164,9 +159,9 @@ export function Trails({ state, segments, embers, glow }: { state: SceneState; s
     const material = new THREE.ShaderMaterial({
       vertexShader: TRAIL_VERT,
       fragmentShader: TRAIL_FRAG,
-      uniforms: { uGlow: { value: new THREE.Color(glow) }, uTime: { value: 0 } },
+      uniforms: { uAccent: { value: palette.accent }, uInk: { value: palette.ink }, uLight: palette.light },
       side: THREE.DoubleSide,
-      ...additive,
+      ...layered,
     })
     return {
       geometry, material, position, intensity, offset,
@@ -176,7 +171,7 @@ export function Trails({ state, segments, embers, glow }: { state: SceneState; s
       age: new Float32Array(C), tan: new Float32Array(C * 3), relaxed: new Float32Array(C * 3),
       dp: new Float32Array(M * 3), dt: new Float32Array(M * 3), dSpeed: new Float32Array(M), dI: new Float32Array(M), dR: new Float32Array(M), dK: new Float32Array(M), dSide: new Float32Array(M * 3), dOpen: new Float32Array(M), dW: new Float32Array(M), dMin: new Float32Array(M),
     }
-  }, [C, M, glow])
+  }, [C, M])
 
   const ember = useMemo(() => {
     const count = Math.max(1, embers)
@@ -192,11 +187,11 @@ export function Trails({ state, segments, embers, glow }: { state: SceneState; s
     const material = new THREE.ShaderMaterial({
       vertexShader: EMBER_VERT,
       fragmentShader: EMBER_FRAG,
-      uniforms: { uGlow: { value: new THREE.Color(glow) }, uScale: { value: 1 } },
-      ...additive,
+      uniforms: { uAccent: { value: palette.accent }, uScale: { value: 1 } },
+      ...layered,
     })
     return { count, geometry, material, position, life, size, vel: new Float32Array(count * 3), decay: new Float32Array(count), next: 0, debt: new Float32Array(TOOL_COUNT) }
-  }, [embers, glow])
+  }, [embers])
 
   useEffect(() => () => { trail.geometry.dispose(); trail.material.dispose() }, [trail])
   useEffect(() => () => { ember.geometry.dispose(); ember.material.dispose() }, [ember])
@@ -211,8 +206,6 @@ export function Trails({ state, segments, embers, glow }: { state: SceneState; s
     const P = trail.position.array as Float32Array
     const I = trail.intensity.array as Float32Array
     const O = trail.offset.array as Float32Array
-    trail.material.uniforms.uTime.value = frame.clock.elapsedTime
-
     const c = clock.current
     c.now += dt
     const now = c.now
@@ -434,7 +427,8 @@ export function Trails({ state, segments, embers, glow }: { state: SceneState; s
       ember.position.needsUpdate = true
       ember.life.needsUpdate = true
       ember.material.uniforms.uScale.value = frame.size.height * frame.viewport.dpr * 1.43 // ~1/tan(fov/2) / 2
-      emberMesh.current!.visible = alive || c.frames < 6
+      // Embers are sparks of light; a pale page cannot show them, so Light leaves them out.
+      emberMesh.current!.visible = (alive && palette.light.value < 0.5) || c.frames < 6
     }
     trailMesh.current!.visible = anyGlow > 0.002 || c.frames++ < 6
   })

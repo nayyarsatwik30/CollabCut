@@ -5,15 +5,18 @@ export const BRAND = 'CollabCut'
 
 export const NAV = {
   links: [
-    { label: 'Sign in', href: '/auth/login' },
-    { label: 'How it works', href: '#workflow' },
-    { label: 'Plans', href: '#pricing' },
+    // `quiet` fades the link back so Sign up stands out against it.
+    { label: 'Sign in', href: '/auth/login', quiet: true },
+    { label: 'How it works', href: '#workflow', quiet: false },
+    { label: 'Plans', href: '#pricing', quiet: false },
   ],
-  cta: { label: 'Talk to us', href: '/contact' },
+  // The magnetic button, and the only saturated thing in the nav.
+  cta: { label: 'Sign up', href: '/auth/signup' },
 }
 
 export const HERO = {
-  tagline: 'By editors, for editors',
+  // "By editors, for editors". `mark` is the part that gets the highlighter block.
+  tagline: { lead: 'By editors,', mark: 'for editors' },
   eyebrow: 'For teams who ship more than one cut',
   copy: 'Stop managing production through scattered messages, mystery files, and status meetings. Give every client, editor, and cut a place to move forward.',
   primary: { label: 'Talk to our team', href: '/contact' },

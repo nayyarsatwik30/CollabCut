@@ -6,14 +6,15 @@ export const STORY_SCROLL_VH = 380 // total height of the pinned section
 export const TL = {
   heroOut: [0.02, 0.11],
   // Hero -> story handoff, in order, with no overlap between the stages:
-  // butterflies land on the dandelions, fold and sink into them, and only
-  // then do the dandelions start turning into spheres.
+  // butterflies land on the flowers, fold and sink into them, and only
+  // then do the flowers start turning into spheres.
   land: [0.015, 0.085], // butterflies arrive and settle (each takes landSpan)
   landSpan: 0.045,
-  butterfliesAway: [0.085, 0.115], // settled butterflies sink into the seed heads
+  butterfliesAway: [0.085, 0.115], // settled butterflies sink into the flower heads
+  scenery: [0.1, 0.18], // flowers that do not become a sphere fade away (each starts a touch apart)
   reveal: [0.05, 0.2], // backdrop light pool fades up
-  morph: [0.12, 0.215], // window in which the dandelions start changing, one after another
-  morphSpan: 0.11, // how long one dandelion takes to become its sphere
+  morph: [0.12, 0.215], // window in which the flowers start changing, one after another
+  morphSpan: 0.11, // how long one flower takes to become its sphere
   captionAIn: [0.26, 0.34],
   captionAOut: [0.58, 0.65],
   converge: [0.62, 0.795],
@@ -23,7 +24,7 @@ export const TL = {
   captionBIn: [0.86, 0.93],
 } as const
 
-// Local progress of one dandelion's change into its sphere: 0 before it starts,
+// Local progress of one flower's change into its sphere: 0 before it starts,
 // 1 when the sphere is formed, and it keeps counting past 1 as the sphere
 // travels on. `startFrac` is the sphere's position (0..1) in the morph window.
 // Inside that local progress:

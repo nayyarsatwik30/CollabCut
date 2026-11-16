@@ -3,9 +3,12 @@ import { ArrowUpRight, ChevronRight } from 'lucide-react'
 import { LandingScrollUnlock } from '@/components/collabcut-landing-scroll-unlock'
 import { About, LandingFooter, Pricing } from './Closing'
 import { FeatureMarquee } from './FeatureMarquee'
+import { MagneticButton } from './MagneticButton'
 import { Steps } from './Steps'
 import { StoryStage } from './StoryStage'
 import { SwayTagline } from './SwayTagline'
+import { ThemeBoot } from './ThemeBoot'
+import { ThemeToggle } from './ThemeToggle'
 import { BRAND, HERO, NAV, STORY } from './content'
 import { SPHERES } from './scene/state'
 import './landing.css'
@@ -15,6 +18,7 @@ import './landing.css'
 export function LandingPage() {
   return (
     <div className="lp">
+      <ThemeBoot />
       <LandingScrollUnlock />
       <main>
         <StoryStage
@@ -24,12 +28,15 @@ export function LandingPage() {
                 <div>
                   <h1 className="lp-wordmark">{BRAND}</h1>
                   <p className="lp-tagline-wrap">
-                    <SwayTagline className="lp-tagline">{HERO.tagline}</SwayTagline>
+                    <SwayTagline className="lp-tagline">{HERO.tagline.lead} <span className="lp-mark">{HERO.tagline.mark}</span></SwayTagline>
                   </p>
                 </div>
                 <nav className="lp-nav" aria-label="Main navigation">
-                  {NAV.links.map((l) => <Link key={l.href} href={l.href}>{l.label}</Link>)}
-                  <Link className="lp-btn" href={NAV.cta.href}>{NAV.cta.label} <ArrowUpRight size={15} aria-hidden="true" /></Link>
+                  {NAV.links.map((l) => l.quiet
+                    ? <MagneticButton key={l.href} variant="reveal" width={96} href={l.href} label={l.label} />
+                    : <Link key={l.href} href={l.href}>{l.label}</Link>)}
+                  <ThemeToggle />
+                  <MagneticButton href={NAV.cta.href} label={NAV.cta.label} />
                 </nav>
               </div>
               <div className="lp-hero-body">

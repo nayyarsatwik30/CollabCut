@@ -20,14 +20,20 @@ function StaticButterflies() {
   return (
     <div className="lp-static-flutter" aria-hidden="true">
       {items.map((b, i) => (
-        <svg key={i} viewBox="-50 -42 100 84" width={b.size} height={b.size * 0.84} style={{ left: b.left, top: b.top, opacity: b.opacity, transform: `rotate(${b.rotate}deg)` }}>
-          <g fill="currentColor">
-            <path d="M0 0C10-30 40-38 46-22C50-8 30 2 0 2Z" opacity=".92" />
-            <path d="M0 2C22 4 36 14 30 26C24 36 8 26 0 6Z" opacity=".7" />
-            <path d="M0 0C-7-26-30-32-34-19C-37-7-22 2 0 2Z" opacity=".6" />
-            <path d="M0 2C-16 4-27 13-22 23C-18 31-6 23 0 6Z" opacity=".45" />
-            <ellipse cx="0" cy="3" rx="1.6" ry="10" opacity=".35" />
-          </g>
+        // The clapper butterfly from the design board, arm part open. The 3D
+        // scene draws the same shape (scene/Butterflies.tsx).
+        <svg key={i} viewBox="0 0 64 48" width={b.size} height={b.size * 0.75} style={{ left: b.left, top: b.top, opacity: b.opacity, transform: `rotate(${b.rotate}deg)` }}>
+          {[undefined, 'matrix(-1 0 0 1 64 0)'].map((mirror) => (
+            <g key={mirror ?? 'left'} transform={mirror}>
+              {/* Striped arm: the accent, with a thin ink edge in Light. */}
+              <g transform="rotate(16 30 26)" fill="var(--accent)" stroke="var(--accent-edge)" strokeWidth=".5">
+                <path d="M8 24h4l3-6h-4zM14 24h4l3-6h-4zM20 24h4l3-6h-4zM26 24h4l3-6h-4z" />
+              </g>
+              <rect x="8" y="26" width="22" height="14" rx="2" fill="var(--fg)" />
+            </g>
+          ))}
+          <rect x="30" y="15" width="4" height="24" rx="2" fill="var(--fg)" />
+          <path d="M32 15L27 7M32 15L37 7" fill="none" stroke="var(--fg)" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
       ))}
     </div>

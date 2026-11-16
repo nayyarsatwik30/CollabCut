@@ -3,6 +3,7 @@
 import { useEffect, useMemo, type MutableRefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { palette } from './palette'
 
 // Selective bloom, built small on purpose.
 //
@@ -45,7 +46,10 @@ void main() {
          + texture2D(tSrc, vUv + uTexel * vec2(-1.0, 1.0)).rgb
          + texture2D(tSrc, vUv + uTexel * vec2(1.0, 1.0)).rgb;
   c *= 0.25;
-  c = max(c - uThreshold, 0.0);
+  // Thresholded on brightness, not per channel, so the glow keeps the hue
+  // of what is glowing.
+  float peak = max(c.r, max(c.g, c.b));
+  c *= max(peak - uThreshold, 0.0) / max(peak, 1e-4);
   gl_FragColor = vec4(c, 1.0);
 }
 `
@@ -119,6 +123,9 @@ export function Glow({ progress, threshold = 0.55, intensity = 0.95 }: { progres
     // Nothing glows during the hero; skip the extra work (after a short
     // warm-up so these shaders are compiled before the first scroll).
     if (progress.current < 0.02 && rig.warm > 6) return
+    // Bloom is light added on top of the frame, which a pale page cannot
+    // show. In Light the pass is skipped once its shaders are compiled.
+    if (palette.light.value > 0.5 && rig.warm > 6) return
     rig.warm++
 
     gl.getDrawingBufferSize(rig.size)

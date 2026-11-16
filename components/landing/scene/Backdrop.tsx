@@ -4,13 +4,14 @@ import { useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { TL, smoothstep } from '../story'
+import { palette } from './palette'
 import { BODY_COUNT, CENTER, PLANE_Z, type ProgressRef, type SceneState } from './state'
 
 // The "page" the spheres come out of: a plane behind the scene carrying a
 // faint pool of light, the soft shadow each sphere casts on it (wider and
 // fainter the further the sphere is from the page), a little bounce light
-// from the glowing trails, and the expanding shockwave ring. It is pure black
-// during the hero and fades up with the story.
+// from the glowing trails, and the expanding shockwave ring. It is plain page
+// colour during the hero and fades up with the story.
 const VERT = /* glsl */ `
 varying vec3 vW;
 void main() {
@@ -30,7 +31,8 @@ uniform vec2 uCenter;
 uniform vec2 uRes;
 uniform vec3 uFg;
 uniform vec3 uBg;
-uniform vec3 uGlow;
+uniform vec3 uAccent;
+uniform float uLight;
 varying vec3 vW;
 const float PLANE = ${PLANE_Z.toFixed(1)};
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
@@ -58,18 +60,29 @@ void main() {
   // canvas has no visible boundary against the sections around it.
   vec2 suv = gl_FragCoord.xy / uRes;
   float vig = smoothstep(0.0, 0.3, suv.y) * smoothstep(1.0, 0.72, suv.y) * smoothstep(0.0, 0.2, suv.x) * smoothstep(1.0, 0.8, suv.x);
-  float light = (pool * occ + bounce) * uReveal * vig;
+  float show = uReveal * vig;
   vec2 cq = vW.xy - uCenter;
   float cr = length(cq);
-  light += uFlash * 0.022 * exp(-cr * cr * 0.09);
-  vec3 col = uBg + uFg * light;
+  float flash = uFlash * 0.022 * exp(-cr * cr * 0.09);
+  float ring = 0.0;
   if (uRing > 0.0 && uRing < 1.0) {
     float e = 1.0 - pow(1.0 - uRing, 3.0);
     float R = mix(1.2, 8.5, e);
     float w = mix(0.07, 0.3, e);
-    float band = exp(-pow((cr - R) / w, 2.0));
-    col += uGlow * band * pow(1.0 - uRing, 2.2) * 0.085 * vig;
+    ring = exp(-pow((cr - R) / w, 2.0)) * pow(1.0 - uRing, 2.2) * vig;
   }
+  // Dark: light is added to a dark page. The pool is page-text colour, the
+  // bounce from the trails and the shockwave are the accent.
+  vec3 dark = uBg + uFg * (pool * occ * show + flash) + uAccent * (bounce * show + ring * 0.085);
+  // Light: adding light to a pale page shows nothing, so the same things are
+  // drawn the other way round. Spheres cast soft shadows, the trails tint
+  // the page, and the shockwave is a tinted band with a faint dark line.
+  vec3 pale = mix(uBg, uFg, (1.0 - occ) * show * 0.2);
+  pale = mix(pale, uAccent, clamp(bounce * show * 7.0, 0.0, 0.45));
+  pale = mix(pale, vec3(1.0), clamp(flash * 7.0, 0.0, 0.6));
+  pale = mix(pale, uAccent, ring * 0.6);
+  pale = mix(pale, uFg, ring * 0.1);
+  vec3 col = mix(dark, pale, uLight);
   // Dither: dark gradients band badly at 8 bits.
   col += (hash(gl_FragCoord.xy) - 0.5) * 0.0009;
   gl_FragColor = vec4(max(col, 0.0), 1.0);
@@ -77,7 +90,7 @@ void main() {
 }
 `
 
-export function Backdrop({ state, progress, fg, bg, glow }: { state: SceneState; progress: ProgressRef; fg: string; bg: string; glow: string }) {
+export function Backdrop({ state, progress }: { state: SceneState; progress: ProgressRef }) {
   const { geometry, material, bodies } = useMemo(() => {
     const bodies = Array.from({ length: BODY_COUNT }, () => new THREE.Vector4())
     const geometry = new THREE.PlaneGeometry(80, 50)
@@ -92,14 +105,15 @@ export function Backdrop({ state, progress, fg, bg, glow }: { state: SceneState;
         uRing: { value: 0 },
         uCenter: { value: new THREE.Vector2(CENTER[0], CENTER[1]) },
         uRes: { value: new THREE.Vector2(1, 1) },
-        uFg: { value: new THREE.Color(fg) },
-        uBg: { value: new THREE.Color(bg) },
-        uGlow: { value: new THREE.Color(glow) },
+        uFg: { value: palette.fg },
+        uBg: { value: palette.bg },
+        uAccent: { value: palette.accent },
+        uLight: palette.light,
       },
       depthWrite: false,
     })
     return { geometry, material, bodies }
-  }, [fg, bg, glow])
+  }, [])
 
   useEffect(() => () => { geometry.dispose(); material.dispose() }, [geometry, material])
 
