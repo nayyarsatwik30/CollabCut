@@ -144,10 +144,12 @@ export function Spheres({ state, progress }: { state: SceneState; progress: Prog
 
   useFrame((frame, delta) => {
     const dt = Math.min(delta, 1 / 30)
-    // The spring below is integrated in steps of at most 1/60 s. At the
+    // The spring below is integrated in steps of about 1/60 s. At the
     // stiffest point of the convergence (w x dt > 1 at 30 fps) a single
-    // semi-implicit step is unstable and would grow every frame. A normal
-    // 60 Hz frame (including its jitter) stays one step, so nothing changes there.
+    // semi-implicit step is unstable and would grow every frame. The 0.05
+    // tolerance lets one step run up to 1/60 s + 0.05/60 s (about 17.5 ms), so a
+    // normal 60 Hz frame, jitter included, stays one step and nothing changes
+    // there; anything slower is split (30 fps becomes two steps of 16.7 ms).
     const steps = Math.max(1, Math.ceil(dt * 60 - 0.05))
     const subDt = dt / steps
     const t = frame.clock.elapsedTime
