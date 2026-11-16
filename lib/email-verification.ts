@@ -83,3 +83,84 @@ export function sendVerificationEmailInBackground(to: string, name: string, toke
     })
   )
 }
+
+// ---------------------------------------------------------------------------
+// Password reset. Same token scheme as verification (32 random bytes, only the
+// SHA-256 hash is stored) with a much shorter life: a reset link grants account
+// takeover, so it expires after an hour.
+// ---------------------------------------------------------------------------
+
+export const RESET_TTL_MINUTES = 60
+export const RESET_COOLDOWN_SECONDS = 60
+
+export function createResetToken() {
+  const token = randomBytes(32).toString('base64url')
+  const expires = new Date(Date.now() + RESET_TTL_MINUTES * 60 * 1000)
+  return { token, hash: hashToken(token), expires }
+}
+
+function getMailer() {
+  const user = process.env.GMAIL_USER
+  const pass = process.env.GMAIL_APP_PASSWORD
+  if (!user || !pass) throw new Error('GMAIL_USER / GMAIL_APP_PASSWORD are not configured')
+  return { user, transporter: nodemailer.createTransport({ service: 'gmail', auth: { user, pass } }) }
+}
+
+export async function sendPasswordResetEmail(to: string, name: string, token: string): Promise<void> {
+  if (!isValidEmail(to)) throw new Error('Refusing to send: recipient is not a single plain email address')
+  const { user, transporter } = getMailer()
+  const link = `${appUrl()}/auth/reset-password?token=${encodeURIComponent(token)}`
+
+  await transporter.sendMail({
+    from: `CollabCut <${user}>`,
+    to,
+    subject: 'Reset your CollabCut password',
+    text:
+      `Hi ${name},\n\nWe received a request to reset your CollabCut password. Open this link to choose a new one:\n${link}\n\n` +
+      `This link expires in 1 hour and can be used once. If you didn't request this, ignore this email - your password won't change.`,
+    html:
+      `<p>Hi ${escapeHtml(name)},</p>` +
+      `<p>We received a request to reset your CollabCut password:</p>` +
+      `<p><a href="${link}">Reset my password</a></p>` +
+      `<p style="color:#666;font-size:12px">Or paste this link into your browser:<br>${escapeHtml(link)}</p>` +
+      `<p style="color:#666;font-size:12px">This link expires in 1 hour and can be used once. ` +
+      `If you didn't request this, ignore this email - your password won't change.</p>`,
+  })
+}
+
+export async function sendPasswordChangedEmail(to: string, name: string, when: Date): Promise<void> {
+  if (!isValidEmail(to)) throw new Error('Refusing to send: recipient is not a single plain email address')
+  const { user, transporter } = getMailer()
+  const stamp = when.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST'
+
+  await transporter.sendMail({
+    from: `CollabCut <${user}>`,
+    to,
+    subject: 'Your CollabCut password was changed',
+    text:
+      `Hi ${name},\n\nYour CollabCut password was changed on ${stamp}. You were signed out of all devices.\n\n` +
+      `If this wasn't you, contact support immediately.`,
+    html:
+      `<p>Hi ${escapeHtml(name)},</p>` +
+      `<p>Your CollabCut password was changed on <strong>${escapeHtml(stamp)}</strong>. You were signed out of all devices.</p>` +
+      `<p style="color:#666;font-size:12px">If this wasn't you, contact support immediately.</p>`,
+  })
+}
+
+// Background sends (see sendVerificationEmailInBackground): never awaited by
+// the caller; failures are logged without any token or password.
+export function sendPasswordResetEmailInBackground(to: string, name: string, token: string): void {
+  waitUntil(
+    sendPasswordResetEmail(to, name, token).catch((err) => {
+      console.error('background password reset email failed', err)
+    })
+  )
+}
+
+export function sendPasswordChangedEmailInBackground(to: string, name: string, when: Date): void {
+  waitUntil(
+    sendPasswordChangedEmail(to, name, when).catch((err) => {
+      console.error('background password-changed email failed', err)
+    })
+  )
+}

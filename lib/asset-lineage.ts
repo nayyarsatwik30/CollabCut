@@ -13,3 +13,14 @@ export function latestPerGroup<T extends { asset_group_id: string | null; id: st
   }
   return Array.from(latestByGroup.values())
 }
+
+// Number of rows per logical video. Pass only live (non-deleted) rows to get
+// the live version count; call it before latestPerGroup collapses the siblings.
+export function countPerGroup<T extends { asset_group_id: string | null; id: string }>(rows: T[]): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const row of rows) {
+    const key = row.asset_group_id ?? row.id
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  return counts
+}

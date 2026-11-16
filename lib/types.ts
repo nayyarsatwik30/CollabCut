@@ -83,6 +83,7 @@ export interface Comment {
   replies: CommentReply[]
   resolved: boolean
   createdAt: string
+  attachments?: { id: string; file_name: string; file_size_bytes: number | null; content_type: string | null }[]
 }
 
 // ─── Share link ──────────────────────────────────────────────────────────────

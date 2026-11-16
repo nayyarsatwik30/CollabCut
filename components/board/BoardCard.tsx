@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, ChevronDown, Clock, Film, Trash2, UserPlus } from 'lucide-react'
-import { priorityMeta } from '@/lib/priority'
+import { PriorityBadge } from '@/components/PriorityBadge'
 import { PriorityMenu } from '@/components/PriorityMenu'
+import { VersionBadge } from '@/components/board/VersionManager'
 
 export interface BoardAsset {
   id: string
@@ -17,6 +18,8 @@ export interface BoardAsset {
   editor: { id: string; name: string } | null
   mux_upload_id: string | null
   priority: number
+  // Live versions in this asset's lineage; the card shows the latest one.
+  version_count?: number
 }
 
 export interface BoardEditorOption {
@@ -36,12 +39,14 @@ interface BoardCardProps {
   asset: BoardAsset
   color: string
   isAdmin: boolean
+  token: string | null
   editors: BoardEditorOption[]
   columns: BoardColumnOption[]
   onAssign: (assetId: string, editorId: string) => void
   onStatusChange: (assetId: string, status: string) => void
   onPriorityChange: (assetId: string, priority: number) => void
   onDelete: (assetId: string) => void
+  onVersionsChanged: () => void
   onDragStart: (e: React.DragEvent<HTMLDivElement>, assetId: string) => void
   onDragEnd: () => void
 }
@@ -61,7 +66,7 @@ export function initialsFor(name: string) {
     .toUpperCase() || '?'
 }
 
-export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, onStatusChange, onPriorityChange, onDelete, onDragStart, onDragEnd }: BoardCardProps) {
+export function BoardCard({ asset, color, isAdmin, token, editors, columns, onAssign, onStatusChange, onPriorityChange, onDelete, onVersionsChanged, onDragStart, onDragEnd }: BoardCardProps) {
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const draggingRef = useRef(false)
@@ -129,12 +134,18 @@ export function BoardCard({ asset, color, isAdmin, editors, columns, onAssign, o
             size="sm"
           />
         ) : (
-          <span
-            className="app-pill font-mono text-[10px] shrink-0"
-            style={{ color: priorityMeta(asset.priority).color, background: `color-mix(in srgb, ${priorityMeta(asset.priority).color} 16%, transparent)` }}
-          >
-            {priorityMeta(asset.priority).label}
-          </span>
+          <PriorityBadge size="sm" priority={asset.priority} />
+        )}
+        {!isPlaceholder && (
+          <VersionBadge
+            assetId={asset.id}
+            versionCount={asset.version_count ?? 1}
+            token={token}
+            canManage
+            onChanged={onVersionsChanged}
+            label={`${asset.version_count} versions`}
+            className="app-pill font-mono text-[10px] shrink-0 bg-th-surface-alt border border-th-border text-th-muted hover:text-th-text transition-colors"
+          />
         )}
         {isPlaceholder ? (
           <span className="ml-auto font-mono text-[9px] uppercase tracking-wider text-th-muted">Awaiting upload</span>

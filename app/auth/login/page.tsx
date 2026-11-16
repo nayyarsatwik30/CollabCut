@@ -23,7 +23,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('verified')) setNotice('Email verified - you can log in now.')
+    if (params.get('reset')) setNotice('Password updated. Please log in.')
+    else if (params.get('verified')) setNotice('Email verified - you can log in now.')
     else if (params.get('reason') === 'elsewhere') setNotice('You were logged out because your account was signed in on another device.')
     const verifyError = params.get('verify_error')
     if (verifyError === 'invalid') setError('That verification link is invalid or has expired. Log in to request a new one.')

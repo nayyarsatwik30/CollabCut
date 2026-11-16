@@ -5,6 +5,7 @@ import { Check, Trash2, MessageSquare, CornerDownRight } from 'lucide-react'
 import { Comment, CommentStatus } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
+import { CommentAttachmentList } from './CommentAttachments'
 
 const STATUS_BORDER: Record<CommentStatus, string> = {
   open:     'var(--th-open)',
@@ -62,6 +63,9 @@ export function CommentCard({ comment: c, onSeek, onResolve, onDelete, onReply }
 
         {/* Note text */}
         <p className="text-[13px] leading-relaxed text-th-text mb-3">{c.text}</p>
+
+        {/* Reference files attached to the note (members only) */}
+        {c.attachments && c.attachments.length > 0 && <CommentAttachmentList attachments={c.attachments} />}
 
         {/* Footer */}
         <div className="flex items-center gap-2 flex-wrap">
