@@ -36,7 +36,9 @@ export function StorageUsageBar({ usedBytes, loading, variant = 'full', workspac
   const remainingGB = Math.max(capGB - usedGB, 0)
   const percent = capGB > 0 ? Math.min((usedGB / capGB) * 100, 100) : 0
   const over = capGB > 0 && usedGB > capGB
-  const barColor = over ? 'var(--th-changes)' : percent > 85 ? '#fb923c' : 'var(--th-accent)'
+  // Lime normally, the text colour when nearly full, the danger colour when over.
+  const barColor = over ? 'var(--th-danger)' : percent > 85 ? 'var(--th-text-primary)' : 'var(--th-accent)'
+  const barEdge = barColor === 'var(--th-accent)' ? 'inset 0 0 0 1px var(--th-accent-edge)' : undefined
   const pending = loading || usedBytes === null
 
   if (variant === 'compact') {
@@ -49,7 +51,7 @@ export function StorageUsageBar({ usedBytes, loading, variant = 'full', workspac
           </span>
         </div>
         <div className="h-1.5 rounded-th-full bg-th-surface-alt overflow-hidden">
-          <div className="h-full rounded-th-full transition-all" style={{ width: `${pending ? 0 : percent}%`, background: barColor }} />
+          <div className="h-full rounded-th-full transition-all" style={{ width: `${pending ? 0 : percent}%`, background: barColor, boxShadow: barEdge }} />
         </div>
       </div>
     )
@@ -64,7 +66,7 @@ export function StorageUsageBar({ usedBytes, loading, variant = 'full', workspac
         </p>
       </div>
       <div className="h-2.5 rounded-th-full bg-th-surface-alt overflow-hidden">
-        <div className="h-full rounded-th-full transition-all" style={{ width: `${pending ? 0 : percent}%`, background: barColor }} />
+        <div className="h-full rounded-th-full transition-all" style={{ width: `${pending ? 0 : percent}%`, background: barColor, boxShadow: barEdge }} />
       </div>
       <p className="text-[12px] text-th-muted">
         {pending

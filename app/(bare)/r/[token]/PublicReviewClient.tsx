@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Lock, MessageSquare, Send, Layers, ChevronDown, Check, X } from 'lucide-react'
+import { Lock, Send, ChevronDown, Check, X } from 'lucide-react'
+import { CommentIcon, VersionsIcon } from '@/components/ui/icons'
 import { VideoPlayer, VideoPlayerHandle } from '@/components/review/VideoPlayer'
 import { Avatar } from '@/components/ui/Badge'
 import { formatTimecode } from '@/lib/utils'
@@ -245,7 +246,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
             onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
             placeholder="Enter password"
             autoFocus
-            className="w-full px-3 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors mb-2"
+            className="w-full px-3 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors mb-2"
           />
           {passwordError && <p className="text-[12px] text-th-changes mb-2">{passwordError}</p>}
           <button
@@ -280,7 +281,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
                 onClick={() => setShowVersions(!showVersions)}
                 className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press"
               >
-                <Layers size={10} />
+                <VersionsIcon size={10} />
                 v{asset.version}
                 <ChevronDown size={10} />
               </button>
@@ -299,7 +300,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
                           onClick={() => handleSwitchVersion(v.id)}
                           className="w-full flex items-center gap-2.5 px-4 py-3 text-left border-b border-th-border last:border-b-0 hover:bg-th-surface-alt transition-colors btn-press"
                         >
-                          <Layers size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
+                          <VersionsIcon size={12} style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-muted)' }} />
                           <div className="flex-1 min-w-0">
                             <p className="text-[12px] font-medium truncate" style={{ color: v.id === asset.id ? 'var(--th-accent-text)' : 'var(--th-text)' }}>
                               v{v.version}
@@ -321,7 +322,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               onClick={handleOpenCompare}
               className="flex items-center gap-1.5 h-6 px-2.5 rounded-th-full bg-th-surface-alt border border-th-border font-mono text-[11px] text-th-muted hover:text-th-text transition-colors btn-press shrink-0"
             >
-              <Layers size={10} className="text-th-accent-text" />
+              <VersionsIcon size={10} className="text-th-accent-text" />
               Compare versions
             </button>
           )}
@@ -350,13 +351,13 @@ export default function PublicReviewClient({ token }: { token: string }) {
 
         <aside className="w-full flex-1 min-h-0 border-t border-th-border bg-th-surface flex flex-col overflow-hidden sm:w-85 sm:flex-none sm:border-t-0 sm:border-l">
           <div className="h-11 shrink-0 border-b border-th-border flex items-center gap-1.5 px-4 text-[12px] font-semibold">
-            <MessageSquare size={13} className="text-th-muted" /> Comments ({comments.length})
+            <CommentIcon size={13} className="text-th-muted" /> Comments ({comments.length})
           </div>
 
           <div className="flex-1 overflow-y-auto px-3 py-3">
             {comments.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-4">
-                <MessageSquare size={24} className="text-th-faint" />
+                <CommentIcon size={24} className="text-th-faint" />
                 <p className="text-[12px] text-th-muted">Pause on a frame and leave the first note.</p>
               </div>
             ) : (
@@ -367,7 +368,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
                   className="w-full text-left mb-3 last:mb-0 p-2.5 rounded-th-sm hover:bg-th-surface-alt transition-colors"
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <Avatar initials={c.author_name?.[0]?.toUpperCase() ?? '?'} color="#4CAF7D" size="sm" />
+                    <Avatar initials={c.author_name?.[0]?.toUpperCase() ?? '?'} color="var(--th-avatar-bg)" size="sm" />
                     <span className="text-[12px] font-semibold truncate">{c.author_name}</span>
                     <span className="ml-auto font-mono text-[10px] text-th-faint">{formatTimecode(c.time_sec)}</span>
                   </div>
@@ -382,7 +383,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               value={reviewerName}
               onChange={(e) => setReviewerName(e.target.value)}
               placeholder="Your name"
-              className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors"
+              className="w-full px-3 py-2 rounded-th-sm bg-th-surface-alt border border-th-border text-[12px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors"
             />
             <textarea
               value={commentText}
@@ -390,7 +391,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePostComment() } }}
               placeholder={`Note this frame at ${formatTimecode(currentTime)}…`}
               rows={3}
-              className="w-full px-3 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none resize-none leading-relaxed transition-colors focus:border-th-accent"
+              className="w-full px-3 py-2.5 rounded-th-sm bg-th-surface-alt border border-th-border text-[13px] text-th-text placeholder:text-th-faint outline-none resize-none leading-relaxed transition-colors focus:border-th-accent-line"
             />
             {commentText.trim() && (
               <button
@@ -410,7 +411,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
           <div className="bg-th-surface border border-th-border rounded-th-lg w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-th-border flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Layers size={16} className="text-th-accent-text" />
+                <VersionsIcon size={16} className="text-th-accent-text" />
                 <h2 className="font-bold text-[16px]">Compare versions</h2>
               </div>
               <button
@@ -428,7 +429,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
                   <select
                     value={compareV1Id}
                     onChange={(e) => setCompareV1Id(e.target.value)}
-                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent font-mono font-medium"
+                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent-line font-mono font-medium"
                   >
                     {versions.map((v) => (
                       <option key={v.id} value={v.id}>
@@ -461,7 +462,7 @@ export default function PublicReviewClient({ token }: { token: string }) {
                   <select
                     value={compareV2Id}
                     onChange={(e) => setCompareV2Id(e.target.value)}
-                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent font-mono font-medium"
+                    className="bg-th-surface border border-th-border text-th-text text-[12px] rounded-th px-2.5 py-1 outline-none focus:border-th-accent-line font-mono font-medium"
                   >
                     {versions.map((v) => (
                       <option key={v.id} value={v.id}>

@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export default function Demo() {
   const [numBars, setNumBars] = useState(7);
-  const [gradientColor, setGradientColor] = useState("#2dd4a7");
+  const [gradientColor, setGradientColor] = useState("#b8e41e");
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // Ensure only odd numbers
@@ -226,12 +226,12 @@ export default function Demo() {
             <label className="control-label mb-2">Presets</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                "#2dd4a7", // Teal
-                "#ff006e", // Pink
-                "#8338ec", // Purple
-                "#3a86ff", // Blue
-                "#06ffa5", // Mint
-                "#ffbe0b", // Gold
+                "#b8e41e", // Spring Lime
+                "#ece6dc", // Cream
+                "#a9a398", // Muted
+                "#5e5a52", // Muted (light theme)
+                "#171717", // Raised
+                "#050505", // Ink
               ].map((color) => (
                 <button
                   key={color}

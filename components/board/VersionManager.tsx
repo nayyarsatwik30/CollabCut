@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Layers, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
+import { VersionsIcon } from '@/components/ui/icons'
 import { IconButton } from '@/components/ui/IconButton'
 import { useConfirm, ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
@@ -130,7 +131,7 @@ export function VersionBadge({ assetId, versionCount, token, canManage, onChange
         title="Manage versions"
         className={className}
       >
-        <Layers size={10} />
+        <VersionsIcon size={10} />
         {label}
       </button>
 
@@ -165,7 +166,7 @@ export function VersionBadge({ assetId, versionCount, token, canManage, onChange
                       onClick={() => router.push(`/review/${v.id}`)}
                       className="flex-1 min-w-0 flex items-center gap-2.5 pl-4 pr-2 py-3 text-left btn-press"
                     >
-                      <Layers size={12} className="text-th-muted shrink-0" />
+                      <VersionsIcon size={12} className="text-th-muted shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-medium truncate">v{v.version}</p>
                         <p className="font-mono text-[10px] text-th-muted">{new Date(v.created_at).toLocaleDateString()}</p>

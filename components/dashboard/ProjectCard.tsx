@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Trash2, Film } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, statusChip } from '@/lib/utils'
 
 interface Project {
   id: string
@@ -20,13 +20,6 @@ interface ProjectCardProps {
   onDelete?: (id: string) => void
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  in_review: 'var(--th-open)',
-  approved: 'var(--th-resolved)',
-  changes: 'var(--th-changes)',
-  draft: 'var(--th-muted)',
-}
-
 const STATUS_LABEL: Record<string, string> = {
   in_review: 'IN REVIEW',
   approved: 'APPROVED',
@@ -35,7 +28,6 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
-  const color = STATUS_COLOR[project.status] ?? 'var(--th-muted)'
   const label = STATUS_LABEL[project.status] ?? project.status.toUpperCase()
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -58,10 +50,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
             <p className="text-[13px] font-semibold truncate">{project.name}</p>
             <p className="text-[11px] text-th-muted">{project.client}</p>
           </div>
-          <span
-            className="font-mono text-[10px] px-2 py-0.5 rounded-th-full"
-            style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}
-          >
+          <span className={`font-mono text-[10px] px-2 py-0.5 rounded-th-full ${statusChip(project.status)}`}>
             {label}
           </span>
         </Link>
@@ -81,7 +70,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
     <div className="relative group h-full">
       <Link
         href={`/project/${project.id}`}
-        className="flex flex-col h-full app-card overflow-hidden hover:border-th-accent"
+        className="flex flex-col h-full app-card overflow-hidden hover:border-th-accent-line"
       >
         <div className="aspect-video shrink-0 bg-th-surface-alt flex items-center justify-center relative">
           {project.cover_playback_id ? (
@@ -93,10 +82,7 @@ export function ProjectCard({ project, view, onDelete }: ProjectCardProps) {
           ) : (
             <Film size={36} style={{ color: 'var(--th-accent-text)' }} />
           )}
-          <span
-            className="absolute top-2.5 right-2.5 font-mono text-[10px] px-2 py-0.5 rounded-th-full"
-            style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}
-          >
+          <span className={`absolute top-2.5 right-2.5 font-mono text-[10px] px-2 py-0.5 rounded-th-full ${statusChip(project.status)}`}>
             {label}
           </span>
         </div>

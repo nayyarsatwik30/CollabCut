@@ -58,14 +58,14 @@ export default function ResetPasswordPage() {
   }
 
   const showInvalid = ready && (!token || linkInvalid)
-  const inputClass = 'w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors'
+  const inputClass = 'w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors'
   const labelClass = 'block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide'
 
   return (
     <div className="page-scroll bg-th-bg flex flex-col min-h-screen">
       <header className="h-14 border-b border-th-border flex items-center justify-between px-6 shrink-0">
         <Link href="/" className="flex items-center gap-2.5">
-          <img src="/collabcut-mark.png" alt="CollabCut" className="w-6 h-6 object-contain shrink-0" />
+          <span role="img" aria-label="CollabCut" className="brand-mark" />
           <span className="text-[17px] font-extrabold tracking-tight">COLLABCUT</span>
         </Link>
         <ThemeToggle />

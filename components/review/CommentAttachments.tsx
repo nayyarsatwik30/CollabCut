@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Paperclip, X, Download, Eye, FileText, Film, Music, Image as ImageIcon, CircleAlert, Loader2 } from 'lucide-react'
+import { Paperclip, X, Eye, FileText, Film, Music, Image as ImageIcon, CircleAlert, Loader2 } from 'lucide-react'
+import { DownloadIcon } from '@/components/ui/icons'
 import {
   ATTACHMENT_ACCEPT, MAX_ATTACHMENTS_PER_COMMENT, MAX_COMMENT_ATTACHMENT_BYTES, attachmentContentType, isInlineSafe,
 } from '@/lib/comment-attachment-rules'
@@ -217,7 +218,7 @@ export function AttachButton({ onFiles, disabled }: { onFiles: (files: FileList)
         onClick={() => ref.current?.click()}
         disabled={disabled}
         title="Attach a reference file"
-        className="flex items-center gap-1 h-6 px-2 rounded-th-full border border-th-border text-[10px] font-semibold text-th-muted hover:text-th-text hover:border-th-accent transition-colors btn-press disabled:opacity-40"
+        className="flex items-center gap-1 h-6 px-2 rounded-th-full border border-th-border text-[10px] font-semibold text-th-muted hover:text-th-text hover:border-th-accent-line transition-colors btn-press disabled:opacity-40"
       >
         <Paperclip size={11} /> Attach
       </button>
@@ -242,7 +243,7 @@ export function DraftAttachmentList({ items, onRemove, onRetry }: { items: Draft
           <div className="flex items-center gap-2">
             {i.state === 'uploading' ? <Loader2 size={12} className="animate-spin text-th-muted shrink-0" />
               : i.state === 'error' ? <CircleAlert size={12} className="text-th-changes shrink-0" />
-              : <Paperclip size={12} className="text-th-resolved shrink-0" />}
+              : <Paperclip size={12} className="text-th-muted shrink-0" />}
             <span className="text-[11px] truncate flex-1" title={i.name}>{i.name}</span>
             <span className="font-mono text-[10px] text-th-faint shrink-0">
               {i.state === 'uploading' ? `${i.progress}%` : formatSize(i.size)}
@@ -326,7 +327,7 @@ export function CommentAttachmentList({ attachments }: { attachments: PostedAtta
                 className="text-th-muted hover:text-th-text shrink-0 disabled:opacity-40"><Eye size={12} /></button>
             )}
             <button type="button" onClick={() => download(a)} disabled={busyId === a.id} title="Download"
-              className="text-th-muted hover:text-th-text shrink-0 disabled:opacity-40"><Download size={12} /></button>
+              className="text-th-muted hover:text-th-text shrink-0 disabled:opacity-40"><DownloadIcon size={12} /></button>
           </div>
         )
       })}

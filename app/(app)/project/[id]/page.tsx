@@ -4,7 +4,8 @@ import { UploadModal } from '@/components/project/UploadModal'
 import { RawFootageArchive } from '@/components/project/RawFootageArchive'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, FolderKanban, Upload, Trash2, Video, Film, CircleCheck, Clock } from 'lucide-react'
+import { ChevronLeft, FolderKanban, Trash2, Video, Film, CircleCheck, Clock } from 'lucide-react'
+import { UploadIcon } from '@/components/ui/icons'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TopBar } from '@/components/layout/TopBar'
 import { Avatar } from '@/components/ui/Badge'
@@ -66,7 +67,7 @@ interface Asset {
 }
 
 const BRIEF_LABEL = 'font-mono text-[10px] uppercase tracking-wider text-th-muted font-semibold mb-1.5 block'
-const BRIEF_INPUT = 'w-full px-3 py-2 text-[13px] bg-th-surface-alt border border-th-border text-th-text focus:outline-none focus:border-th-accent'
+const BRIEF_INPUT = 'w-full px-3 py-2 text-[13px] bg-th-surface-alt border border-th-border text-th-text focus:outline-none focus:border-th-accent-line'
 
 function BriefTab({ project, token, onSaved }: {
   project: Project
@@ -185,7 +186,7 @@ function BriefTab({ project, token, onSaved }: {
             {saving ? 'Saving…' : 'Save'}
           </button>
           {message && (
-            <span className="text-[12px]" style={{ color: message.ok ? 'var(--th-resolved)' : 'var(--th-open)' }}>{message.text}</span>
+            <span className="text-[12px]" style={{ color: message.ok ? 'var(--th-text-primary)' : 'var(--th-danger)' }}>{message.text}</span>
           )}
         </div>
         <p className="text-[11px] text-th-muted">Shown on the review screen for any cut that has no brief of its own. Not visible on share links.</p>
@@ -547,7 +548,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
               className="px-4 py-3 text-[13px] transition-colors border-b-2 btn-press"
               style={{
                 color: tab === id ? 'var(--th-accent-text)' : 'var(--th-muted)',
-                borderColor: tab === id ? 'var(--th-accent)' : 'transparent',
+                borderColor: tab === id ? 'var(--th-accent-line)' : 'transparent',
                 fontWeight: tab === id ? 700 : 400,
               }}>
               {label}
@@ -574,7 +575,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   <button
                     onClick={() => setShowUploadCustom(true)}
                     className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
-                    <Upload size={13} /> Upload
+                    <UploadIcon size={13} /> Upload
                   </button>
                 </div>
                 {project?.viewer_is_admin && (
@@ -590,14 +591,14 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     <button
                       onClick={() => setShowUploadCustom(true)}
                       className="flex items-center gap-2 px-4 py-2 rounded-th-full bg-th-accent text-th-accent-fg text-[12px] font-semibold btn-press">
-                      <Upload size={13} /> Upload first cut
+                      <UploadIcon size={13} /> Upload first cut
                     </button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                     {customAssets.map((a) => (
                       <Link key={a.id} href={`/review/${a.id}`}
-                        className="group relative flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover">
+                        className="group relative flex flex-col h-full bg-th-surface border border-th-border rounded-th-lg overflow-hidden hover:border-th-accent-line transition-colors shadow-card hover:shadow-card-hover">
                         <button
                           onClick={(e) => handleDeleteAsset(e, a.id)}
                           className="absolute top-2.5 left-2.5 p-1.5 rounded-th-sm bg-th-bg border border-th-border opacity-0 group-hover:opacity-100 transition-opacity text-th-muted hover:text-th-changes z-20">
@@ -626,9 +627,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     ))}
                     <button
                       onClick={() => setShowUploadCustom(true)}
-                      className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent-text transition-colors btn-press overflow-hidden">
+                      className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent-line hover:text-th-accent-text transition-colors btn-press overflow-hidden">
                       <div className="aspect-video shrink-0 flex items-center justify-center">
-                        <Upload size={20} />
+                        <UploadIcon size={20} />
                       </div>
                       <div className="p-3.5 flex-1 flex items-center justify-center min-h-[64px]">
                         <span className="text-[12px] font-medium">Upload cut</span>
@@ -650,7 +651,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   <button
                     onClick={() => setShowUploadBoard(true)}
                     className="flex items-center gap-1.5 h-8 px-3.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
-                    <Upload size={13} /> Upload
+                    <UploadIcon size={13} /> Upload
                   </button>
                 </div>
 
@@ -659,7 +660,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     <button
                       onClick={() => setShowUploadBoard(true)}
                       className="flex items-center gap-2 px-4 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-semibold btn-press hover:bg-th-accent-hover transition-colors">
-                      <Upload size={14} /> Upload first cut
+                      <UploadIcon size={14} /> Upload first cut
                     </button>
                   </EmptyState>
                 ) : (
@@ -668,7 +669,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                       const isPlaceholder = !a.mux_upload_id
                       return (
                       <Link key={a.id} href={`/review/${a.id}`}
-                        className={`group relative flex flex-col h-full bg-th-surface rounded-th-lg overflow-hidden transition-colors shadow-card hover:shadow-card-hover ${isPlaceholder ? 'border border-dashed border-th-faint hover:border-th-accent' : 'border border-th-border hover:border-th-accent'}`}>
+                        className={`group relative flex flex-col h-full bg-th-surface rounded-th-lg overflow-hidden transition-colors shadow-card hover:shadow-card-hover ${isPlaceholder ? 'border border-dashed border-th-faint hover:border-th-accent-line' : 'border border-th-border hover:border-th-accent-line'}`}>
                         {!isPlaceholder && (
                           <button
                             onClick={(e) => handleDeleteAsset(e, a.id)}
@@ -712,7 +713,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                               <span
                                 className="thumb-badge-dot"
                                 style={{
-                                  background: a.status === 'approved' ? 'var(--th-resolved)' : a.status === 'changes' ? 'var(--th-changes)' : 'var(--th-open)',
+                                  background: a.status === 'approved' ? 'var(--th-accent)' : a.status === 'changes' ? 'var(--badge-danger)' : 'var(--badge-open)',
                                 }}
                               />
                               {a.status === 'approved' ? 'APPROVED'
@@ -734,8 +735,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                                 Requested
                               </span>
                             ) : a.is_complete ? (
-                              <span className="app-pill text-[10px]"
-                                style={{ color: 'var(--th-resolved)', background: 'color-mix(in srgb, var(--th-resolved) 14%, transparent)' }}>
+                              <span className="app-pill text-[10px] chip-resolved">
                                 <CircleCheck size={11} /> Complete
                               </span>
                             ) : (
@@ -750,9 +750,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                     })}
                     <button
                       onClick={() => setShowUploadBoard(true)}
-                      className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent hover:text-th-accent-text transition-colors btn-press overflow-hidden">
+                      className="flex flex-col h-full rounded-th-lg border-2 border-dashed border-th-border text-th-muted hover:border-th-accent-line hover:text-th-accent-text transition-colors btn-press overflow-hidden">
                       <div className="aspect-video shrink-0 flex items-center justify-center">
-                        <Upload size={20} />
+                        <UploadIcon size={20} />
                       </div>
                       <div className="p-3.5 flex-1 flex items-center justify-center min-h-[64px]">
                         <span className="text-[12px] font-medium">Upload cut</span>

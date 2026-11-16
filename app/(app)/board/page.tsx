@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { LayoutGrid, Plus, FolderKanban, Users, ChevronLeft, Film } from 'lucide-react'
+import { Plus, FolderKanban, Users, ChevronLeft, Film } from 'lucide-react'
+import { BoardIcon } from '@/components/ui/icons'
 import { TopBar } from '@/components/layout/TopBar'
 import { BoardCard, initialsFor, type BoardAsset, type BoardEditorOption } from '@/components/board/BoardCard'
 import { BoardSkeleton } from '@/components/board/BoardSkeleton'
@@ -35,12 +36,15 @@ interface Column {
   color: string
 }
 
+// The columns carry no colour of their own any more (the palette has one accent):
+// every column is neutral, and the dot of the column a card is being dragged
+// over turns lime (see .dot-active in globals.css).
 const COLUMNS: Column[] = [
   { key: 'idea',      label: 'Cut',          color: 'var(--th-muted)' },
-  { key: 'editing',   label: 'Editing',      color: 'var(--th-accent-text)' },
-  { key: 'review',    label: 'Review',       color: 'var(--th-changes)' },
-  { key: 'revision',  label: 'Revision',     color: '#fb923c' },
-  { key: 'approved',  label: 'Approved',     color: 'var(--th-resolved)' },
+  { key: 'editing',   label: 'Editing',      color: 'var(--th-muted)' },
+  { key: 'review',    label: 'Review',       color: 'var(--th-muted)' },
+  { key: 'revision',  label: 'Revision',     color: 'var(--th-muted)' },
+  { key: 'approved',  label: 'Approved',     color: 'var(--th-muted)' },
 ]
 
 // Moving a card TO either of these is admin-only, regardless of which
@@ -518,7 +522,7 @@ export default function BoardPage() {
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopBar title={showClientCtx && activeClient !== ALL_CLIENTS_KEY ? `Board: ${boardTitleClient}` : 'Board'} icon={LayoutGrid}>
+        <TopBar title={showClientCtx && activeClient !== ALL_CLIENTS_KEY ? `Board: ${boardTitleClient}` : 'Board'} icon={BoardIcon}>
           <span className="font-mono text-[11px] text-th-muted hidden md:inline">{ctxText}</span>
           {showClientCtx && activeClient !== ALL_CLIENTS_KEY && (
             <Button onClick={() => setSelectedClient(ALL_CLIENTS_KEY)} size="sm" variant="secondary" className="hidden md:inline-flex">Show all clients</Button>
@@ -541,7 +545,7 @@ export default function BoardPage() {
         {role === 'admin' && (
           <div className="shrink-0 bg-th-surface border-b border-th-border px-6 flex gap-1">
             {([
-              { key: 'board', icon: LayoutGrid, label: 'Board' },
+              { key: 'board', icon: BoardIcon, label: 'Board' },
               { key: 'projects', icon: FolderKanban, label: 'Projects' },
               { key: 'editors', icon: Users, label: 'Editors' },
             ] as { key: BoardView; icon: React.ElementType; label: string }[]).map(({ key, icon: Icon, label }) => (
@@ -551,7 +555,7 @@ export default function BoardPage() {
                 className="flex items-center gap-1.5 px-3 py-2.5 text-[12px] border-b-2 btn-press transition-colors"
                 style={{
                   color: boardView === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
-                  borderColor: boardView === key ? 'var(--th-accent)' : 'transparent',
+                  borderColor: boardView === key ? 'var(--th-accent-line)' : 'transparent',
                   fontWeight: boardView === key ? 700 : 400,
                 }}
               >
@@ -641,14 +645,11 @@ export default function BoardPage() {
                         <Link
                           key={a.id}
                           href={`/review/${a.id}`}
-                          className="flex flex-col bg-th-surface border border-th-border rounded-th-lg p-3.5 hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover"
+                          className="flex flex-col bg-th-surface border border-th-border rounded-th-lg p-3.5 hover:border-th-accent-line transition-colors shadow-card hover:shadow-card-hover"
                         >
                           <p className="text-[13px] font-semibold leading-snug mb-0.5 line-clamp-2">{a.name}</p>
                           <p className="text-[11px] text-th-muted truncate mb-2.5">{a.project_client}</p>
-                          <span
-                            className="app-pill w-fit text-[10px]"
-                            style={{ color: col.color, background: `color-mix(in srgb, ${col.color} 14%, transparent)` }}
-                          >
+                          <span className="app-pill w-fit text-[10px] chip-muted">
                             {col.label}
                           </span>
                         </Link>
@@ -671,7 +672,7 @@ export default function BoardPage() {
                     <button
                       key={ed.id}
                       onClick={() => handleSelectEditor(ed)}
-                      className="flex flex-col gap-3 text-left bg-th-surface border border-th-border rounded-th-lg p-4 hover:border-th-accent transition-colors shadow-card hover:shadow-card-hover btn-press"
+                      className="flex flex-col gap-3 text-left bg-th-surface border border-th-border rounded-th-lg p-4 hover:border-th-accent-line transition-colors shadow-card hover:shadow-card-hover btn-press"
                     >
                       <div className="flex items-center gap-2.5">
                         <span
@@ -696,10 +697,7 @@ export default function BoardPage() {
                               <div key={cut.id} className="flex items-center gap-1.5 min-w-0">
                                 <PriorityBadge priority={cut.priority} />
                                 <span className="text-[11px] text-th-text truncate flex-1">{cut.title}</span>
-                                <span
-                                  className="app-pill shrink-0 text-[10px]"
-                                  style={{ color: col.color, background: `color-mix(in srgb, ${col.color} 14%, transparent)` }}
-                                >
+                                <span className="app-pill shrink-0 text-[10px] chip-muted">
                                   {col.label}
                                 </span>
                               </div>
@@ -749,7 +747,7 @@ export default function BoardPage() {
                       transition: 'background-color 160ms ease, color 160ms ease, border-color 160ms ease',
                     }}
                   >
-                    <span className="shrink-0" style={{ width: 7, height: 7, borderRadius: '50%', background: col.color }} />
+                    <span className="shrink-0 border border-th-border-strong" style={{ width: 7, height: 7, borderRadius: '50%' }} />
                     <span style={{ fontSize: 12.5, fontWeight: 700 }}>{col.label}</span>
                     <span style={{ fontFamily: 'var(--th-mono)', fontSize: 11, opacity: 0.75 }}>{grouped[col.key]?.length ?? 0}</span>
                   </div>
@@ -776,11 +774,11 @@ export default function BoardPage() {
                     className="w-[260px] shrink-0 flex flex-col rounded-th-lg border transition-colors"
                     style={{
                       background: dragOverColumn === col.key ? 'var(--th-surface-alt)' : 'transparent',
-                      borderColor: dragOverColumn === col.key ? col.color : 'transparent',
+                      borderColor: dragOverColumn === col.key ? 'var(--th-accent-line)' : 'transparent',
                     }}
                   >
                     <div className="flex items-center gap-2 px-2 py-2 shrink-0">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: col.color }} />
+                      <span aria-hidden className={`w-2 h-2 rounded-full shrink-0 ${dragOverColumn === col.key ? 'dot-active' : 'border border-th-border-strong'}`} />
                       <span className="text-[12px] font-bold">{col.label}</span>
                       <span className="ml-auto font-mono text-[11px] text-th-muted">{grouped[col.key]?.length ?? 0}</span>
                     </div>

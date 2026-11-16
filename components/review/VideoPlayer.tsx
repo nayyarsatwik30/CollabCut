@@ -2,7 +2,8 @@
 
 import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
 import Hls from 'hls.js'
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Download } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2 } from 'lucide-react'
+import { DownloadIcon } from '@/components/ui/icons'
 import { Comment } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { startBrowserDownload } from '@/lib/download-client'
@@ -240,7 +241,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         )}
 
         {approved && (
-          <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-th-resolved text-white text-[11px] font-bold px-3 py-1 rounded-th-full pointer-events-none">
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-th-accent text-th-accent-fg text-[11px] font-bold px-3 py-1 rounded-th-full pointer-events-none">
             ✓ APPROVED
           </div>
         )}
@@ -297,8 +298,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           </button>
 
           <button onClick={togglePlay} title="Play/Pause (Space)"
-            className="w-9 h-9 rounded-full bg-th-accent flex items-center justify-center btn-press hover:opacity-90 transition-opacity"
-            style={{ boxShadow: '0 4px 12px color-mix(in srgb, var(--th-accent) 40%, transparent)' }}>
+            className="w-9 h-9 rounded-full bg-th-accent flex items-center justify-center btn-press hover:opacity-90 transition-opacity">
             {playing
               ? <Pause size={16} className="text-th-accent-fg" />
               : <Play size={16} className="text-th-accent-fg ml-0.5" />
@@ -331,8 +331,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           </div>
 
           <div className="ml-2 flex items-center gap-3 font-mono text-[11px] text-th-muted">
-            <span style={{ color: 'var(--th-open)' }}>{openCount} open</span>
-            <span style={{ color: 'var(--th-resolved)' }}>{resolvedCnt} resolved</span>
+            {/* Hollow dot = open, lime dot = resolved (lime is a fill, never text). */}
+            <span className="inline-flex items-center gap-1.5 text-th-text"><i aria-hidden className="w-2 h-2 rounded-full border border-th-border-strong" />{openCount} open</span>
+            <span className="inline-flex items-center gap-1.5 text-th-text"><i aria-hidden className="w-2 h-2 rounded-full bg-th-accent" />{resolvedCnt} resolved</span>
           </div>
 
           <div className="ml-auto flex items-center gap-2">
@@ -346,7 +347,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 className="w-8 h-8 rounded-th-sm bg-th-surface-alt border border-th-border flex items-center justify-center text-th-muted hover:text-th-text transition-colors btn-press disabled:opacity-50"
                 title={downloading ? 'Preparing download…' : 'Download'}
               >
-                <Download size={13} />
+                <DownloadIcon size={13} />
               </button>
             )}
             <button onClick={toggleFullscreen}

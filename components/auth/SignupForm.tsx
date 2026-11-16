@@ -163,14 +163,14 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
               <div className="grid grid-cols-2 gap-3">
                 <button type="button" onClick={() => setRole('admin')}
                   className={`px-3.5 py-2.5 rounded-th border text-left text-[13px] transition-colors ${
-                    role === 'admin' ? 'border-th-accent bg-th-accent/10' : 'border-th-border bg-th-surface'
+                    role === 'admin' ? 'border-th-accent-line bg-th-accent/10' : 'border-th-border bg-th-surface'
                   }`}>
                   <span className="block font-semibold">Create a workspace</span>
                   <span className="block text-[11px] text-th-muted mt-0.5">You'll be the admin</span>
                 </button>
                 <button type="button" onClick={() => setRole('editor')}
                   className={`px-3.5 py-2.5 rounded-th border text-left text-[13px] transition-colors ${
-                    role === 'editor' ? 'border-th-accent bg-th-accent/10' : 'border-th-border bg-th-surface'
+                    role === 'editor' ? 'border-th-accent-line bg-th-accent/10' : 'border-th-border bg-th-surface'
                   }`}>
                   <span className="block font-semibold">Join a workspace</span>
                   <span className="block text-[11px] text-th-muted mt-0.5">You'll be an editor</span>
@@ -183,7 +183,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
             <div>
               <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">Workspace code</label>
               <input name="inviteCode" value={form.inviteCode} onChange={handleChange} placeholder="e.g. 4F9B2C1A"
-                className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors font-mono uppercase" />
+                className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors font-mono uppercase" />
             </div>
           )}
 
@@ -191,26 +191,26 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
             <div>
               <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">First name</label>
               <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="Satwik"
-                className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors" />
+                className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors" />
             </div>
             <div>
               <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">Last name</label>
               <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Nayyar"
-                className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors" />
+                className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors" />
             </div>
           </div>
 
           <div>
             <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">Email</label>
             <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="you@studio.in"
-              className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors" />
+              className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors" />
           </div>
 
           <div>
             <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">Password</label>
             <div className="relative">
               <input name="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="Min. 8 characters"
-                className="w-full px-3.5 py-2.5 pr-10 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent transition-colors" />
+                className="w-full px-3.5 py-2.5 pr-10 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors" />
               <IconButton type="button" label={showPass ? 'Hide password' : 'Show password'}
                 size="sm" variant="ghost"
                 onClick={() => setShowPass(!showPass)}
@@ -239,7 +239,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
           <ul className="space-y-4">
             {PERKS.map((p) => (
               <li key={p} className="flex items-center gap-3 text-[14px]">
-                <Check size={14} className="text-th-resolved shrink-0" /> {p}
+                <Check size={14} className="text-th-text shrink-0" /> {p}
               </li>
             ))}
           </ul>

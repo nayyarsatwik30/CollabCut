@@ -136,7 +136,7 @@ export function ClientTabStrip({ tabs, allCount, countFor, activeKey, onSelect, 
               className="shrink-0 flex items-center gap-1.5 px-3 text-[12px] border-b-2 btn-press transition-colors max-w-[200px] hover:bg-[color-mix(in_srgb,var(--th-text)_6%,transparent)]"
               style={{
                 color: active ? 'var(--th-accent-text)' : 'var(--th-muted)',
-                borderColor: active ? 'var(--th-accent)' : 'transparent',
+                borderColor: active ? 'var(--th-accent-line)' : 'transparent',
                 background: active ? 'var(--th-bg)' : undefined,
                 fontWeight: active ? 700 : 400,
               }}

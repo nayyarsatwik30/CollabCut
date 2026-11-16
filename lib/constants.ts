@@ -1,26 +1,26 @@
+// Legacy constants (not referenced by the app), kept on the CollabCut palette.
 export const COLORS = {
-  bg: "#15140F",
-  surface: "#1C1A14",
-  surfaceAlt: "#242019",
-  border: "#332E20",
-  text: "#F3F0E8",
-  textMuted: "#9C9686",
-  amber: "#E8A33D",
-  green: "#5FA777",
-  coral: "#E1604A",
+  bg: "#050505",
+  surface: "#0E0E0E",
+  surfaceAlt: "#171717",
+  border: "#2a2926",
+  text: "#ECE6DC",
+  textMuted: "#A9A398",
+  lime: "#B8E41E",
+  danger: "#FF8A7A",
 } as const;
 
 export const STATUS_STYLE: Record<string, { color: string; label: string }> = {
-  open: { color: "#E8A33D", label: "Open" },
-  resolved: { color: "#5FA777", label: "Resolved" },
-  changes: { color: "#E1604A", label: "Needs changes" },
+  open: { color: "#ECE6DC", label: "Open" },
+  resolved: { color: "#B8E41E", label: "Resolved" },
+  changes: { color: "#FF8A7A", label: "Needs changes" },
 };
 
 export const VIDEO_SRC = "https://www.w3schools.com/html/mov_bbb.mp4";
 export const FPS = 24;
 
 export const INITIAL_COMMENTS = [
-  { id: 1, time: 2.5, author: "Riya", color: "#E8A33D", status: "open", text: "Can we trim this beat by half a second? Feels a touch slow." },
+  { id: 1, time: 2.5, author: "Riya", color: "#ECE6DC", status: "open", text: "Can we trim this beat by half a second? Feels a touch slow." },
   // ... rest of items
 ];
 

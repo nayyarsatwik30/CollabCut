@@ -155,7 +155,7 @@ export default function SettingsPage() {
                   <div>
                     <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Full name</label>
                     <input value={name} onChange={e => setName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text outline-none focus:border-th-accent transition-colors" />
+                      className="w-full px-3.5 py-2.5 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text outline-none focus:border-th-accent-line transition-colors" />
                   </div>
                   <div>
                     <label className="block font-mono text-[10px] uppercase tracking-wider text-th-muted mb-1.5">Email</label>
@@ -203,7 +203,7 @@ export default function SettingsPage() {
                   ) : (
                     <div className="p-6 rounded-th-lg border border-th-border bg-th-surface space-y-3">
                       <div>
-                        <span className="app-pill font-mono text-[10px] uppercase tracking-wider bg-th-accent/10 border border-th-accent/30 text-th-accent-text">
+                        <span className="app-pill font-mono text-[10px] uppercase tracking-wider bg-th-accent/10 border border-th-accent-line/30 text-th-accent-text">
                           {adminWorkspace.name}
                         </span>
                       </div>

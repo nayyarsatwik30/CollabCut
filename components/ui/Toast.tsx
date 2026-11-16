@@ -24,7 +24,8 @@ export function Toast({ toast, onDismiss }: ToastProps) {
 
   if (!toast) return null
 
-  const dotColor = toast.type === 'error' ? 'bg-th-changes' : toast.type === 'success' ? 'bg-th-resolved' : 'bg-th-accent'
+  // Palette only: lime for success, the danger colour for errors, muted for info.
+  const dotColor = toast.type === 'error' ? 'bg-th-danger' : toast.type === 'success' ? 'bg-th-accent' : 'bg-th-muted'
 
   return (
     <div

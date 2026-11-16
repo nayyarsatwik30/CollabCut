@@ -132,8 +132,7 @@ export function PriorityMenu({ value, onChange, size = 'md' }: PriorityMenuProps
           e.stopPropagation()
           if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); openMenu() }
         }}
-        className={`inline-flex items-center font-mono font-bold rounded-[3px] outline-none cursor-pointer transition-colors hover:brightness-125 focus-visible:ring-1 focus-visible:ring-th-accent ${text}`}
-        style={{ color: meta.color, background: `color-mix(in srgb, ${meta.color} 14%, transparent)`, border: `1px solid color-mix(in srgb, ${meta.color} 45%, transparent)` }}
+        className={`inline-flex items-center font-mono font-bold rounded-[3px] outline-none cursor-pointer transition-colors hover:brightness-110 focus-visible:ring-2 focus-visible:ring-th-accent-line ${meta.chip} ${text}`}
       >
         <PriorityBars bars={meta.bars} size={size === 'sm' ? 11 : 12} />
         {meta.label}
@@ -166,7 +165,7 @@ export function PriorityMenu({ value, onChange, size = 'md' }: PriorityMenuProps
                 className="flex items-center gap-2 h-8 px-2 rounded-th-sm cursor-pointer text-[12px] text-th-text select-none"
                 style={{ background: i === activeIndex ? 'var(--th-surface-hov)' : 'transparent' }}
               >
-                <span className="inline-flex items-center gap-1.5 font-mono font-bold" style={{ color: priorityMeta(p.value).color }}>
+                <span className={`inline-flex items-center gap-1.5 font-mono font-bold rounded-[3px] px-1.5 py-0.5 ${priorityMeta(p.value).chip}`}>
                   <PriorityBars bars={p.bars} size={11} />
                   {p.label}
                 </span>

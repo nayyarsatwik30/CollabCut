@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Plus, MessageSquare } from 'lucide-react'
+import { CommentIcon, TimecodeIcon } from '@/components/ui/icons'
 import { Comment, CommentStatus } from '@/lib/types'
 import { formatTimecode } from '@/lib/utils'
 import { CommentCard } from './CommentCard'
@@ -29,10 +29,12 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'resolved', label: 'Resolved' },
 ]
 
-const DRAFT_STATUS_OPTIONS: { key: CommentStatus; label: string; color: string }[] = [
-  { key: 'open',     label: 'Open',    color: 'var(--th-open)'     },
-  { key: 'changes',  label: 'Change',  color: 'var(--th-changes)'  },
-  { key: 'resolved', label: 'Done',    color: 'var(--th-resolved)' },
+// The selected option takes the status chip look (see globals.css): open is an
+// outline, change is the danger colour, done is a lime fill.
+const DRAFT_STATUS_OPTIONS: { key: CommentStatus; label: string; chip: string }[] = [
+  { key: 'open',     label: 'Open',    chip: 'chip-open'    },
+  { key: 'changes',  label: 'Change',  chip: 'chip-changes' },
+  { key: 'resolved', label: 'Done',    chip: 'chip-resolved' },
 ]
 
 export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, onDelete, onReply, attachments }: CommentPanelProps) {
@@ -72,11 +74,9 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
             key={key}
             onClick={() => setFilter(key)}
             className="px-3 py-1 rounded-th-full text-[11px] font-medium transition-colors btn-press capitalize"
-            style={{
-              background: filter === key ? 'color-mix(in srgb, var(--th-accent) 18%, transparent)' : 'transparent',
-              color: filter === key ? 'var(--th-accent-text)' : 'var(--th-muted)',
-              border: `1px solid ${filter === key ? 'var(--th-accent)' : 'var(--th-border)'}`,
-            }}
+            style={filter === key
+              ? { background: 'var(--th-accent)', color: 'var(--th-accent-fg)', border: '1px solid var(--th-accent-edge)', fontWeight: 600 }
+              : { background: 'transparent', color: 'var(--th-muted)', border: '1px solid var(--th-border)' }}
           >
             {label}
           </button>
@@ -88,7 +88,7 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
       <div className="flex-1 overflow-y-auto px-3 py-3">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
-            <MessageSquare size={28} className="text-th-faint" />
+            <CommentIcon size={28} className="text-th-faint" />
             <div>
               <p className="text-[13px] font-semibold mb-1">
                 {filter === 'all' ? 'No notes yet' : `No ${filter} notes`}
@@ -118,21 +118,18 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
       <div className="p-3.5 border-t border-th-border shrink-0 bg-th-surface">
         {/* Status selector + timecode label */}
         <div className="flex items-center gap-2 mb-2.5">
-          <span className="font-mono text-[10px] text-th-accent-text font-bold">
+          <span className="chip-time gap-1">
+            <TimecodeIcon size={11} />
             AT {formatTimecode(currentTime)}
           </span>
           <div className="ml-auto flex items-center gap-1">
             {attachments && <AttachButton onFiles={drafts.addFiles} disabled={drafts.full} />}
-            {DRAFT_STATUS_OPTIONS.map(({ key, label, color }) => (
+            {DRAFT_STATUS_OPTIONS.map(({ key, label, chip }) => (
               <button
                 key={key}
                 onClick={() => setDraftStatus(key)}
-                className="px-2.5 py-0.5 rounded-th-full text-[10px] font-bold transition-colors btn-press"
-                style={{
-                  color,
-                  background: draftStatus === key ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
-                  border: `1px solid ${draftStatus === key ? color : 'var(--th-border)'}`,
-                }}
+                aria-pressed={draftStatus === key}
+                className={`px-2.5 py-0.5 rounded-th-full text-[10px] font-bold transition-colors btn-press ${draftStatus === key ? chip : 'chip-muted'}`}
               >
                 {label}
               </button>
@@ -148,7 +145,7 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
           placeholder="Note this frame… (Enter to post, Shift+Enter for newline)"
           rows={3}
           className="w-full px-3 py-2.5 rounded-th bg-th-surface-alt border text-[13px] text-th-text placeholder:text-th-faint outline-none font-display resize-none leading-relaxed transition-colors"
-          style={{ borderColor: draftText ? 'var(--th-accent)' : 'var(--th-border)' }}
+          style={{ borderColor: draftText ? 'var(--th-accent-line)' : 'var(--th-border)' }}
         />
 
         {attachments && (
@@ -173,10 +170,9 @@ export function CommentPanel({ comments, currentTime, onSeek, onAdd, onResolve, 
           <button
             onClick={handleSubmit}
             disabled={drafts.busy || drafts.errorCount > 0}
-            className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-th-full bg-th-accent text-th-accent-fg text-[13px] font-bold btn-press hover:bg-th-accent-hover transition-colors animate-fade-in disabled:opacity-60"
-            style={{ boxShadow: '0 4px 14px color-mix(in srgb, var(--th-accent) 40%, transparent)' }}
+            className="btn btn-primary mt-2 w-full animate-fade-in [--btn-fs:14px]"
           >
-            <Plus size={14} /> {drafts.busy ? 'Uploading file…' : `Post note at ${formatTimecode(currentTime)}`}
+            <CommentIcon size={16} /> {drafts.busy ? 'Uploading file…' : `Post note at ${formatTimecode(currentTime)}`}
           </button>
         )}
       </div>

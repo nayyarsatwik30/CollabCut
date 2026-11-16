@@ -6,42 +6,32 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 /* Shared button component. Radix's Slot handles the "render as a Link
-   instead of a <button>" case (asChild) and focus-visible semantics;
-   all visual styling stays in Tailwind via cva variants, driven by the
-   th-* theme tokens so it still follows light/dark automatically. */
+   instead of a <button>" case (asChild) and focus-visible semantics.
+   The look (pill, lime / solid / outline / ghost, 600 weight, 2px hover lift,
+   focus ring) lives in the .btn classes in globals.css, which follow the
+   Dark/Light tokens. Sizes only set the height, padding and font size: md and
+   lg are the 48px / 15px board buttons; sm and xs are compact sizes for dense
+   toolbars and rows. */
 
 const buttonVariants = cva(
-  'group inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap ' +
-  'rounded-th-full transition-all duration-150 ease-out ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-th-accent focus-visible:ring-offset-2 focus-visible:ring-offset-th-bg ' +
-  'disabled:opacity-50 disabled:pointer-events-none ' +
-  'active:scale-[0.97]',
+  'btn group',
   {
     variants: {
       variant: {
-        primary:
-          'bg-th-accent text-th-accent-fg shadow-[0_1px_2px_rgba(0,0,0,0.08)] ' +
-          'hover:shadow-[0_4px_12px_rgba(0,0,0,0.16)] hover:-translate-y-px ' +
-          'hover:bg-th-accent-hover',
-        secondary:
-          'bg-th-surface text-th-text border border-th-border ' +
-          'hover:border-th-text/30 hover:bg-th-surface-alt hover:-translate-y-px ' +
-          'hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
-        ghost:
-          'text-th-muted hover:text-th-text hover:bg-th-surface-alt',
-        danger:
-          'bg-th-changes text-white shadow-[0_1px_2px_rgba(0,0,0,0.08)] ' +
-          'hover:shadow-[0_4px_12px_rgba(0,0,0,0.16)] hover:-translate-y-px hover:brightness-110',
-        dangerOutline:
-          'text-th-changes border border-th-changes/40 ' +
-          'hover:bg-th-changes/10 hover:border-th-changes/60 hover:-translate-y-px',
+        primary: 'btn-primary',
+        solid: 'btn-solid',
+        outline: 'btn-outline',
+        secondary: 'btn-outline',
+        ghost: 'btn-ghost',
+        danger: 'btn-danger',
+        dangerOutline: 'btn-danger-outline',
       },
       size: {
-        xs: 'h-7 px-3 text-[11px] gap-1.5',
-        sm: 'h-8 px-3.5 text-[12px]',
-        md: 'h-10 px-4.5 text-[14px]',
-        lg: 'h-12 px-6 text-[15px]',
-        icon: 'h-9 w-9 p-0',
+        xs: '[--btn-h:28px] [--btn-px:12px] [--btn-fs:11px] gap-1.5',
+        sm: '[--btn-h:36px] [--btn-px:14px] [--btn-fs:12px]',
+        md: '[--btn-px:22px]',
+        lg: '[--btn-px:28px]',
+        icon: '[--btn-h:36px] [--btn-px:0px] w-9',
       },
     },
     defaultVariants: {

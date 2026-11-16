@@ -2,7 +2,8 @@
 
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import Link from 'next/link'
-import { ChevronLeft, Play, ArrowRight, MessageSquare } from 'lucide-react'
+import { ChevronLeft, Play, ArrowRight } from 'lucide-react'
+import { CommentIcon } from '@/components/ui/icons'
 import { StatusBadge, Avatar } from '@/components/ui/Badge'
 
 // A fully static stand-in for the review experience, so the landing page's
@@ -16,7 +17,7 @@ const MOCK_COMMENTS = [
   {
     id: '1',
     author: 'Priya',
-    color: '#5b8def',
+    color: 'var(--th-avatar-bg)',
     time: '00:12',
     status: 'open' as const,
     text: 'Can we hold on this frame a beat longer before the cut? Feels rushed.',
@@ -24,7 +25,7 @@ const MOCK_COMMENTS = [
   {
     id: '2',
     author: 'Sam',
-    color: '#34d399',
+    color: 'var(--th-avatar-bg)',
     time: '00:47',
     status: 'changes' as const,
     text: 'Color grade looks a bit warm here compared to the rest of the sequence.',
@@ -32,10 +33,10 @@ const MOCK_COMMENTS = [
   {
     id: '3',
     author: 'Priya',
-    color: '#5b8def',
+    color: 'var(--th-avatar-bg)',
     time: '01:23',
     status: 'resolved' as const,
-    text: 'Approved on my end ✅',
+    text: 'Approved on my end',
   },
 ]
 
@@ -51,7 +52,7 @@ export default function DemoReviewPage() {
           </Link>
           <span className="w-px h-5 bg-th-border" />
           <span className="text-[13px] font-semibold">Trailer_Cut_v4.mp4</span>
-          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent/30 text-th-accent-text">
+          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-th-full bg-th-accent/10 border border-th-accent-line/30 text-th-accent-text">
             Sample review — no sign-in needed
           </span>
         </div>
@@ -70,7 +71,7 @@ export default function DemoReviewPage() {
         <div>
           <div
             className="relative aspect-video rounded-th-lg overflow-hidden flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #17324a, #1d6b66 55%, #2dd4a7)' }}
+            style={{ background: 'linear-gradient(135deg, #0e0e0e, #171717 55%, #3a3833)' }}
           >
             <button className="w-16 h-16 rounded-full bg-black/30 backdrop-blur flex items-center justify-center hover:bg-black/40 transition-colors">
               <Play size={26} className="text-white ml-1" fill="white" />
@@ -95,7 +96,7 @@ export default function DemoReviewPage() {
 
         <div className="border border-th-border rounded-th-lg bg-th-surface p-4">
           <div className="flex items-center gap-2 mb-4 text-[13px] font-semibold">
-            <MessageSquare size={15} className="text-th-muted" /> Comments ({MOCK_COMMENTS.length})
+            <CommentIcon size={15} className="text-th-muted" /> Comments ({MOCK_COMMENTS.length})
           </div>
 
           <div className="space-y-4">

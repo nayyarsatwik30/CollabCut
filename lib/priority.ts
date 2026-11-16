@@ -1,14 +1,12 @@
 // Shared P1/P2/P3 metadata so every place that renders the priority (Board
 // card, editor-card preview, project folder view, review screen, dashboard,
 // PriorityMenu) stays in sync. Priority is deliberately a different visual
-// family from status badges: violet (no status uses it - status is
-// amber/red/orange/green/blue/grey), a squared shape instead of the status
-// pills' round one, and a signal-bars glyph whose filled count encodes the
-// level (3 = highest), so it reads without relying on color.
+// family from status badges: a squared shape instead of the status pills'
+// round one, and a signal-bars glyph whose filled count encodes the level
+// (3 = highest), so it reads without relying on color.
 //
-// color-mix with --th-text keeps the violet legible on both the light theme
-// (pulled darker) and the dark-navy theme (pulled lighter).
-export const PRIORITY_COLOR = 'color-mix(in srgb, #8b5cf6 55%, var(--th-text))'
+// The chip look comes from the palette (classes in globals.css): P1 is a
+// lime fill with Ink text, P2 an outline in the text colour, P3 a muted outline.
 
 export const PRIORITY_OPTIONS = [
   { value: 1, label: 'P1', name: 'High', bars: 3, a11y: 'Priority 1 (highest)' },
@@ -18,5 +16,5 @@ export const PRIORITY_OPTIONS = [
 
 export function priorityMeta(priority: number) {
   const m = PRIORITY_OPTIONS.find((p) => p.value === priority) ?? PRIORITY_OPTIONS[2]
-  return { ...m, color: PRIORITY_COLOR }
+  return { ...m, chip: `chip-p${m.value}` }
 }

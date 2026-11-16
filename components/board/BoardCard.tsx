@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, ChevronDown, Clock, Film, Trash2, UserPlus } from 'lucide-react'
 import { PriorityBadge } from '@/components/PriorityBadge'
+import { ApproveIcon } from '@/components/ui/icons'
 import { PriorityMenu } from '@/components/PriorityMenu'
 import { VersionBadge } from '@/components/board/VersionManager'
 
@@ -152,10 +153,10 @@ export function BoardCard({ asset, color, isAdmin, token, editors, columns, onAs
         ) : asset.is_complete && (
           <span
             className="ml-auto w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: 'color-mix(in srgb, var(--th-resolved) 20%, transparent)', color: 'var(--th-resolved)' }}
+            style={{ background: 'var(--th-accent)', color: 'var(--th-accent-fg)', boxShadow: 'inset 0 0 0 1px var(--th-accent-edge)' }}
             title="Marked complete"
           >
-            <Check size={10} strokeWidth={3} />
+            <ApproveIcon size={11} strokeWidth={2.5} />
           </span>
         )}
       </div>
@@ -169,7 +170,7 @@ export function BoardCard({ asset, color, isAdmin, token, editors, columns, onAs
           onClick={(e) => e.stopPropagation()}
           onChange={(e) => { e.stopPropagation(); onStatusChange(asset.id, e.target.value) }}
           title="Change status"
-          className="w-full mb-3 bg-th-surface-alt border border-th-border rounded-th-sm text-[11px] text-th-muted px-2 py-1 outline-none focus:border-th-accent font-mono cursor-pointer hover:text-th-text transition-colors"
+          className="w-full mb-3 bg-th-surface-alt border border-th-border rounded-th-sm text-[11px] text-th-muted px-2 py-1 outline-none focus:border-th-accent-line font-mono cursor-pointer hover:text-th-text transition-colors"
         >
           {columns
             .filter((col) => isAdmin || col.key === asset.pipeline_status || !RESTRICTED_STATUSES.includes(col.key))

@@ -58,13 +58,13 @@ export function ConfirmDialog({ state, onConfirm, onCancel }: ConfirmDialogProps
         <div className="flex items-center justify-end gap-2.5 mt-4">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-th-full text-[13px] font-semibold border border-th-border text-th-text hover:bg-th-surface-alt transition-colors btn-press"
+            className="btn btn-outline [--btn-h:36px] [--btn-px:16px] [--btn-fs:13px]"
           >
             {state.cancelLabel ?? 'Cancel'}
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 rounded-th-full text-[13px] font-bold bg-th-changes text-white hover:opacity-90 transition-opacity btn-press"
+            className="btn btn-danger [--btn-h:36px] [--btn-px:16px] [--btn-fs:13px]"
           >
             {state.confirmLabel ?? 'Confirm'}
           </button>
