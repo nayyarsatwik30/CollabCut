@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff, ArrowRight, Check, Copy } from '@/components/ui/icons'
+import { Eye, EyeOff, ArrowRight, Check, Copy, Minus } from '@/components/ui/icons'
+import { PASSWORD_RULES, validatePassword } from '@/lib/password-policy'
 import { Button, ButtonIcon } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
 
@@ -31,6 +32,8 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // Unmet rules as reported by the server (it re-checks the same policy).
+  const [serverRules, setServerRules] = useState<string[]>([])
   const [role, setRole] = useState<SignupRole>('admin')
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', inviteCode: '' })
   // Set once the account exists; the form is replaced by a "check your email"
@@ -41,18 +44,21 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
   const planId = searchParams.get('plan') ?? 'basic'
   const billingCycle = searchParams.get('cycle') ?? 'monthly'
 
+  const passwordOk = validatePassword(form.password).length === 0
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
   const handleSubmit = async () => {
     setError('')
+    setServerRules([])
     if (!form.firstName || !form.email || !form.password) {
       setError('All fields are required')
       return
     }
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters')
+    if (!passwordOk) {
+      setError('Password does not meet requirements')
       return
     }
     if (role === 'editor' && !form.inviteCode.trim()) {
@@ -79,6 +85,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
 
     if (!res.ok) {
       setError(data.error ?? 'Failed to create account')
+      if (Array.isArray(data.rules)) setServerRules(data.rules)
       setLoading(false)
       return
     }
@@ -153,6 +160,11 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
         {error && (
           <div className="mb-4 px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
             {error}
+            {serverRules.length > 0 && (
+              <ul className="mt-1.5 list-disc pl-4 space-y-0.5">
+                {serverRules.map((label) => <li key={label}>{label}</li>)}
+              </ul>
+            )}
           </div>
         )}
 
@@ -209,7 +221,7 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
           <div>
             <label className="block text-[12px] font-semibold text-th-muted mb-1.5 font-mono uppercase tracking-wide">Password</label>
             <div className="relative">
-              <input name="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="Min. 8 characters"
+              <input name="password" type={showPass ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="Min. 10 characters"
                 className="w-full px-3.5 py-2.5 pr-10 rounded-th bg-th-surface border border-th-border text-[14px] text-th-text placeholder:text-th-faint outline-none focus:border-th-accent-line transition-colors" />
               <IconButton type="button" label={showPass ? 'Hide password' : 'Show password'}
                 size="sm" variant="ghost"
@@ -218,9 +230,23 @@ export function SignupForm({ allowWorkspaceChoice, showPricingSidebar }: SignupF
                 {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
               </IconButton>
             </div>
+            <ul aria-label="Password requirements" className="mt-2.5 space-y-1">
+              {PASSWORD_RULES.map((rule) => {
+                const met = rule.test(form.password)
+                return (
+                  <li key={rule.id} className={`flex items-center gap-2 text-[12px] transition-colors ${met ? 'text-th-text' : 'text-th-faint'}`}>
+                    <span className={`shrink-0 ${met ? 'text-th-accent-line' : 'text-th-faint'}`}>
+                      {met ? <Check size={12} /> : <Minus size={12} />}
+                    </span>
+                    {rule.label}
+                    <span className="sr-only">{met ? ' (met)' : ' (not met)'}</span>
+                  </li>
+                )
+              })}
+            </ul>
           </div>
 
-          <Button onClick={handleSubmit} loading={loading} size="lg" className="w-full">
+          <Button onClick={handleSubmit} loading={loading} disabled={!passwordOk} size="lg" className="w-full">
             {loading ? 'Creating account…' : <><span>Create free account</span> <ButtonIcon><ArrowRight size={14} /></ButtonIcon></>}
           </Button>
         </div>

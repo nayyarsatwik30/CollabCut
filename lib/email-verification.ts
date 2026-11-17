@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'crypto'
 import nodemailer from 'nodemailer'
 import { waitUntil } from '@vercel/functions'
+import { migrationDb } from './migrationDb'
 
 export const VERIFICATION_TTL_HOURS = 24
 // A resend within this window of the last send is silently skipped, so the
@@ -78,8 +79,21 @@ export async function sendVerificationEmail(to: string, name: string, token: str
 // out); outside Vercel it is a no-op and the promise just runs.
 export function sendVerificationEmailInBackground(to: string, name: string, token: string): void {
   waitUntil(
-    sendVerificationEmail(to, name, token).catch((err) => {
+    sendVerificationEmail(to, name, token).catch(async (err) => {
       console.error('background verification email failed', err)
+      // The resend cooldown is derived from email_verification_expires, so a
+      // failed send must not keep it. NULL passes the cooldown check and
+      // can't verify anything (the verify UPDATE needs expires > now()); the
+      // hash match keeps a newer token's cooldown intact.
+      try {
+        await migrationDb.query(
+          `UPDATE auth_credentials SET email_verification_expires = NULL
+           WHERE email_verification_token_hash = $1`,
+          [hashToken(token)]
+        )
+      } catch (resetErr) {
+        console.error('could not release verification cooldown', resetErr)
+      }
     })
   )
 }
@@ -151,8 +165,18 @@ export async function sendPasswordChangedEmail(to: string, name: string, when: D
 // the caller; failures are logged without any token or password.
 export function sendPasswordResetEmailInBackground(to: string, name: string, token: string): void {
   waitUntil(
-    sendPasswordResetEmail(to, name, token).catch((err) => {
+    sendPasswordResetEmail(to, name, token).catch(async (err) => {
       console.error('background password reset email failed', err)
+      // A failed send must not burn the 60s cooldown. Matching on this
+      // token's hash leaves a newer request's cooldown untouched.
+      try {
+        await migrationDb.query(
+          `UPDATE auth_credentials SET reset_requested_at = NULL WHERE reset_token_hash = $1`,
+          [hashToken(token)]
+        )
+      } catch (resetErr) {
+        console.error('could not release reset cooldown', resetErr)
+      }
     })
   )
 }

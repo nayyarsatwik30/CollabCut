@@ -232,7 +232,7 @@ export default function BoardPage() {
     // Keep project-derived client tabs fresh too. Not awaited: a slow
     // projects request must never delay the board's own polling cadence.
     if (role === 'admin') void fetchProjects(token, { skipIfBusy: true })
-  }, 3000, !loading && !error && boardView === 'board')
+  }, 5000, !loading && !error && boardView === 'board')
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, assetId: string) => {
     mutationRef.current.dragging = true

@@ -19,15 +19,17 @@ export default function ForgotPasswordPage() {
       return
     }
     setLoading(true)
-    // The API answers the same for every address, so the UI does too. A
-    // network failure is the only case surfaced differently.
+    // The API answers 200 { ok: true } for every address, so the UI shows the
+    // same message for every 200. Only a transport failure or a non-200 (server
+    // error, bad deploy) is surfaced, and that says nothing about the address.
     try {
-      await fetch('/api/auth/forgot', {
+      const res = await fetch('/api/auth/forgot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      setSent(true)
+      if (res.ok) setSent(true)
+      else setError('Something went wrong, please try again.')
     } catch {
       setError('Could not reach the server. Please try again.')
     }

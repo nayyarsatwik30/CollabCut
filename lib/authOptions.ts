@@ -11,6 +11,24 @@ export const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED'
 
 type SessionToken = { id?: string; sessionToken?: string; valid?: boolean; checkFailed?: boolean }
 
+// Per-instance cache of "this user's session token matched the DB" results, so
+// the jwt callback doesn't hit the DB on every session read (each request and
+// every poll). Only positive results are cached: a DB error is never cached,
+// and a mismatch deletes the entry.
+const SESSION_CHECK_TTL_MS = 15_000
+const SESSION_CHECK_MAX_ENTRIES = 1000
+const sessionCheckCache = new Map<string, { sessionToken: string; valid: boolean; checkedAt: number }>()
+
+function rememberValidSession(userId: string, sessionToken: string, now: number) {
+  if (sessionCheckCache.size >= SESSION_CHECK_MAX_ENTRIES) {
+    sessionCheckCache.forEach((entry, key) => {
+      if (now - entry.checkedAt >= SESSION_CHECK_TTL_MS) sessionCheckCache.delete(key)
+    })
+    if (sessionCheckCache.size >= SESSION_CHECK_MAX_ENTRIES) sessionCheckCache.clear()
+  }
+  sessionCheckCache.set(userId, { sessionToken, valid: true, checkedAt: now })
+}
+
 export const authOptions: AuthOptions = {
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET,
@@ -76,6 +94,14 @@ export const authOptions: AuthOptions = {
       // next-auth clear the cookie.)
       // JWTs issued before this check existed have no sessionToken and are
       // rejected, i.e. everyone signs in once more after the deploy.
+      // Revocation (login elsewhere, password reset) can take up to 15 s per instance because of this cache.
+      const now = Date.now()
+      const cached = t.id ? sessionCheckCache.get(t.id) : undefined
+      if (cached && cached.valid && cached.sessionToken === t.sessionToken && now - cached.checkedAt < SESSION_CHECK_TTL_MS) {
+        t.valid = true
+        t.checkFailed = false
+        return t
+      }
       try {
         const result = await migrationDb.query(
           `SELECT current_session_token FROM auth_credentials WHERE id = $1`,
@@ -84,6 +110,10 @@ export const authOptions: AuthOptions = {
         const current = result.rows[0]?.current_session_token as string | null | undefined
         t.valid = !!t.sessionToken && !!current && current === t.sessionToken
         t.checkFailed = false
+        if (t.id) {
+          if (t.valid && t.sessionToken) rememberValidSession(t.id, t.sessionToken, now)
+          else sessionCheckCache.delete(t.id)
+        }
       } catch (err) {
         console.error('session validity check failed', err)
         t.valid = false

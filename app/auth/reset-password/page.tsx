@@ -5,9 +5,8 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-
-// Mirrors the signup rule (app/api/auth/signup/route.ts); the server re-checks.
-const MIN_PASSWORD_LENGTH = 8
+import { Check, Minus } from '@/components/ui/icons'
+import { PASSWORD_RULES, validatePassword } from '@/lib/password-policy'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -17,7 +16,10 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // Unmet rules as reported by the server (it re-checks the same policy).
+  const [serverRules, setServerRules] = useState<string[]>([])
   const [linkInvalid, setLinkInvalid] = useState(false)
+  const passwordOk = validatePassword(password).length === 0
 
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('token')
@@ -29,8 +31,9 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async () => {
     setError('')
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+    setServerRules([])
+    if (!passwordOk) {
+      setError('Password does not meet requirements')
       return
     }
     if (password !== confirm) {
@@ -49,7 +52,10 @@ export default function ResetPasswordPage() {
         return
       }
       const data = await res.json().catch(() => ({}))
-      if (res.status === 400 && !/at least/.test(data.error ?? '')) setLinkInvalid(true)
+      if (res.status === 400 && Array.isArray(data.rules)) {
+        setError(data.error ?? 'Password does not meet requirements')
+        setServerRules(data.rules)
+      } else if (res.status === 400) setLinkInvalid(true)
       else setError(data.error ?? 'Something went wrong. Please try again.')
     } catch {
       setError('Could not reach the server. Please try again.')
@@ -89,7 +95,14 @@ export default function ResetPasswordPage() {
               <p className="text-th-muted text-[13px] mb-8">You'll be asked to log in again on all devices.</p>
 
               {error && (
-                <div className="mb-4 px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">{error}</div>
+                <div className="mb-4 px-4 py-3 rounded-th bg-th-changes/10 border border-th-changes/40 text-th-changes text-[13px]">
+                  {error}
+                  {serverRules.length > 0 && (
+                    <ul className="mt-1.5 list-disc pl-4 space-y-0.5">
+                      {serverRules.map((label) => <li key={label}>{label}</li>)}
+                    </ul>
+                  )}
+                </div>
               )}
 
               <div className="space-y-4">
@@ -97,6 +110,20 @@ export default function ResetPasswordPage() {
                   <label className={labelClass}>New password</label>
                   <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••" className={inputClass} />
+                  <ul aria-label="Password requirements" className="mt-2.5 space-y-1">
+                    {PASSWORD_RULES.map((rule) => {
+                      const met = rule.test(password)
+                      return (
+                        <li key={rule.id} className={`flex items-center gap-2 text-[12px] transition-colors ${met ? 'text-th-text' : 'text-th-faint'}`}>
+                          <span className={`shrink-0 ${met ? 'text-th-accent-line' : 'text-th-faint'}`}>
+                            {met ? <Check size={12} /> : <Minus size={12} />}
+                          </span>
+                          {rule.label}
+                          <span className="sr-only">{met ? ' (met)' : ' (not met)'}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 </div>
                 <div>
                   <label className={labelClass}>Confirm new password</label>
@@ -104,7 +131,7 @@ export default function ResetPasswordPage() {
                     onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                     placeholder="••••••••" className={inputClass} />
                 </div>
-                <Button onClick={handleSubmit} loading={loading} disabled={!ready} size="lg" className="w-full">
+                <Button onClick={handleSubmit} loading={loading} disabled={!ready || !passwordOk} size="lg" className="w-full">
                   {loading ? 'Saving…' : 'Set password'}
                 </Button>
               </div>

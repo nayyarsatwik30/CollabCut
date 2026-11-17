@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
 import { hashPassword } from '@/lib/password'
+import { validatePassword } from '@/lib/password-policy'
 import { DEFAULT_WORKSPACE_PLAN_ID } from '@/lib/storage-config'
 import { createVerificationToken, isValidEmail, sendVerificationEmail } from '@/lib/email-verification'
 
@@ -25,8 +26,9 @@ export async function POST(req: NextRequest) {
   if (role !== 'admin' && role !== 'editor') {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
   }
-  if (password.length < 8) {
-    return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
+  const unmetRules = validatePassword(typeof password === 'string' ? password : '')
+  if (unmetRules.length > 0) {
+    return NextResponse.json({ error: 'Password does not meet requirements', rules: unmetRules }, { status: 400 })
   }
 
   // Validated before any DB write: the address is later used as the mail "to"
