@@ -3,6 +3,7 @@ import { migrationDb } from '@/lib/migrationDb'
 import { video } from '@/lib/mux'
 import { syncProjectStatus } from '@/lib/project-status'
 import { requireAuth, canAccessAsset, verifyCancelToken } from '@/lib/api-auth'
+import { deleteB2Objects } from '@/lib/comment-attachments'
 import { abortOriginalUpload, fromRowUploadId, isB2RowUploadId, originalKey } from '@/lib/asset-original'
 
 // Cancels an in-flight upload: aborts the B2 multipart upload (or, for an
@@ -54,6 +55,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // leave the row behind.
     const key = originalKey(asset.project_id, asset.id, asset.original_file_name ?? '')
     await abortOriginalUpload(key, fromRowUploadId(upload_id))
+    // The multipart upload may have completed in B2 without the row recording
+    // it (a lost reply); remove that object too so it isn't orphaned. A no-op
+    // when nothing is there.
+    await deleteB2Objects([key])
   } else {
     // Best effort: an upload Mux has already completed or cancelled rejects the
     // call, which must not leave the row behind.
