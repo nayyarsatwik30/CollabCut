@@ -91,7 +91,7 @@ export async function deleteB2Objects(keys: string[]): Promise<void> {
   await Promise.all(
     keys.map((key) =>
       b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: key })).catch((err) => {
-        console.error('comment attachment B2 delete failed', (err as Error).name)
+        console.error('B2 delete failed', (err as Error).name)
       }),
     ),
   )

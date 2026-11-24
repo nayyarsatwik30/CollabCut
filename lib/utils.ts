@@ -82,15 +82,16 @@ function sanitizeFilenamePart(value: string): string {
     .trim()
 }
 
-/** Build a safe ".mp4" filename as "<Project> - <Asset> vX.mp4" (non-English letters are kept;
+/** Build a safe filename as "<Project> - <Asset> vX.<ext>" (non-English letters are kept;
  *  only characters unsafe in filenames are stripped). Falls back to the asset name alone when
  *  there's no project name. Total length is capped at ~120 chars, truncating the name portion
- *  rather than dropping the version suffix or extension. */
-export function buildDownloadFilename(projectName: string | null | undefined, assetName: string, version?: number): string {
+ *  rather than dropping the version suffix or extension. `extension` (without the dot)
+ *  defaults to "mp4"; pass '' for none. */
+export function buildDownloadFilename(projectName: string | null | undefined, assetName: string, version?: number, extension = 'mp4'): string {
   const project = projectName ? sanitizeFilenamePart(projectName) : ''
   const asset = sanitizeFilenamePart(assetName.replace(/\.[^./\\]+$/, '')) || 'video'
   const base = project ? `${project} - ${asset}` : asset
-  const suffix = `${version ? ` v${version}` : ''}.mp4`
+  const suffix = `${version ? ` v${version}` : ''}${extension ? `.${extension}` : ''}`
   const maxBaseLength = Math.max(1, 120 - suffix.length)
   return `${base.slice(0, maxBaseLength).trim()}${suffix}`
 }

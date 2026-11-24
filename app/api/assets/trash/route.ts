@@ -118,10 +118,12 @@ export async function DELETE(req: NextRequest) {
   // foreign key, so it serializes with this), collect the files, delete them
   // and the asset, commit - then remove the B2 objects best-effort.
   let attachmentKeys: string[] = []
+  let originalKey: string | null = null
   const client = await migrationDb.connect()
   try {
     await client.query('BEGIN')
-    await client.query(`SELECT id FROM assets WHERE id = $1 FOR UPDATE`, [asset_id])
+    const locked = await client.query(`SELECT original_b2_key FROM assets WHERE id = $1 FOR UPDATE`, [asset_id])
+    originalKey = locked.rows[0]?.original_b2_key ?? null
     const hasTable = (await client.query(`SELECT to_regclass('public.comment_attachments') AS t`)).rows[0].t
     if (hasTable) {
       const attachments = await client.query(
@@ -142,6 +144,8 @@ export async function DELETE(req: NextRequest) {
   } finally {
     client.release()
   }
-  await deleteB2Objects(attachmentKeys)
+  // The uploaded original goes with the asset; like the attachments, a failed
+  // B2 delete is logged but never undoes the (already committed) DB delete.
+  await deleteB2Objects(originalKey ? [...attachmentKeys, originalKey] : attachmentKeys)
   return NextResponse.json({ success: true })
 }
