@@ -4,181 +4,11 @@ import { useState, useRef, useEffect } from 'react'
 import { X, CircleCheck, CircleAlert, Ban } from '@/components/ui/icons'
 import { UploadIcon } from '@/components/ui/icons'
 import { useSession } from 'next-auth/react'
-import * as UpChunk from '@mux/upchunk'
 import { invalidateStorageUsage } from '@/lib/useStorageUsage'
 import { Orb } from '@/components/ui/Orb'
 import { Button } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
-
-// UpChunk pauses (rather than failing) while the browser reports itself
-// offline and resumes on its own once it's back - but it would wait forever.
-// Give up after this long so a dead connection ends in a real error instead
-// of a progress bar frozen mid-way.
-const OFFLINE_GIVE_UP_MS = 60_000
-
-// UpChunk sets no request timeout, so a chunk whose connection silently stops
-// moving (no error, no bytes) would hang forever. If nothing happens for this
-// long while online, fail with a clear message instead. Generous on purpose:
-// upload progress counts bytes handed to the OS socket buffer, so on a slow
-// uplink it can sit at a chunk's end for minutes while that buffer drains -
-// that is not a stall. 12 minutes = the largest chunk (MAX_CHUNK_SIZE_KB,
-// 8 MB) divided by the slowest speed measured to Mux (~14 KB/s), which is
-// ~9.8 minutes, plus headroom for the response and the next chunk's preflight.
-const STALL_GIVE_UP_MS = 12 * 60_000
-
-// Adaptive chunk sizes, all in KB and all multiples of 256 (required by the
-// resumable-upload protocol). Editors upload from very different connections
-// - office fibre to a phone hotspot - so no single fixed size suits everyone.
-// UpChunk starts at CHUNK_SIZE_KB, doubles the size after a chunk that took
-// under 10 s and halves it after one that took over 30 s, staying within the
-// bounds below. Mux sends no preflight max-age, so every chunk pays a CORS
-// preflight on top of its PUT: the 8 MB ceiling keeps that overhead low on
-// fast links. The 1 MB floor keeps a drop mid-chunk cheap on slow ones, since
-// a failed chunk is resent whole. The ceiling also caps how long one chunk can
-// drain, which is what sizes the stall window above.
-const CHUNK_SIZE_KB = 2048
-const MIN_CHUNK_SIZE_KB = 1024
-const MAX_CHUNK_SIZE_KB = 8192
-
-// A dropped connection surfaces from UpChunk's XHR layer as status 0, which
-// its default retry list (408/502/503/504) treats as fatal - one blip would
-// end the whole upload. Retry it (and the other transient codes) instead.
-const RETRY_CODES = [0, 408, 429, 500, 502, 503, 504]
-
-const NO_CONNECTION_MESSAGE = 'Upload failed: no internet connection. Check your connection and try again.'
-
-class UploadCancelledError extends Error {
-  constructor() { super('Upload cancelled') }
-}
-
-// Chunked, resumable upload straight to the Mux direct-upload URL. A single
-// raw PUT of the whole file died on any network blip (surfacing in the
-// browser as a misleading CORS error), leaving the asset row stuck in
-// "processing" forever. Here chunks are adaptive, between 1 and 8 MB, and each
-// is retried on its own - 10 attempts, 3s apart, so ~30s of flakiness per
-// chunk is survivable - and the upload resumes from the last good chunk
-// instead of starting over.
-export function uploadFileToMux(
-  file: File,
-  url: string,
-  onProgress: (percent: number) => void,
-  onStatus: (message: string) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const upload = UpChunk.createUpload({
-      endpoint: url,
-      file,
-      chunkSize: CHUNK_SIZE_KB,
-      dynamicChunkSize: true,
-      minChunkSize: MIN_CHUNK_SIZE_KB,
-      maxChunkSize: MAX_CHUNK_SIZE_KB,
-      attempts: 10,
-      delayBeforeAttempt: 3,
-      retryCodes: RETRY_CODES,
-    })
-
-    // UpChunk's own 'online' listener calls sendChunks() unconditionally. If
-    // the in-flight chunk survived the offline blip (it can), that starts a
-    // second send loop next to the first: both pull chunks from one file
-    // iterator but share one byte offset, so data lands at the wrong position
-    // and Mux never gets a complete file - while UpChunk reports success.
-    // Allow only one loop at a time. (Present in 3.5.0, the latest release.)
-    const internals = upload as unknown as { sendChunks: () => Promise<void> }
-    const sendChunks = internals.sendChunks.bind(upload)
-    let sending: Promise<void> | null = null
-    internals.sendChunks = () => {
-      if (!sending) sending = sendChunks().finally(() => { sending = null })
-      return sending
-    }
-
-    // UpChunk treats 308 ("resume incomplete") as a successful chunk. On the
-    // last chunk Mux answers 200/201 once it has the whole file, so a final
-    // 308 means it doesn't - never report that as a finished upload.
-    let lastChunkStatus: number | undefined
-
-    let settled = false
-    let offlineTimer: ReturnType<typeof setTimeout> | undefined
-    let stallTimer: ReturnType<typeof setTimeout> | undefined
-
-    // Caller-initiated cancel: stop UpChunk and both timers; the caller
-    // decides what the rejection means.
-    signal?.addEventListener('abort', () => {
-      if (settled) return
-      settled = true
-      clearTimeout(offlineTimer)
-      clearTimeout(stallTimer)
-      upload.abort()
-      reject(new UploadCancelledError())
-    })
-
-    const finish = (err?: Error) => {
-      if (settled) return
-      settled = true
-      clearTimeout(offlineTimer)
-      clearTimeout(stallTimer)
-      if (err) {
-        upload.abort()
-        reject(err)
-      } else resolve()
-    }
-
-    // Re-armed on every sign of life; paused while offline (the offline
-    // timer owns that case).
-    const watchForStall = () => {
-      clearTimeout(stallTimer)
-      stallTimer = setTimeout(() => {
-        finish(new Error('Upload failed: the connection stopped sending data. Check your connection and try again.'))
-      }, STALL_GIVE_UP_MS)
-    }
-
-    const waitForReconnect = () => {
-      onStatus('Connection lost - upload paused, it will resume automatically')
-      clearTimeout(stallTimer)
-      clearTimeout(offlineTimer)
-      offlineTimer = setTimeout(() => finish(new Error(NO_CONNECTION_MESSAGE)), OFFLINE_GIVE_UP_MS)
-    }
-
-    upload.on('progress', (e) => {
-      onProgress(Math.floor(e.detail))
-      if (!upload.offline) watchForStall()
-    })
-    // Fires just before every chunk request - re-arms the timer so the gap
-    // before that chunk's first progress event (preflight, reading a bigger
-    // chunk from disk) is covered too.
-    upload.on('attempt', () => {
-      if (!upload.offline) watchForStall()
-    })
-    upload.on('attemptFailure', (e) => {
-      onStatus(`Connection problem - retrying (${e.detail.attemptsLeft} attempts left)`)
-      if (!upload.offline) watchForStall()
-    })
-    upload.on('chunkSuccess', (e) => {
-      lastChunkStatus = e.detail.response?.statusCode
-      onStatus('')
-    })
-    upload.on('offline', waitForReconnect)
-    upload.on('online', () => {
-      clearTimeout(offlineTimer)
-      watchForStall()
-      onStatus('Connection restored - resuming upload')
-    })
-    upload.on('success', () => finish(lastChunkStatus === 308
-      ? new Error('Upload failed: Mux did not receive the whole file. Please try again.')
-      : undefined))
-    upload.on('error', (e) => {
-      // Status 0 = never reached the server; after all retries that means
-      // the connection kept dropping, not that Mux rejected the file.
-      const status = e.detail.response?.statusCode
-      finish(new Error(status
-        ? `Upload failed: ${e.detail.message}`
-        : 'Upload failed: the connection kept dropping. Check your connection and try again.'))
-    })
-
-    if (typeof navigator !== 'undefined' && !navigator.onLine) waitForReconnect()
-    else watchForStall()
-  })
-}
+import { NO_CONNECTION_MESSAGE, UploadCancelledError, uploadOriginal } from '@/lib/original-upload-client'
 
 interface UploadModalProps {
   projectId: string
@@ -263,7 +93,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
       // an upload while offline never leaves a row stuck in "processing".
       if (!navigator.onLine) throw new Error(NO_CONNECTION_MESSAGE)
 
-      // Request Mux upload URL from our API. fetch() only rejects when the
+      // Ask our API to create the asset row and start the B2 upload. fetch() only rejects when the
       // request never got through, which would otherwise surface as a bare
       // "Failed to fetch".
       const res = await fetch('/api/assets/upload', {
@@ -277,17 +107,18 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
           version: 1,
           cut_type: cutType,
           size_bytes: file.size,
+          content_type: file.type,
           ...(linkedAsset ? { linked_asset_name: linkedAsset.name } : {}),
           ...(fulfillAssetId ? { fulfill_asset_id: fulfillAssetId } : {}),
         }),
       }).catch(() => { throw new Error(NO_CONNECTION_MESSAGE) })
 
       if (!res.ok) {
-        const err = await res.json()
+        const err = await res.json().catch(() => ({}))
         throw new Error(err.error ?? 'Failed to get upload URL')
       }
 
-      const { asset, upload_url, upload_id, cancel_token } = await res.json()
+      const { asset, upload_token, part_size, total_parts, upload_id, cancel_token } = await res.json()
       uploadInfoRef.current = {
         assetId: asset.id,
         uploadId: upload_id,
@@ -300,11 +131,15 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
         return
       }
 
-      // Upload directly to Mux
+      // The file goes to B2 once; the server then hands it to Mux itself.
       setState('uploading')
       setProgress(0)
       setUploadStatus('')
-      await uploadFileToMux(file, upload_url, setProgress, setUploadStatus, abortRef.current?.signal)
+      await uploadOriginal(
+        file,
+        { uploadToken: upload_token, partSize: part_size, totalParts: total_parts },
+        { onProgress: setProgress, onStatus: setUploadStatus, signal: abortRef.current?.signal },
+      )
       // size_bytes was recorded when the row was created - once the bytes
       // actually land, refresh the sidebar/settings storage bar.
       invalidateStorageUsage()
@@ -316,9 +151,15 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
         onUploaded()
       }, 2000)
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (cancelledRef.current || err instanceof UploadCancelledError) return
-      setError(err.message ?? 'Upload failed')
+      // A failed upload must not leave a half-made asset or B2 parts behind.
+      // The server refuses (409) once the file is fully stored, so this is
+      // safe even when the failure came from the final step.
+      const info = uploadInfoRef.current
+      uploadInfoRef.current = null
+      if (info) void cancelOnServer(info)
+      setError(err instanceof Error ? err.message : 'Upload failed')
       setState('error')
     }
   }
@@ -406,7 +247,7 @@ export function UploadModal({ projectId, onClose, onUploaded, linkedAsset, cutTy
                 />
               </div>
               <p className="text-[11px] text-th-muted mt-3 font-mono">
-                Uploading directly to Mux — do not close this window
+                Uploading your original file — do not close this window
               </p>
               <div className="mt-6 flex justify-center">
                 <Button variant="outline" size="sm" onClick={handleCancel}>
