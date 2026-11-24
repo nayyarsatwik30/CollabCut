@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationDb } from '@/lib/migrationDb'
-import { video, getCorsOrigin } from '@/lib/mux'
+import { MAX_ORIGINAL_PARTS, ORIGINAL_PART_SIZE, abortOriginalUpload, startOriginalUpload } from '@/lib/asset-original'
 import { syncProjectStatus } from '@/lib/project-status'
 import { notifyWorkspaceAdmins } from '@/lib/notifications'
 import { requireAuth, projectMembership, canAccessAsset, signCancelToken } from '@/lib/api-auth'
@@ -23,18 +23,32 @@ async function getUploadNotificationContext(projectId: string, uploaderId: strin
   }
 }
 
+// B2 being unreachable must surface as a clear JSON error, not a bare 500.
+async function beginOriginalUpload(args: Parameters<typeof startOriginalUpload>[0]) {
+  try {
+    return await startOriginalUpload(args)
+  } catch (err) {
+    console.error('asset original start failed', (err as Error).name)
+    return null
+  }
+}
+
+const START_FAILED = { error: 'Could not start the upload. Please try again.' }
+
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if ('error' in auth) return auth.error
   const { user } = auth
 
-  const { project_id, name, linked_asset_name, cut_type, fulfill_asset_id: requestedFulfillAssetId, size_bytes } = await req.json()
+  const { project_id, name, linked_asset_name, cut_type, fulfill_asset_id: requestedFulfillAssetId, size_bytes, content_type } = await req.json()
 
-  // The file goes browser -> Mux directly and Mux never reports the original
-  // file's size back, so the client's File.size is the only source for
-  // size_bytes - which /api/storage-usage sums. Without it every asset sits
-  // at the column default of 0 and the storage bar never moves.
-  const sizeBytes = Number.isSafeInteger(size_bytes) && size_bytes >= 0 ? size_bytes : 0
+  // The file goes browser -> B2 directly, so the client's File.size is the
+  // declared size: it is stored as size_bytes (which /api/storage-usage sums)
+  // and the finished B2 object must match it exactly before Mux is involved.
+  if (!Number.isSafeInteger(size_bytes) || size_bytes <= 0 || Math.ceil(size_bytes / ORIGINAL_PART_SIZE) > MAX_ORIGINAL_PARTS) {
+    return NextResponse.json({ error: 'A valid file size is required' }, { status: 400 })
+  }
+  const sizeBytes: number = size_bytes
 
   // Every upload lands in some project - the placeholder's own project when
   // fulfilling, otherwise project_id - and the caller must belong to that
@@ -90,20 +104,31 @@ export async function POST(req: NextRequest) {
     if (!target) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     if (target.mux_upload_id) return NextResponse.json({ error: 'This asset already has a file' }, { status: 400 })
 
-    const upload = await video.uploads.create({
-      cors_origin: getCorsOrigin(req),
-      new_asset_settings: {
-        playback_policy: ['public'],
-        mp4_support: 'capped-1080p',
-        video_quality: 'plus',
-      },
+    const original = await beginOriginalUpload({
+      userId: user.id, projectId: target.project_id, assetId: fulfill_asset_id, name, contentType: content_type, sizeBytes,
     })
+    if (!original) return NextResponse.json(START_FAILED, { status: 502 })
 
-    const updateResult = await migrationDb.query(
-      `UPDATE assets SET status = 'processing', pipeline_status = 'review', mux_upload_id = $1, size_bytes = $2 WHERE id = $3 RETURNING *`,
-      [upload.id, sizeBytes, fulfill_asset_id]
-    )
+    // The mux_upload_id IS NULL guard makes the "already has a file" check
+    // above atomic: of two simultaneous fulfilments only one wins.
+    let updateResult
+    try {
+      updateResult = await migrationDb.query(
+        `UPDATE assets
+         SET status = 'processing', pipeline_status = 'review', mux_upload_id = $1, size_bytes = $2,
+             original_file_name = $3, original_content_type = $4
+         WHERE id = $5 AND mux_upload_id IS NULL RETURNING *`,
+        [original.rowUploadId, sizeBytes, original.fileName, original.contentType, fulfill_asset_id]
+      )
+    } catch (err) {
+      await abortOriginalUpload(original.key, original.b2UploadId)
+      throw err
+    }
     const asset = updateResult.rows[0]
+    if (!asset) {
+      await abortOriginalUpload(original.key, original.b2UploadId)
+      return NextResponse.json({ error: 'This asset already has a file' }, { status: 400 })
+    }
 
     await syncProjectStatus(target.project_id)
 
@@ -122,8 +147,9 @@ export async function POST(req: NextRequest) {
     // The token lets the cancel flow restore this placeholder instead of
     // deleting it, without trusting the client to say which case it is.
     return NextResponse.json({
-      asset, upload_url: upload.url, upload_id: upload.id,
-      cancel_token: signCancelToken(asset.id, upload.id, true),
+      asset, upload_token: original.uploadToken, part_size: original.partSize, total_parts: original.totalParts,
+      upload_id: original.rowUploadId,
+      cancel_token: signCancelToken(asset.id, original.rowUploadId, true),
     }, { status: 201 })
   }
 
@@ -198,43 +224,47 @@ export async function POST(req: NextRequest) {
   const cutType = linkedHead ? linkedHead.cut_type : (cut_type ?? 'board')
   const nextVersion = linkedHead ? linkedHead.version + 1 : 1
 
-  const upload = await video.uploads.create({
-    cors_origin: getCorsOrigin(req),
-    new_asset_settings: {
-      playback_policy: ['public'],
-      mp4_support: 'capped-1080p',
-      video_quality: 'plus',
-    },
-  })
-
   // asset_group_id ties every version of the same logical video together,
   // independent of filename: reuse the linked asset's group when stacking a
   // new version, otherwise this row is the head of its own new group (its
   // own id, generated up front so it can self-reference in one insert).
   const newAssetId = randomUUID()
 
+  const original = await beginOriginalUpload({
+    userId: user.id, projectId: project_id, assetId: newAssetId, name, contentType: content_type, sizeBytes,
+  })
+  if (!original) return NextResponse.json(START_FAILED, { status: 502 })
+
   // Priority is kept in sync across every version in a lineage (see
   // PATCH /api/assets/[id]/priority), so a new version just inherits
   // whatever the lineage already has - same copy-forward as cutType above -
   // and a brand new lineage starts at the column's own default, 3.
-  const insertResult = await migrationDb.query(
-    `INSERT INTO assets (id, project_id, uploaded_by, name, version, status, pipeline_status, cut_type, mux_upload_id, asset_group_id, size_bytes, priority)
-     VALUES ($1,$2,$3,$4,$5,'processing',$6,$7,$8,$9,$10,$11)
-     RETURNING *`,
-    [
-      newAssetId,
-      project_id,
-      user.id,
-      name,
-      nextVersion,
-      linkedHead ? 'review' : 'idea',
-      cutType,
-      upload.id,
-      linkedHead ? linkedHead.asset_group_id : newAssetId,
-      sizeBytes,
-      linkedHead ? linkedHead.priority : 3,
-    ]
-  )
+  let insertResult
+  try {
+    insertResult = await migrationDb.query(
+      `INSERT INTO assets (id, project_id, uploaded_by, name, version, status, pipeline_status, cut_type, mux_upload_id, asset_group_id, size_bytes, priority, original_file_name, original_content_type)
+       VALUES ($1,$2,$3,$4,$5,'processing',$6,$7,$8,$9,$10,$11,$12,$13)
+       RETURNING *`,
+      [
+        newAssetId,
+        project_id,
+        user.id,
+        name,
+        nextVersion,
+        linkedHead ? 'review' : 'idea',
+        cutType,
+        original.rowUploadId,
+        linkedHead ? linkedHead.asset_group_id : newAssetId,
+        sizeBytes,
+        linkedHead ? linkedHead.priority : 3,
+        original.fileName,
+        original.contentType,
+      ]
+    )
+  } catch (err) {
+    await abortOriginalUpload(original.key, original.b2UploadId)
+    throw err
+  }
   const asset = insertResult.rows[0]
 
   // A new version reopens the pipeline (e.g. re-cutting an already-approved
@@ -282,7 +312,8 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({
-    asset, upload_url: upload.url, upload_id: upload.id,
-    cancel_token: signCancelToken(asset.id, upload.id, false),
+    asset, upload_token: original.uploadToken, part_size: original.partSize, total_parts: original.totalParts,
+    upload_id: original.rowUploadId,
+    cancel_token: signCancelToken(asset.id, original.rowUploadId, false),
   }, { status: 201 })
 }

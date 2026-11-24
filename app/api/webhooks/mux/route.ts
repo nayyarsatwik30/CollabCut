@@ -24,16 +24,22 @@ export async function POST(req: NextRequest) {
     // Only leave the "processing" state once a playback ID actually exists —
     // otherwise the review page would show a video player with no stream to
     // play, since mux_playback_id would stay null indefinitely.
+    // Rows are matched three ways: the direct upload id (assets uploaded
+    // before originals moved to B2), the Mux asset id we stored when we
+    // created the asset from the B2 original, or - if this event beat that
+    // write - the passthrough, which is our asset id.
     const updated = await migrationDb.query(
       `UPDATE assets
        SET mux_asset_id = $1,
            duration_sec = $2
            ${playbackId ? ", mux_playback_id = $3, status = 'in_review'" : ''}
-       WHERE mux_upload_id = $${playbackId ? 4 : 3}
+       WHERE mux_asset_id = $1
+          OR mux_upload_id = $${playbackId ? 4 : 3}
+          OR (id::text = $${playbackId ? 5 : 4} AND mux_asset_id IS NULL)
        RETURNING id, project_id`,
       playbackId
-        ? [muxAssetId, durationSec, playbackId, data.upload_id]
-        : [muxAssetId, durationSec, data.upload_id]
+        ? [muxAssetId, durationSec, playbackId, data.upload_id ?? null, data.passthrough ?? null]
+        : [muxAssetId, durationSec, data.upload_id ?? null, data.passthrough ?? null]
     )
     const updatedAsset = updated.rows[0]
 
@@ -53,8 +59,9 @@ export async function POST(req: NextRequest) {
 
   if (type === 'video.asset.errored') {
     await migrationDb.query(
-      `UPDATE assets SET status = 'processing' WHERE mux_upload_id = $1`,
-      [data.upload_id]
+      `UPDATE assets SET status = 'processing'
+       WHERE mux_asset_id = $1 OR mux_upload_id = $2 OR (id::text = $3 AND mux_asset_id IS NULL)`,
+      [data.id, data.upload_id ?? null, data.passthrough ?? null]
     )
   }
 
